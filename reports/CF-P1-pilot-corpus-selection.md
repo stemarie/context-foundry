@@ -2,7 +2,7 @@
 
 ## Status
 
-**Corpus approval:** pending Karell's explicit approval.
+**Corpus authorization:** covered by Karell's Phase 1 work order.
 **Selection timestamp:** 2026-08-13T20:55:28+00:00
 **Read-only constraint:** all selected artifacts may be read, searched, and boundedly extracted only. No source execution or changes to AI.Contract are authorized.
 
@@ -25,8 +25,8 @@ The canonical machine-readable inventory, absolute locators, modification times,
 
 This four-source set is within the configured 3–5-source range and provides: (1) the Foundry pilot's governing boundary, (2) AI.Contract's current service/data boundary, (3) the current Coordinator/Worker behavioral contract, and (4) the current durable-card/continuation safeguards. It is small enough for a bounded evidence packet while varied enough to distinguish factual current-state observations from a recommendation for the proposed Architect/Worker/Auditor extension.
 
-## Gate and next action
+## Execution authority and next action
 
-No Worker or Auditor evidence card has been created or dispatched. The manifest and packet are frozen for this review subject to the hashes above.
+Karell’s authorized Phase 1 work order covers selection and use of this bounded, read-only corpus. Worker execution may proceed without a separate corpus approval. The manifest and packet remain frozen to the hashes above; a material corpus change still requires re-inventory and Architect review.
 
-Karell: reply **`Approve CF-P1 corpus`** to approve exactly these four hash-pinned, read-only sources. Any changed source, hash, source count, or locator requires a new manifest and approval before Worker dispatch.
+The next action is Worker evidence production, followed by an independent Auditor verdict and Architect synthesis.

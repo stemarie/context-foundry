@@ -20,7 +20,7 @@ Activate the temporary Context Foundry Phase 1 control plane while preserving th
 
 ## Safety contract
 
-- Do not dispatch the Worker evidence packet before Karell approves the exact selected corpus.
+- Do not dispatch the Worker evidence packet until the Architect has recorded the bounded, hash-pinned corpus under the authorized work order.
 - No Phase 2+ monitors, health jobs, retrospectives, public actions, or unrelated external effects.
 - Maintain one active repository writer.
 - Use only GitHub Issues and the dedicated Kanban board as durable work-control records.

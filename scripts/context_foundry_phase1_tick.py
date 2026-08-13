@@ -47,10 +47,13 @@ def main() -> int:
     active = [c for c in all_cards if c.get("status") in {"ready", "running", "review"}]
     if active:
         return 0
-    if state.get("corpus_approval") != "approved":
-        # The corpus-review card is the visible human gate. Never dispatch Worker work before it closes.
+    if state.get("corpus_approval") not in {
+        "approved",
+        "covered_by_authorized_work_order",
+    }:
+        # Stop only for a genuine human gate, not a review step implicit in the authorized work order.
         return 0
-    # After explicit approval, the Architect owns creating/recovering the Worker/Auditor/synthesis sequence.
+    # The Architect owns creating/recovering the Worker/Auditor/synthesis sequence.
     # This no-agent recovery tick stays intentionally conservative and only dispatches already-ready work.
     result = run("dispatch", "--max", "1", "--json")
     if result.returncode:

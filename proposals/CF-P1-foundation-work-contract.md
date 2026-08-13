@@ -7,7 +7,7 @@
 
 ## Objective
 
-Build the Context Foundry Phase 1 foundation required to execute one *subsequent*, approved, read-only pilot packet. This contract does not authorize the pilot Worker investigation itself before Karell approves the Architect-selected corpus.
+Build the Context Foundry Phase 1 foundation required to execute one subsequent, authorized-work-order-covered, read-only pilot packet. The Architect selects and hash-pins the bounded pilot corpus; this foundation contract does not itself execute the Worker investigation.
 
 ## In scope
 

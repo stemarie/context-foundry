@@ -3,7 +3,7 @@
 **GitHub Issue:** [#3](https://github.com/stemarie/context-foundry/issues/3)
 **Kanban:** pending creation
 **Assigned role:** `foundry-worker`
-**Required predecessor:** Karell approves the Architect-selected corpus.
+**Required predecessor:** Architect has selected and hash-pinned the bounded corpus under Karell’s authorized Phase 1 work order.
 
 ## Question
 
@@ -12,7 +12,7 @@ How should AI.Contract's current Coordinator/Worker model be extended into Archi
 ## Preconditions
 
 - The Architect has selected and recorded a read-only corpus of 3–5 artifacts in `sources/manifest.json`.
-- Karell has explicitly approved that exact corpus in the Phase 1 corpus-review gate.
+- Karell's authorized Phase 1 work order covers the exact hash-pinned corpus; no separate corpus-review approval is required.
 - This contract, the packet, and any concrete source IDs agree. A mismatch is a blocker, not permission to substitute sources.
 
 ## Allowed work

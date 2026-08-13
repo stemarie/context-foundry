@@ -49,15 +49,14 @@ reports/      Durable run reports
 ## Phase 1 flow
 
 ```text
-Architect: initialize and map
-  → Karell approves the selected 3–5-source pilot corpus
+Architect: initialize and map the bounded pilot corpus
   → Worker: produce cited evidence
   → Auditor: PASS / REQUEST_CHANGES / BLOCKED_WITH_EVIDENCE
   → Architect: synthesis
   → Verified and stop
 ```
 
-A `REQUEST_CHANGES` verdict creates a bounded Worker correction card and requires a fresh independent audit. The temporary Phase 1 loop is completion-triggered, with an hourly recovery fallback while active. It is quiet except for the corpus review, a genuine blocker, or its final outcome.
+A `REQUEST_CHANGES` verdict creates a bounded Worker correction card and requires a fresh independent audit. The temporary Phase 1 loop is completion-triggered, with an hourly recovery fallback while active. It is quiet except for a genuine blocker or its final outcome. The authorized Phase 1 work order covers Architect selection of the bounded 3–5-source pilot corpus; only material corpus changes require renewed Architect review.
 
 ## Quick start and checks
 
@@ -71,4 +70,4 @@ These scripts use only the Python standard library. Run them from the repository
 
 ## Terminal rule
 
-The temporary Phase 1 loop stops only when all Phase 1 deliverables exist, Karell has approved the pilot corpus, valid cited evidence exists, an independent Auditor returns `PASS`, and the final synthesis artifact exists.
+The temporary Phase 1 loop stops only when all Phase 1 deliverables exist, the bounded pilot corpus is covered by the authorized work order, valid cited evidence exists, an independent Auditor returns `PASS`, and the final synthesis artifact exists.

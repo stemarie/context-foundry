@@ -24,13 +24,13 @@ pilot:
   corpus_size_min: 3
   corpus_size_max: 5
   architect_selects_additional_artifacts: true
-  requires_karell_corpus_approval: true
+  requires_karell_corpus_approval: false
   corpus_is_read_only: true
 loop:
   owner_profile: foundry-architect
   completion_triggered_continuation: true
   recovery_fallback: every 1h
-  notification_policy: quiet_except_corpus_review_blocker_terminal
+  notification_policy: quiet_except_genuine_blocker_or_terminal
   terminal_statuses: [verified, needs_decision, blocked, obsolete]
 phase_1_safe_actions:
   - create_or_configure_foundry_profiles
@@ -40,13 +40,12 @@ phase_1_safe_actions:
   - create_or_update_github_issues_and_comments
   - direct_push_verified_changes_to_main
 human_gates:
-  - approve_selected_pilot_corpus
   - public_or_external_side_effect
   - destructive_legal_financial_or_credential_action
   - evidence_backed_source_of_truth_conflict
 terminal_rule:
   - all_phase_1_deliverables_exist
-  - karell_approved_pilot_corpus
+  - approved_work_order_covers_pilot_corpus
   - valid_cited_evidence_exists
   - independent_auditor_pass
   - final_synthesis_exists

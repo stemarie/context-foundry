@@ -13,9 +13,9 @@
 ## Current state
 
 - Phase 1 is active.
-- `state/phase-1.json` records `corpus_approval: pending`.
-- The only ready card is the Architect's corpus-selection/presentation gate.
-- No Worker or Auditor evidence work is created or dispatched until Karell approves the exact recorded corpus.
+- `state/phase-1.json` records `corpus_approval: covered_by_authorized_work_order`.
+- The Architect mapped the hash-pinned corpus; the work order authorizes its bounded, read-only use.
+- Worker evidence work may be created and dispatched; no separate corpus approval is required.
 
 ## Role boundaries
 

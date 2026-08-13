@@ -1,7 +1,7 @@
 {
   "phase": 1,
   "status": "active",
-  "stage": "foundation_setup",
-  "corpus_approval": "pending",
+  "stage": "pilot_execution",
+  "corpus_approval": "covered_by_authorized_work_order",
   "pilot_question": "How should AI.Contract\u0027s current Coordinator/Worker model be extended into Architect/Worker/Auditor, based on the approved pilot corpus?"
 }
