@@ -1,6 +1,6 @@
 packet_id: CF-P1-role-model
 question: How should AI.Contract's current Coordinator/Worker model be extended into Architect/Worker/Auditor, based on the approved pilot corpus?
-source_ids: []
+source_ids: [src-P1-001, src-P1-002, src-P1-003, src-P1-004]
 allowed_operations: [read, search, extract, test]
 forbidden_operations: [write_external_system, edit_global_skill, execute_untrusted_code]
 budget:

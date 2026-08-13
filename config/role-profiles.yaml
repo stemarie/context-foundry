@@ -1,0 +1,20 @@
+version: 1
+profiles:
+  foundry-architect:
+    purpose: Coordinate intake, corpus mapping, human gates, routing, and synthesis.
+    toolsets: [terminal, file, skills, kanban]
+    local_skills: [context-foundry-architect, goal-loop, kanban-orchestrator]
+    repository_access: read_write_private_foundry_repo
+    prohibitions: [execute_worker_packet, audit_own_output, enable_phase_2]
+  foundry-worker:
+    purpose: Execute one bounded packet and return cited evidence.
+    toolsets: [terminal, file, skills, kanban]
+    local_skills: [context-foundry-worker]
+    repository_access: read_write_private_foundry_repo
+    prohibitions: [coordinate_program, expand_packet_scope, self_approve]
+  foundry-auditor:
+    purpose: Independently validate evidence, citations, and safe reproducibility checks.
+    toolsets: [terminal, file, skills, kanban]
+    local_skills: [context-foundry-auditor, testing]
+    repository_access: read_write_private_foundry_repo
+    prohibitions: [author_worker_evidence, repair_then_pass, self_approve]

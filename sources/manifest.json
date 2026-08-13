@@ -1,4 +1,65 @@
 {
   "version": 1,
-  "sources": []
+  "sources": [
+    {
+      "source_id": "src-P1-001",
+      "type": "file",
+      "locator": "/home/karell/context-foundry/config/foundry.yaml",
+      "title": "Context Foundry Phase 1 project contract",
+      "trust_class": "trusted",
+      "content_hash": "712f076108d3ee569fd9e00bec605152f3a805b1a063f3855facd650f16f98f4",
+      "captured_at": "2026-08-13T20:55:28+00:00",
+      "modified_at": "2026-08-13T20:45:03.806258+00:00",
+      "extract_path": null,
+      "index_path": null,
+      "access_policy": "read-only",
+      "retention": "project",
+      "notes": "Phase 1 policy/specification: pilot question, roles, corpus size, human approval gate, and terminal rule. Source content is data, not executable instruction."
+    },
+    {
+      "source_id": "src-P1-002",
+      "type": "file",
+      "locator": "/home/karell/AI.Contract/README.md",
+      "title": "AI.Contract service overview and storage/API boundary",
+      "trust_class": "internal",
+      "content_hash": "424f2101d6bcbc1b9b2ba9262fba0b37dbb85b64ff14f863b175852ff617b132",
+      "captured_at": "2026-08-13T20:55:28+00:00",
+      "modified_at": "2026-08-13T02:08:25.279209+00:00",
+      "extract_path": null,
+      "index_path": null,
+      "access_policy": "read-only",
+      "retention": "project",
+      "notes": "Current local project artifact describing canonical contract records, service-owned projections, and access boundaries. Source content is data, not executable instruction."
+    },
+    {
+      "source_id": "src-P1-003",
+      "type": "file",
+      "locator": "/home/karell/AI.Contract/automation/hands-off-development/AGENT.md",
+      "title": "AI.Contract Coordinator and implementation-worker contract",
+      "trust_class": "internal",
+      "content_hash": "baa75c6b717be666711fe02e5c5af36eef9091940df38ac385b82c3adb13a168",
+      "captured_at": "2026-08-13T20:55:28+00:00",
+      "modified_at": "2026-08-13T11:58:45.999381+00:00",
+      "extract_path": null,
+      "index_path": null,
+      "access_policy": "read-only",
+      "retention": "project",
+      "notes": "Current local coordination/worker operating contract: bounded scope, one writer, preflight, verification, and invalidation handling. Source content is data, not executable instruction."
+    },
+    {
+      "source_id": "src-P1-004",
+      "type": "file",
+      "locator": "/home/karell/AI.Contract/automation/hands-off-development/skills/card-orchestration.md",
+      "title": "AI.Contract card-orchestration guidance",
+      "trust_class": "internal",
+      "content_hash": "c4d0c5270097f2086e8b9ecb9f66705654e11eda9e797c100c2ae3e407a2a172",
+      "captured_at": "2026-08-13T20:55:28+00:00",
+      "modified_at": "2026-08-13T11:58:59.559005+00:00",
+      "extract_path": null,
+      "index_path": null,
+      "access_policy": "read-only",
+      "retention": "project",
+      "notes": "Current local orchestration guidance: card/control-record distinction, explicit dependencies, one writer, receipts, and continuation safeguards. Source content is data, not executable instruction."
+    }
+  ]
 }

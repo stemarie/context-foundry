@@ -1,0 +1,8 @@
+# Python bytecode and local test caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local, run-specific Foundry state and generated artifacts
+*.extract
+*.tmp
