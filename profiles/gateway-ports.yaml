@@ -1,0 +1,12 @@
+version: 1
+policy:
+  gateways_permitted: true
+  service_model: independent_profile_gateway
+  api_servers_default_enabled: false
+  bind_host: 127.0.0.1
+  credential_rule: unique_profile_local_API_SERVER_KEY
+  preflight: python3 scripts/check_foundry_gateway_ports.py
+ports:
+  foundry-architect: 8643
+  foundry-worker: 8644
+  foundry-auditor: 8645

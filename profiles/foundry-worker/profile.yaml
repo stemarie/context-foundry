@@ -1,0 +1,3 @@
+description: 'Context Foundry Worker: performs only bounded work packets, produces
+  cited evidence, and never self-audits.'
+description_auto: false

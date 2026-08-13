@@ -1,20 +1,29 @@
-version: 1
+version: 2
+profile_kit:
+  repository_root: profiles/
+  declarative_source_of_truth: true
+  excluded_runtime_state: [.env, credentials, state_db, logs, caches, sessions, gateway_process_state]
+  parity_check: python3 scripts/sync_foundry_profiles.py --check
+  gateway_port_check: python3 scripts/check_foundry_gateway_ports.py
 profiles:
   foundry-architect:
-    purpose: Coordinate intake, corpus mapping, human gates, routing, and synthesis.
+    purpose: Coordinate intake, corpus mapping, human gates, recovery/invalidation routing, and synthesis.
     toolsets: [terminal, file, skills, kanban]
-    local_skills: [context-foundry-architect, goal-loop, kanban-orchestrator]
+    local_skills: [context-foundry-architect, goal-loop, kanban-orchestrator, ai-contract-card-orchestration, ai-contract-discrepancy-to-delivery]
     repository_access: read_write_private_foundry_repo
+    optional_api_server: {host: 127.0.0.1, port: 8643, default_enabled: false}
     prohibitions: [execute_worker_packet, audit_own_output, enable_phase_2]
   foundry-worker:
-    purpose: Execute one bounded packet and return cited evidence.
+    purpose: Execute one bounded packet or bounded correction and return cited evidence.
     toolsets: [terminal, file, skills, kanban]
-    local_skills: [context-foundry-worker]
+    local_skills: [context-foundry-worker, ai-contract-grounded-recovery, ai-contract-verified-implementation-delivery]
     repository_access: read_write_private_foundry_repo
+    optional_api_server: {host: 127.0.0.1, port: 8644, default_enabled: false}
     prohibitions: [coordinate_program, expand_packet_scope, self_approve]
   foundry-auditor:
-    purpose: Independently validate evidence, citations, and safe reproducibility checks.
+    purpose: Independently validate evidence, citations, recovery claims, and safe reproducibility checks.
     toolsets: [terminal, file, skills, kanban]
-    local_skills: [context-foundry-auditor, testing]
+    local_skills: [context-foundry-auditor, testing, ai-contract-recovery-audit, ai-contract-verified-delivery-audit]
     repository_access: read_write_private_foundry_repo
+    optional_api_server: {host: 127.0.0.1, port: 8645, default_enabled: false}
     prohibitions: [author_worker_evidence, repair_then_pass, self_approve]

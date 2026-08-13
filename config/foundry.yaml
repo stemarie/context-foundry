@@ -6,13 +6,13 @@ phase: 1
 roles:
   architect:
     profile: foundry-architect
-    skills: [context-foundry-architect, kanban-orchestrator, goal-loop]
+    skills: [context-foundry-architect, kanban-orchestrator, goal-loop, ai-contract-card-orchestration, ai-contract-discrepancy-to-delivery]
   worker:
     profile: foundry-worker
-    skills: [context-foundry-worker]
+    skills: [context-foundry-worker, ai-contract-grounded-recovery, ai-contract-verified-implementation-delivery]
   auditor:
     profile: foundry-auditor
-    skills: [context-foundry-auditor, testing]
+    skills: [context-foundry-auditor, testing, ai-contract-recovery-audit, ai-contract-verified-delivery-audit]
 concurrency:
   max_active_repository_writers: 1
   max_workers_per_map: 3

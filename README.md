@@ -42,7 +42,8 @@ proposals/    Reviewable future improvements only
 state/        Idempotency/checkpoint state; not a Kanban replacement
 scripts/      Deterministic inventory, extraction, and validation utilities
 templates/    Kanban card and artifact templates
-skills/       Foundry role skills
+skills/       Canonical Foundry role skills
+profiles/     Versioned Architect/Worker/Auditor profile kit; no runtime state
 reports/      Durable run reports
 ```
 
@@ -67,6 +68,18 @@ python3 -m unittest discover -s tests -v
 ```
 
 These scripts use only the Python standard library. Run them from the repository root. See `config/foundry.yaml` and `config/source-policy.yaml` for the durable Phase 1 contract.
+
+## Versioned role profiles and gateways
+
+`profiles/` contains the reviewable Architect, Worker, and Auditor profile kit: role contracts, profile metadata, gateway/API-server templates, and every installed role-local skill. It is the declarative source of truth for the Foundry profiles; credentials, runtime databases, logs, caches, sessions, and gateway process state are deliberately excluded.
+
+```bash
+python3 scripts/sync_foundry_profiles.py --check
+python3 scripts/check_foundry_gateway_ports.py
+python3 -m unittest discover -s tests -v
+```
+
+The profiles may run independent gateways. Their optional loopback API-server ports are reserved as Architect `8643`, Worker `8644`, and Auditor `8645`; all start disabled. Before enabling one, configure a unique `API_SERVER_KEY` only in that profile’s private `.env`, run the port check, and start/restart only that profile’s gateway. Do not copy credentials between profiles.
 
 ## Terminal rule
 

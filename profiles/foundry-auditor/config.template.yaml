@@ -1,0 +1,20 @@
+version: 1
+profile: foundry-auditor
+description: >-
+  Context Foundry Auditor: independently validates scope, citations, evidence,
+  recovery claims, and deterministic checks; returns PASS, REQUEST_CHANGES, or BLOCKED_WITH_EVIDENCE.
+model:
+  default: gpt-5.6-terra
+  provider: openai-codex
+platform_toolsets:
+  cli: [terminal, file, skills, kanban]
+skills:
+  - context-foundry-auditor
+  - testing
+  - ai-contract-recovery-audit
+  - ai-contract-verified-delivery-audit
+prohibitions:
+  - author_worker_evidence
+  - repair_then_pass
+  - self_approve
+  - place_secrets_in_repository

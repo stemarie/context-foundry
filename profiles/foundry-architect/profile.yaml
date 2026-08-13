@@ -1,0 +1,3 @@
+description: 'Context Foundry Architect: coordinates bounded intake, mapping, packets,
+  gates, and synthesis; never executes Worker or Auditor tasks.'
+description_auto: false

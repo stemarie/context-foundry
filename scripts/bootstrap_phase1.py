@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create deterministic Phase 1 templates, role skills, and test fixtures."""
+"""Create only missing deterministic Phase 1 templates and test fixtures."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -199,5 +199,6 @@ if __name__ == "__main__":
 for relative, content in FILES.items():
     path = ROOT / relative
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
-print(f"wrote {len(FILES)} files")
+    if not path.exists():
+        path.write_text(content, encoding="utf-8")
+print(f"ensured {len(FILES)} files without overwriting existing artifacts")
