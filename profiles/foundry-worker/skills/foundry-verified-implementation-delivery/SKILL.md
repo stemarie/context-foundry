@@ -1,12 +1,12 @@
 ---
-name: ai-contract-verified-implementation-delivery
+name: foundry-verified-implementation-delivery
 description: Execute bounded Foundry corrections with real checks and delivery proof.
 version: 1.0.0
-source: AI.Contract/automation/hands-off-development/skills/verified-implementation-delivery.md
+source: kits/contract-orchestration/skills/verified-implementation-delivery.md
 adapted_for: foundry-worker
 ---
 
-# AI.Contract Verified Delivery — Foundry Worker
+# Context Foundry Verified Delivery — Foundry Worker
 
 ## Trigger
 Use only for a bounded Worker packet or Architect-routed correction with named scope, output paths, acceptance criteria, and verification gates.

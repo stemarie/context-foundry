@@ -1,9 +1,9 @@
 # Versioned Foundry profile kit
 
-This directory is the **reviewable source of truth** for the declarative parts of the three Context Foundry profiles:
+This directory is the **canonical, reviewable source of truth** for the three Context Foundry profiles. Context Foundry owns the profile definitions and its contract-orchestration/recovery skill material; AI.Contract owns only its Go service and its service contract.
 
 - profile description and model/toolset template;
-- versioned role contracts and all role-local skills (including the AI.Contract recovery/error-correction skills);
+- versioned role contracts and all role-local skills, including recovery and error-correction guidance now owned by Context Foundry;
 - API-server port allocation and gateway policy.
 
 ## Deliberately excluded
@@ -20,7 +20,7 @@ python3 scripts/sync_foundry_profiles.py --apply
 python3 scripts/sync_foundry_profiles.py --check
 ```
 
-`--apply` deliberately copies only `profile.yaml` and the declared `skills/*/SKILL.md` files. The versioned configuration files are templates checked against the safe installed subset; runtime configuration, credentials, and state are never replaced. It never reads, writes, prints, or replaces `.env` files.
+`--apply` copies only canonical non-secret profile files: `profile.yaml`, `config.yaml`, `SOUL.md`, and declared `skills/*/SKILL.md` files. It removes superseded managed skill directories, but never reads, writes, prints, or replaces `.env`, credentials, databases, sessions, logs, caches, or gateway process state.
 
 ## Gateway ports
 

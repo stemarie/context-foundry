@@ -1,12 +1,12 @@
 ---
-name: ai-contract-discrepancy-to-delivery
+name: foundry-discrepancy-to-delivery
 description: Route Foundry discrepancies through bounded recovery or fresh audit.
 version: 1.0.0
-source: AI.Contract/automation/hands-off-development/skills/discrepancy-to-delivery.md
+source: kits/contract-orchestration/skills/discrepancy-to-delivery.md
 adapted_for: foundry-architect
 ---
 
-# AI.Contract Discrepancy to Delivery — Foundry Architect
+# Context Foundry Discrepancy to Delivery — Foundry Architect
 
 ## Trigger
 Use when a packet, manifest, evidence artifact, card receipt, repository state, remote-delivery claim, or audit result disagrees with current authoritative evidence.

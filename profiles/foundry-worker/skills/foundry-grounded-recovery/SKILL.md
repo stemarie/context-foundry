@@ -1,12 +1,12 @@
 ---
-name: ai-contract-grounded-recovery
+name: foundry-grounded-recovery
 description: Recover bounded Worker execution failures from authoritative evidence.
 version: 1.0.0
-source: AI.Contract/automation/hands-off-development/SOUL.template.md
+source: kits/contract-orchestration/SOUL.template.md
 adapted_for: foundry-worker
 ---
 
-# AI.Contract Grounded Recovery — Foundry Worker
+# Context Foundry Grounded Recovery — Foundry Worker
 
 ## Protocol
 When a claimed path, checkout, credential state, tool capability, source hash, card state, configuration, or delivery fact conflicts with current evidence:

@@ -1,12 +1,12 @@
 ---
-name: ai-contract-card-orchestration
+name: foundry-card-orchestration
 description: Operate Foundry cards as serialized control records with recovery receipts.
 version: 1.0.0
-source: AI.Contract/automation/hands-off-development/skills/card-orchestration.md
+source: kits/contract-orchestration/skills/card-orchestration.md
 adapted_for: foundry-architect
 ---
 
-# AI.Contract Card Orchestration — Foundry Architect
+# Context Foundry Card Orchestration — Foundry Architect
 
 ## Operating rules
 - A card controls assignment and receipts; it is never proof that a source, remote, or external state changed.

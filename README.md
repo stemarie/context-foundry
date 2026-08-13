@@ -1,6 +1,6 @@
 # Context Foundry
 
-Context Foundry is a Hermes-native system for bounded, evidence-backed work across repositories, research corpora, operations, and multi-source projects. It treats context as durable, inspectable artifacts—not a prompt dump.
+Context Foundry is the canonical home for its Architect/Worker/Auditor profiles and portable contract-orchestration kit; see [`OWNERSHIP.md`](OWNERSHIP.md). It is a Hermes-native system for bounded, evidence-backed work across repositories, research corpora, operations, and multi-source projects. It treats context as durable, inspectable artifacts—not a prompt dump.
 
 ## Phase 1 status
 
@@ -43,7 +43,8 @@ state/        Idempotency/checkpoint state; not a Kanban replacement
 scripts/      Deterministic inventory, extraction, and validation utilities
 templates/    Kanban card and artifact templates
 skills/       Canonical Foundry role skills
-profiles/     Versioned Architect/Worker/Auditor profile kit; no runtime state
+profiles/     Canonical Architect/Worker/Auditor profile definitions; no runtime state
+kits/         Portable Foundry-owned contract-orchestration kit
 reports/      Durable run reports
 ```
 
@@ -71,7 +72,7 @@ These scripts use only the Python standard library. Run them from the repository
 
 ## Versioned role profiles and gateways
 
-`profiles/` contains the reviewable Architect, Worker, and Auditor profile kit: role contracts, profile metadata, gateway/API-server templates, and every installed role-local skill. It is the declarative source of truth for the Foundry profiles; credentials, runtime databases, logs, caches, sessions, and gateway process state are deliberately excluded.
+`profiles/` is the canonical Architect, Worker, and Auditor profile package: role contracts, `profile.yaml`, non-secret `config.yaml`, `SOUL.md`, gateway-port policy, and every role-local skill. `kits/contract-orchestration/` is the canonical portable work-contract/recovery/orchestration kit. Both are owned by Context Foundry and can be used without AI.Contract. Credentials, runtime databases, logs, caches, sessions, and gateway process state are deliberately excluded.
 
 ```bash
 python3 scripts/sync_foundry_profiles.py --check

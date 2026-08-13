@@ -1,12 +1,12 @@
 ---
-name: ai-contract-recovery-audit
+name: foundry-recovery-audit
 description: Independently verify Foundry recovery claims without remediating evidence.
 version: 1.0.0
-source: AI.Contract/automation/hands-off-development/SOUL.template.md
+source: kits/contract-orchestration/SOUL.template.md
 adapted_for: foundry-auditor
 ---
 
-# AI.Contract Recovery Audit — Foundry Auditor
+# Context Foundry Recovery Audit — Foundry Auditor
 
 ## Trigger
 Use when Worker or Architect evidence claims recovery from a path, invocation, tool, source-integrity, checkout, credential-propagation, service-state, or delivery failure.

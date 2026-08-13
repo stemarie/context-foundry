@@ -1,12 +1,12 @@
 ---
-name: ai-contract-verified-delivery-audit
+name: foundry-verified-delivery-audit
 description: Audit exact validation and delivery claims for Foundry evidence receipts.
 version: 1.0.0
-source: AI.Contract/automation/hands-off-development/skills/verified-implementation-delivery.md
+source: kits/contract-orchestration/skills/verified-implementation-delivery.md
 adapted_for: foundry-auditor
 ---
 
-# AI.Contract Verified Delivery Audit — Foundry Auditor
+# Context Foundry Verified Delivery Audit — Foundry Auditor
 
 ## Checks
 1. Inspect the latest packet/correction contract, source policy, evidence artifacts, Worker receipt, current repository status, and relevant audit rules.
