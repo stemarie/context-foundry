@@ -14,7 +14,8 @@
   },
   "independent_audit_verdict": "PASS",
   "recovery_loop": {
-    "status": "stopped",
-    "verification": "hermes cron list reported no scheduled jobs on 2026-08-13T21:29:20Z"
+    "status": "removed",
+    "removed_job_id": "7259ab347ac8",
+    "verification": "Hermes scheduler read-back confirmed removal of Context Foundry Phase 1 recovery on 2026-08-13."
   }
 }
