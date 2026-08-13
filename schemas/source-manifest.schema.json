@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Context Foundry Source Manifest",
+  "type": "object",
+  "required": ["version", "sources"],
+  "properties": {
+    "version": {"type": "integer", "const": 1},
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "source_id", "type", "locator", "title", "trust_class",
+          "captured_at", "access_policy", "retention"
+        ],
+        "properties": {
+          "source_id": {"type": "string", "pattern": "^src-[A-Za-z0-9._-]+$"},
+          "type": {"enum": ["file", "repo", "url", "api", "task-record", "transcript"]},
+          "locator": {"type": "string", "minLength": 1},
+          "title": {"type": "string", "minLength": 1},
+          "trust_class": {"enum": ["trusted", "internal", "external-untrusted"]},
+          "content_hash": {"type": ["string", "null"]},
+          "captured_at": {"type": "string", "format": "date-time"},
+          "modified_at": {"type": ["string", "null"], "format": "date-time"},
+          "extract_path": {"type": ["string", "null"]},
+          "index_path": {"type": ["string", "null"]},
+          "access_policy": {"enum": ["read-only", "review-before-write", "no-local-copy"]},
+          "retention": {"enum": ["ephemeral", "project", "restricted"]},
+          "notes": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
