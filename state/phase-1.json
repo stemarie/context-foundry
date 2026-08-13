@@ -1,7 +1,20 @@
 {
   "phase": 1,
-  "status": "active",
-  "stage": "pilot_execution",
+  "status": "verified",
+  "stage": "terminal_verified",
   "corpus_approval": "covered_by_authorized_work_order",
-  "pilot_question": "How should AI.Contract\u0027s current Coordinator/Worker model be extended into Architect/Worker/Auditor, based on the approved pilot corpus?"
+  "pilot_question": "How should AI.Contract\u0027s current Coordinator/Worker model be extended into Architect/Worker/Auditor, based on the approved pilot corpus?",
+  "terminal_artifacts": {
+    "manifest": "sources/manifest.json",
+    "packet": "packets/CF-P1-role-model.md",
+    "evidence_json": "evidence/CF-P1-role-model.json",
+    "evidence_markdown": "evidence/CF-P1-role-model.md",
+    "independent_audit": "audits/CF-P1-role-model-audit.md",
+    "synthesis": "synthesis/CF-P1-role-model-synthesis.md"
+  },
+  "independent_audit_verdict": "PASS",
+  "recovery_loop": {
+    "status": "stopped",
+    "verification": "hermes cron list reported no scheduled jobs on 2026-08-13T21:29:20Z"
+  }
 }
