@@ -4,7 +4,7 @@ Context Foundry is the canonical home for its Architect/Worker/Auditor profiles 
 
 ## Phase 1 status
 
-**Active pilot:** Foundation only. Phase 1 builds the workspace, evidence contracts, role profiles, Kanban templates, deterministic scripts, and one approved read-only dry run. It does **not** enable recurring source monitors, health jobs, retrospectives, free-form recursion, or autonomous external actions.
+**Terminal:** **verified and complete.** Phase 1 built the workspace, evidence contracts, role profiles, Kanban templates, deterministic scripts, and one authorized read-only dry run. The terminal evidence set is retained in `state/phase-1.json`, `evidence/`, `audits/`, and `synthesis/`. No recurring source monitor, health job, retrospective, free-form recursion, autonomous external action, or recovery cron is active.
 
 The pilot question is:
 
@@ -58,7 +58,7 @@ Architect: initialize and map the bounded pilot corpus
   → Verified and stop
 ```
 
-A `REQUEST_CHANGES` verdict creates a bounded Worker correction card and requires a fresh independent audit. The temporary Phase 1 loop is completion-triggered, with an hourly recovery fallback while active. It is quiet except for a genuine blocker or its final outcome. The authorized Phase 1 work order covers Architect selection of the bounded 3–5-source pilot corpus; only material corpus changes require renewed Architect review.
+A `REQUEST_CHANGES` verdict would create a bounded Worker correction card and require a fresh independent audit if a future authorized packet uses this workflow. Phase 1 itself is terminal: its former completion-triggered recovery loop and hourly fallback were removed after the independent `PASS` audit and Architect synthesis. The authorized Phase 1 work order covered Architect selection of the bounded 3–5-source pilot corpus; only material corpus changes would have required renewed Architect review.
 
 ## Quick start and checks
 
@@ -82,6 +82,6 @@ python3 -m unittest discover -s tests -v
 
 The profiles may run independent gateways. Their optional loopback API-server ports are reserved as Architect `8643`, Worker `8644`, and Auditor `8645`; all start disabled. Before enabling one, configure a unique `API_SERVER_KEY` only in that profile’s private `.env`, run the port check, and start/restart only that profile’s gateway. Do not copy credentials between profiles.
 
-## Terminal rule
+## Terminal Phase 1 record
 
-The temporary Phase 1 loop stops only when all Phase 1 deliverables exist, the bounded pilot corpus is covered by the authorized work order, valid cited evidence exists, an independent Auditor returns `PASS`, and the final synthesis artifact exists.
+Phase 1 is **verified and complete**. The required artifacts, valid cited evidence, independent Auditor `PASS`, and Architect synthesis are recorded in `state/phase-1.json`. Its temporary recovery cron was removed; no Phase 2+ monitor, health job, retrospective, recursive expansion, or other capability is enabled by that terminal result.
