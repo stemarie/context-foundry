@@ -82,6 +82,10 @@ python3 -m unittest discover -s tests -v
 
 The profiles may run independent gateways. Their optional loopback API-server ports are reserved as Architect `8643`, Worker `8644`, and Auditor `8645`; all start disabled. Before enabling one, configure a unique `API_SERVER_KEY` only in that profile’s private `.env`, run the port check, and start/restart only that profile’s gateway. Do not copy credentials between profiles.
 
+## Generic reusable skill pack
+
+The profile kit includes generic reusable skills: Architect has `context-foundry-intake`, `context-foundry-map`, `context-foundry-synthesis`, and `context-foundry-retrospective`; Worker has `context-foundry-evidence`; Auditor has `context-foundry-evidence-audit` alongside its independent recovery and delivery-audit skills. This pack governs profile/skill work only. It does not install a control-plane runtime, dependency graph automation, heartbeat/checkpoint behavior, cron/monitor, gateway, or external automation.
+
 ## Terminal Phase 1 record
 
-Phase 1 is **verified and complete**. The required artifacts, valid cited evidence, independent Auditor `PASS`, and Architect synthesis are recorded in `state/phase-1.json`. Its temporary recovery cron was removed; no Phase 2+ monitor, health job, retrospective, recursive expansion, or other capability is enabled by that terminal result.
+Phase 1 is **verified and complete**. The required artifacts, valid cited evidence, independent Auditor `PASS`, and Architect synthesis are recorded in `state/phase-1.json`. Its temporary recovery cron was removed; that terminal result did not enable a monitor, health job, recursive expansion, gateway, or other runtime capability.

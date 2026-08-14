@@ -8,14 +8,16 @@ PROFILES = {
     "foundry-architect": {
         "context-foundry-architect", "goal-loop", "kanban-orchestrator",
         "foundry-card-orchestration", "foundry-discrepancy-to-delivery",
+        "context-foundry-intake", "context-foundry-map", "context-foundry-synthesis",
+        "context-foundry-retrospective",
     },
     "foundry-worker": {
         "context-foundry-worker", "foundry-grounded-recovery",
-        "foundry-verified-implementation-delivery",
+        "foundry-verified-implementation-delivery", "context-foundry-evidence",
     },
     "foundry-auditor": {
         "context-foundry-auditor", "testing", "foundry-recovery-audit",
-        "foundry-verified-delivery-audit",
+        "foundry-verified-delivery-audit", "context-foundry-evidence-audit",
     },
 }
 
@@ -39,6 +41,23 @@ class ProfileKitTests(unittest.TestCase):
                 self.assertTrue(content.startswith("---\n"), f"{profile}/{skill} lacks frontmatter")
                 self.assertNotIn("ai-contract-", content.lower(), f"{profile}/{skill} retains old ownership")
                 self.assertNotIn("source: ai.contract", content.lower(), f"{profile}/{skill} retains old source")
+
+    def test_generic_skill_pack_is_role_bound_and_runtime_free(self):
+        expected = {
+            "foundry-architect": {
+                "context-foundry-intake", "context-foundry-map",
+                "context-foundry-synthesis", "context-foundry-retrospective",
+            },
+            "foundry-worker": {"context-foundry-evidence"},
+            "foundry-auditor": {"context-foundry-evidence-audit"},
+        }
+        forbidden = ("cronjob(", "schedule=", "gateway restart", "api_server_key")
+        for profile, skills in expected.items():
+            for skill in skills:
+                content = (ROOT / "profiles" / profile / "skills" / skill / "SKILL.md").read_text(encoding="utf-8").lower()
+                self.assertIn("## contract", content)
+                self.assertIn("## verification", content)
+                self.assertTrue(all(token not in content for token in forbidden), f"{profile}/{skill} adds runtime behavior")
 
     def test_contract_orchestration_kit_is_self_validating(self):
         result = subprocess.run(
