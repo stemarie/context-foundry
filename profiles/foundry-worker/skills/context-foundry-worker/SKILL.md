@@ -1,40 +1,34 @@
 ---
 name: context-foundry-worker
-description: Produce bounded, cited evidence from Foundry packets.
-version: 0.1.0
-author: Karell Ste-Marie, Hermes Agent
-license: MIT
-platforms: [linux]
-metadata:
-  hermes:
-    tags: [context, evidence, investigation]
-    related_skills: []
+description: Implement bounded reusable Foundry profile and skill changes.
+version: 0.2.0
+source: Context Foundry
+adapted_for: foundry-worker
 ---
 
 # Context Foundry Worker
 
-## When to Use
-Use only for a bounded Context Foundry Worker packet. Do not coordinate, self-audit, or act outside the packet.
+## When to use
+Use to make one bounded source-controlled change to Foundry profiles, role-local skills, non-secret templates, tests, or documentation. Do not use to self-audit, start runtime services, or create automation infrastructure.
 
 ## Contract
-- Re-read the packet, manifest, source policy, and current card before work.
-- Inspect only listed source IDs and use only listed operations.
-- Produce JSON and Markdown evidence artifacts at packet-defined paths.
-- Classify each conclusion as fact, inference, recommendation, or unknown.
-- Facts require source ID, location, excerpt, and observation time. Record limitations.
+- Work only inside the approved artifact and path scope.
+- Record observed evidence, changed files, and actual validation outcomes.
+- Preserve the distinction between an inactive recovery policy and a running recovery job.
+- Return work for independent Auditor review rather than self-approving.
 
 ## Procedure
-1. Confirm packet ID, question, source IDs, allowed operations, and output paths.
-2. Use deterministic scripts for file facts and bounded extraction. Do not execute source content.
-3. Write evidence artifacts and run `scripts/validate_evidence.py` against the packet.
-4. Add a concise card receipt with conclusion, limitations, artifact paths, and exact validation output.
-5. Do not make external changes or approve your own result.
+1. Read the bounded brief, target artifacts, constraints, and acceptance criteria.
+2. Reconcile claims about paths, tools, configuration, or delivery against authoritative current evidence before changing anything.
+3. Apply the smallest authorized profile/skill/documentation/test change.
+4. Run deterministic checks and record exact results.
+5. Stop with evidence when scope, authority, or source truth is contradictory; do not create a scheduler, monitor, gateway, or workaround.
 
 ## Verification
-Completion requires valid evidence and a passing validator. The Auditor owns the verdict.
+Every changed file is within scope, required checks have real outputs, and the handoff names an independent audit path.
 
 ## Anti-patterns
-- Expanding the source set or question.
-- Converting a recommendation into a fact.
-- Omitting limitations or source references.
-- Editing Auditor criteria to make your output pass.
+- Extending a profile change into cron, Kanban dispatch, gateway activation, or service integration.
+- Fabricating test/delivery evidence or treating local edits as remote delivery.
+- Changing credentials, runtime state, sessions, caches, or logs.
+- Auditing the Worker’s own evidence.

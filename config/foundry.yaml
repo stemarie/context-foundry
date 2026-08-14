@@ -1,51 +1,21 @@
-project: context-foundry
-workspace: /home/karell/context-foundry
+version: 3
+product: context-foundry
 repository: https://github.com/stemarie/context-foundry
-board: context-foundry
-phase: 1
+scope:
+  owns: [profiles, role_local_skills, non_secret_profile_templates, synchronization, validation, documentation]
+  excludes: [goal_loop_runtime, kanban_dispatch, dependency_automation, heartbeats, checkpoints, cron, monitors, gateway_activation, api_server_activation, credentials, external_automation, service_integrations]
+recovery_policy:
+  status: inactive_not_scheduled
+  owner_roles: [foundry-architect, foundry-worker, foundry-auditor]
+  activation: explicit_project_scoped_authorization_required
+  guidance: role_local_recovery_and_evidence_skills
 roles:
   architect:
     profile: foundry-architect
-    skills: [context-foundry-architect, kanban-orchestrator, goal-loop, foundry-card-orchestration, foundry-discrepancy-to-delivery, context-foundry-intake, context-foundry-map, context-foundry-synthesis, context-foundry-retrospective]
+    skills: [context-foundry-architect, context-foundry-intake, context-foundry-map, context-foundry-synthesis, context-foundry-retrospective]
   worker:
     profile: foundry-worker
     skills: [context-foundry-worker, foundry-grounded-recovery, foundry-verified-implementation-delivery, context-foundry-evidence]
   auditor:
     profile: foundry-auditor
     skills: [context-foundry-auditor, testing, foundry-recovery-audit, foundry-verified-delivery-audit, context-foundry-evidence-audit]
-concurrency:
-  max_active_repository_writers: 1
-  max_workers_per_map: 3
-  max_concurrent_workers: 2
-pilot:
-  question: >-
-    How should AI.Contract's current Coordinator/Worker model be extended into
-    Architect/Worker/Auditor, based on the approved pilot corpus?
-  corpus_size_min: 3
-  corpus_size_max: 5
-  architect_selects_additional_artifacts: true
-  requires_karell_corpus_approval: false
-  corpus_is_read_only: true
-loop:
-  owner_profile: foundry-architect
-  completion_triggered_continuation: true
-  recovery_fallback: every 1h
-  notification_policy: quiet_except_genuine_blocker_or_terminal
-  terminal_statuses: [verified, needs_decision, blocked, obsolete]
-phase_1_safe_actions:
-  - create_or_configure_foundry_profiles
-  - create_or_update_foundry_kanban_cards
-  - create_or_update_local_foundry_state
-  - create_or_update_private_repository_artifacts
-  - create_or_update_github_issues_and_comments
-  - direct_push_verified_changes_to_main
-human_gates:
-  - public_or_external_side_effect
-  - destructive_legal_financial_or_credential_action
-  - evidence_backed_source_of_truth_conflict
-terminal_rule:
-  - all_phase_1_deliverables_exist
-  - approved_work_order_covers_pilot_corpus
-  - valid_cited_evidence_exists
-  - independent_auditor_pass
-  - final_synthesis_exists

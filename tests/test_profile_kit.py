@@ -6,9 +6,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PROFILES = {
     "foundry-architect": {
-        "context-foundry-architect", "goal-loop", "kanban-orchestrator",
-        "foundry-card-orchestration", "foundry-discrepancy-to-delivery",
-        "context-foundry-intake", "context-foundry-map", "context-foundry-synthesis",
+        "context-foundry-architect", "context-foundry-intake",
+        "context-foundry-map", "context-foundry-synthesis",
         "context-foundry-retrospective",
     },
     "foundry-worker": {
@@ -58,6 +57,17 @@ class ProfileKitTests(unittest.TestCase):
                 self.assertIn("## contract", content)
                 self.assertIn("## verification", content)
                 self.assertTrue(all(token not in content for token in forbidden), f"{profile}/{skill} adds runtime behavior")
+
+    def test_scope_configuration_preserves_inactive_recovery_only(self):
+        config = (ROOT / "config" / "foundry.yaml").read_text(encoding="utf-8")
+        self.assertIn("status: inactive_not_scheduled", config)
+        self.assertIn("activation: explicit_project_scoped_authorization_required", config)
+        self.assertNotIn("loop:\n", config)
+        self.assertNotIn("recovery_fallback:", config)
+        self.assertNotIn("goal-loop", config)
+        self.assertNotIn("kanban-orchestrator", config)
+        self.assertNotIn("foundry-card-orchestration", config)
+        self.assertNotIn("foundry-discrepancy-to-delivery", config)
 
     def test_contract_orchestration_kit_is_self_validating(self):
         result = subprocess.run(

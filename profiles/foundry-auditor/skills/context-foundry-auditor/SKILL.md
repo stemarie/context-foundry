@@ -1,39 +1,33 @@
 ---
 name: context-foundry-auditor
-description: Independently audit Foundry evidence and reproducibility.
-version: 0.1.0
-author: Karell Ste-Marie, Hermes Agent
-license: MIT
-platforms: [linux]
-metadata:
-  hermes:
-    tags: [context, evidence, audit, verification]
-    related_skills: []
+description: Independently verify reusable Foundry profile and skill changes.
+version: 0.2.0
+source: Context Foundry
+adapted_for: foundry-auditor
 ---
 
 # Context Foundry Auditor
 
-## When to Use
-Use for an independent Context Foundry audit after its Worker card is complete. Do not author or repair the Worker evidence.
+## When to use
+Use to independently verify a bounded change to Foundry profiles, role-local skills, non-secret templates, tests, or documentation. Do not use to repair the change, operate runtime automation, or claim delivery without remote evidence.
 
 ## Contract
-- Independently read the packet, manifest, Worker receipt, and evidence artifacts.
-- Check scope, citation completeness, fact/inference classification, limitations, and deterministic validation output.
-- Run only safe read-only reproducibility commands needed to test the packet.
-- Return exactly PASS, REQUEST_CHANGES, or BLOCKED_WITH_EVIDENCE.
+- Independently assess scope, citations, role separation, source artifacts, and deterministic validation.
+- Verify recovery policy is documented as inactive unless separate evidence proves an authorized scheduler is registered.
+- Return `PASS`, `REQUEST_CHANGES`, or `BLOCKED_WITH_EVIDENCE`; never remediate the implementation under review.
 
 ## Procedure
-1. Confirm you did not materially author the evidence or audit rules being judged.
-2. Re-run the validator and inspect source references against manifest IDs.
-3. Test disputed factual claims with bounded read-only checks when practical.
-4. Issue a verdict with concrete evidence and required corrections. Do not repair the output yourself.
-5. On REQUEST_CHANGES, the Architect must route a Worker correction card and arrange a fresh audit.
+1. Read the approved brief, Worker evidence, changed paths, and required checks.
+2. Verify scope remains limited to profiles, skills, templates, synchronization, tests, or documentation.
+3. Re-run safe deterministic checks and inspect required source artifacts.
+4. Confirm no runtime scheduler, dispatcher, monitor, gateway/API-server activation, credential change, or external automation was introduced.
+5. Issue the evidence-backed verdict with bounded requirements if corrections are needed.
 
 ## Verification
-PASS only when every material fact is cited, packet scope is respected, validator succeeds, and no unapproved action occurred.
+A `PASS` requires reproducible checks, role-bound artifacts, no material discrepancy, and no unauthorized runtime behavior.
 
 ## Anti-patterns
-- Self-approving authored evidence or modified audit rules.
-- Repairing the Worker artifact and then passing it.
-- Approving based only on a Worker narrative.
-- Broadly re-investigating the project without a disputed claim.
+- Editing the work or evidence before judging it.
+- Treating a local commit, issue comment, or planned release as verified remote delivery.
+- Approving a profile/skill change that creates an implied control plane.
+- Converting inactive recovery guidance into a claim that recovery is actively scheduled.

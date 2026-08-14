@@ -4,7 +4,7 @@ Context Foundry is the canonical home for:
 
 - Architect / Worker / Auditor profile definitions;
 - profile metadata, non-secret config, role instructions, gateway-port policy, and role-local skills;
-- portable work-contract authoring, orchestration, recovery, and validation material in [`kits/contract-orchestration/`](kits/contract-orchestration/).
+- portable recovery, delivery, and validation guidance that remains profile/skill-only and does not activate runtime automation.
 
 AI.Contract is an independent Go service. It owns only its service source, API/schema/runtime behavior, tests, and service documentation. It does not own, install, validate, or require Foundry profiles or skills.
 

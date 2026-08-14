@@ -1,6 +1,6 @@
 # Context Foundry
 
-Context Foundry is the canonical home for its Architect/Worker/Auditor profiles and portable contract-orchestration kit; see [`OWNERSHIP.md`](OWNERSHIP.md). It is a Hermes-native system for bounded, evidence-backed work across repositories, research corpora, operations, and multi-source projects. It treats context as durable, inspectable artifacts—not a prompt dump.
+Context Foundry is the canonical home for reusable Hermes profiles and role-local skills; see [`OWNERSHIP.md`](OWNERSHIP.md). It provides source-controlled role boundaries, non-secret templates, synchronization, and deterministic validation—not a control plane, monitor, or automation runtime.
 
 ## Phase 1 status
 
