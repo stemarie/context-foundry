@@ -9,7 +9,7 @@ adapted_for: foundry-architect
 # Context Foundry Architect
 
 ## When to use
-Use to design, map, document, and synthesize changes to reusable Foundry profiles and skills. Do not use to operate a Kanban board, dispatcher, goal loop, scheduler, gateway, service, or external workflow.
+Use to design, map, document, and synthesize reusable Foundry profiles and skills. For an explicitly authorized target-repository release, use it only to produce the brief and create the initial issue; do not operate a Kanban board, dispatcher, goal loop, scheduler, gateway, service, or release delivery workflow.
 
 ## Contract
 - Keep Foundry limited to profile definitions, role-local skills, non-secret templates, synchronization, validation, and documentation.

@@ -8,15 +8,17 @@ PROFILES = {
     "foundry-architect": {
         "context-foundry-architect", "context-foundry-intake",
         "context-foundry-map", "context-foundry-synthesis",
-        "context-foundry-retrospective",
+        "context-foundry-retrospective", "foundry-release-brief",
     },
     "foundry-worker": {
         "context-foundry-worker", "foundry-grounded-recovery",
         "foundry-verified-implementation-delivery", "context-foundry-evidence",
+        "foundry-release-delivery",
     },
     "foundry-auditor": {
         "context-foundry-auditor", "testing", "foundry-recovery-audit",
         "foundry-verified-delivery-audit", "context-foundry-evidence-audit",
+        "foundry-release-audit",
     },
 }
 
@@ -68,6 +70,24 @@ class ProfileKitTests(unittest.TestCase):
         self.assertNotIn("kanban-orchestrator", config)
         self.assertNotIn("foundry-card-orchestration", config)
         self.assertNotIn("foundry-discrepancy-to-delivery", config)
+
+    def test_release_coordination_is_role_bound_and_target_guarded(self):
+        architect = (ROOT / "profiles/foundry-architect/skills/foundry-release-brief/SKILL.md").read_text(encoding="utf-8").lower()
+        worker = (ROOT / "profiles/foundry-worker/skills/foundry-release-delivery/SKILL.md").read_text(encoding="utf-8").lower()
+        auditor = (ROOT / "profiles/foundry-auditor/skills/foundry-release-audit/SKILL.md").read_text(encoding="utf-8").lower()
+        config = (ROOT / "config/foundry.yaml").read_text(encoding="utf-8")
+        for token in ("repository slug", "checkout `origin` remote", "github rest api target"):
+            self.assertIn(token, architect)
+        self.assertIn("initial tracking issue", architect)
+        self.assertIn("committing, commenting, linking, closing, tagging, or publishing as architect", architect)
+        self.assertIn("pre-publication auditor pass", worker)
+        self.assertIn("post-publication auditor pass", worker)
+        self.assertIn("external step partially succeeds", worker)
+        self.assertIn("pre-publication audit", auditor)
+        self.assertIn("post-publication audit", auditor)
+        self.assertIn("worker may close the issue", auditor)
+        self.assertIn("authentication: packet_supplied_nonsecret_helper", config)
+        self.assertIn("closure: worker_after_post_publication_auditor_pass", config)
 
     def test_contract_orchestration_kit_is_self_validating(self):
         result = subprocess.run(

@@ -9,7 +9,7 @@ adapted_for: foundry-worker
 # Context Foundry Worker
 
 ## When to use
-Use to make one bounded source-controlled change to Foundry profiles, role-local skills, non-secret templates, tests, or documentation. Do not use to self-audit, start runtime services, or create automation infrastructure.
+Use to make one bounded source-controlled change to Foundry profiles, role-local skills, non-secret templates, tests, or documentation; or to execute an explicitly authorized target-repository release packet. Do not use to self-audit, start runtime services, or create automation infrastructure.
 
 ## Contract
 - Work only inside the approved artifact and path scope.

@@ -84,7 +84,7 @@ The profiles may run independent gateways. Their optional loopback API-server po
 
 ## Generic reusable skill pack
 
-The profile kit includes generic reusable skills: Architect has `context-foundry-intake`, `context-foundry-map`, `context-foundry-synthesis`, and `context-foundry-retrospective`; Worker has `context-foundry-evidence`; Auditor has `context-foundry-evidence-audit` alongside its independent recovery and delivery-audit skills. This pack governs profile/skill work only. It does not install a control-plane runtime, dependency graph automation, heartbeat/checkpoint behavior, cron/monitor, gateway, or external automation.
+The profile kit includes generic reusable skills: Architect has `context-foundry-intake`, `context-foundry-map`, `context-foundry-synthesis`, `context-foundry-retrospective`, and `foundry-release-brief`; Worker has `context-foundry-evidence` and `foundry-release-delivery`; Auditor has `context-foundry-evidence-audit` and `foundry-release-audit` alongside its independent recovery and delivery-audit skills. Release coordination remains role guidance, not a runtime: Architect creates only the initial issue, Worker performs approved delivery, and Auditor independently gates publication and closure. This pack does not install a control-plane runtime, dependency graph automation, heartbeat/checkpoint behavior, cron/monitor, gateway, or external automation.
 
 ## Terminal Phase 1 record
 

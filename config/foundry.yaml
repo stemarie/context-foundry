@@ -9,13 +9,20 @@ recovery_policy:
   owner_roles: [foundry-architect, foundry-worker, foundry-auditor]
   activation: explicit_project_scoped_authorization_required
   guidance: role_local_recovery_and_evidence_skills
+release_coordination:
+  target_binding: [repository_slug, checkout_origin_remote, github_rest_target]
+  authentication: packet_supplied_nonsecret_helper
+  architect_issue_action: create_initial_tracking_issue_only
+  worker_delivery_actions: [commits, issue_evidence_and_closure, annotated_tag, github_release, remote_readback]
+  auditor_gates: [pre_publication, post_publication]
+  closure: worker_after_post_publication_auditor_pass
 roles:
   architect:
     profile: foundry-architect
-    skills: [context-foundry-architect, context-foundry-intake, context-foundry-map, context-foundry-synthesis, context-foundry-retrospective]
+    skills: [context-foundry-architect, context-foundry-intake, context-foundry-map, context-foundry-synthesis, context-foundry-retrospective, foundry-release-brief]
   worker:
     profile: foundry-worker
-    skills: [context-foundry-worker, foundry-grounded-recovery, foundry-verified-implementation-delivery, context-foundry-evidence]
+    skills: [context-foundry-worker, foundry-grounded-recovery, foundry-verified-implementation-delivery, context-foundry-evidence, foundry-release-delivery]
   auditor:
     profile: foundry-auditor
-    skills: [context-foundry-auditor, testing, foundry-recovery-audit, foundry-verified-delivery-audit, context-foundry-evidence-audit]
+    skills: [context-foundry-auditor, testing, foundry-recovery-audit, foundry-verified-delivery-audit, context-foundry-evidence-audit, foundry-release-audit]

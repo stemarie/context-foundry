@@ -7,23 +7,23 @@ profile_kit:
   gateway_port_check: python3 scripts/check_foundry_gateway_ports.py
 profiles:
   foundry-architect:
-    purpose: Design and maintain reusable profiles, skills, mappings, recovery policy, and synthesis.
+    purpose: Design profiles/skills and bounded release briefs; create only the initial tracking issue.
     toolsets: [terminal, file, skills]
-    local_skills: [context-foundry-architect, context-foundry-intake, context-foundry-map, context-foundry-synthesis, context-foundry-retrospective]
+    local_skills: [context-foundry-architect, context-foundry-intake, context-foundry-map, context-foundry-synthesis, context-foundry-retrospective, foundry-release-brief]
     repository_access: read_write_private_foundry_repo
     optional_api_server: {host: 127.0.0.1, port: 8643, default_enabled: false}
     prohibitions: [execute_worker_packet, audit_own_output, enable_runtime_automation]
   foundry-worker:
-    purpose: Execute one bounded packet or bounded correction and return cited evidence.
+    purpose: Execute bounded changes and audited release delivery with cited evidence.
     toolsets: [terminal, file, skills]
-    local_skills: [context-foundry-worker, foundry-grounded-recovery, foundry-verified-implementation-delivery, context-foundry-evidence]
+    local_skills: [context-foundry-worker, foundry-grounded-recovery, foundry-verified-implementation-delivery, context-foundry-evidence, foundry-release-delivery]
     repository_access: read_write_private_foundry_repo
     optional_api_server: {host: 127.0.0.1, port: 8644, default_enabled: false}
     prohibitions: [coordinate_program, expand_packet_scope, self_approve]
   foundry-auditor:
-    purpose: Independently validate evidence, citations, recovery claims, and safe reproducibility checks.
+    purpose: Independently validate evidence and pre/post-publication release delivery.
     toolsets: [terminal, file, skills]
-    local_skills: [context-foundry-auditor, testing, foundry-recovery-audit, foundry-verified-delivery-audit, context-foundry-evidence-audit]
+    local_skills: [context-foundry-auditor, testing, foundry-recovery-audit, foundry-verified-delivery-audit, context-foundry-evidence-audit, foundry-release-audit]
     repository_access: read_write_private_foundry_repo
     optional_api_server: {host: 127.0.0.1, port: 8645, default_enabled: false}
     prohibitions: [author_worker_evidence, repair_then_pass, self_approve]

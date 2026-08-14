@@ -9,7 +9,7 @@ adapted_for: foundry-auditor
 # Context Foundry Auditor
 
 ## When to use
-Use to independently verify a bounded change to Foundry profiles, role-local skills, non-secret templates, tests, or documentation. Do not use to repair the change, operate runtime automation, or claim delivery without remote evidence.
+Use to independently verify a bounded change to Foundry profiles, role-local skills, non-secret templates, tests, documentation, or an explicitly authorized target-repository release packet. Do not use to repair the change, operate runtime automation, or claim delivery without remote evidence.
 
 ## Contract
 - Independently assess scope, citations, role separation, source artifacts, and deterministic validation.
