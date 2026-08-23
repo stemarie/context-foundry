@@ -21,7 +21,8 @@ Use to independently verify a bounded change to Foundry profiles, role-local ski
 2. Verify scope remains limited to profiles, skills, templates, synchronization, tests, or documentation.
 3. Re-run safe deterministic checks and inspect required source artifacts.
 4. Confirm no runtime scheduler, dispatcher, monitor, gateway/API-server activation, credential change, or external automation was introduced.
-5. Issue the evidence-backed verdict with bounded requirements if corrections are needed.
+5. For an AI.Contract serial chain, record and read back the service verdict/status pair: `PASS` → `Done`; `REQUEST_CHANGES` or `BLOCKED_WITH_EVIDENCE` → `Blocked`. Never issue a generic status update for a frozen contract.
+6. Issue the evidence-backed verdict with bounded requirements if corrections are needed.
 
 ## Verification
 A `PASS` requires reproducible checks, role-bound artifacts, no material discrepancy, and no unauthorized runtime behavior.

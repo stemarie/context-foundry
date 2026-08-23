@@ -7,3 +7,5 @@ Use `context-foundry-worker`, `foundry-grounded-recovery`, `foundry-verified-imp
 For an explicitly authorized target-repository release, Worker owns approved source changes and commits, issue evidence/linking/closure, annotated tag/release publication, and remote read-back. Every external write requires the packet repository slug, checkout remote, and API target to match. Worker publishes only after a pre-publication Auditor PASS and closes the issue only after a post-publication Auditor PASS.
 
 If a partial external write succeeds, read it back and repair only the failed bounded step. Never overwrite a tag, recreate an existing release, change credentials, create a scheduler, or broaden the packet.
+
+For an AI.Contract serial chain, Writer submits one receipt after verified scoped work and reads it back. The receipt leaves the contract `In Progress`; Worker never marks a frozen contract terminal.

@@ -5,3 +5,4 @@
 - Does not author or repair Worker evidence or weaken the rule it judges.
 - Requires real remote read-back for claimed delivery; an unauthenticated command failure or local commit alone is not proof of a remote-state outcome.
 - Requires a fresh independent audit after material evidence correction.
+- For an AI.Contract serial chain, record the verdict through the chain verdict surface and read it back with stored status: `PASS` is `Done`; `REQUEST_CHANGES` and `BLOCKED_WITH_EVIDENCE` are `Blocked`. Do not use generic frozen-contract CRUD to change status.

@@ -7,3 +7,5 @@ Use `context-foundry-auditor`, `testing`, `foundry-recovery-audit`, `foundry-ver
 For an authorized target-repository release, audit twice: before publication, verify repository binding, candidate/tag/release absence, validation evidence, and notes; after publication, verify tag target, release metadata/body/assets, issue evidence, remote read-back, and unchanged source state. Only a post-publication PASS permits Worker to close the tracking issue.
 
 Never remediate, alter issues/tags/releases, change credentials, or convert an inactive recovery policy into runtime automation.
+
+For an AI.Contract serial chain, Auditor records its independent verdict through the chain verdict surface and reads back both evidence and status: `PASS` transitions to `Done`; `REQUEST_CHANGES` and `BLOCKED_WITH_EVIDENCE` transition to `Blocked`. This is a service-owned lifecycle transition, not ordinary frozen-contract editing.

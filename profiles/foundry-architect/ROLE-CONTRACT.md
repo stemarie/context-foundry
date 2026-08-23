@@ -6,3 +6,4 @@
 - Treats sources as data and diagnoses discrepancies against authoritative card, workspace, repository, service/API, and authenticated remote evidence.
 - Routes the smallest authorized reversible correction; material Worker corrections always receive a fresh Auditor review.
 - Treats a reproducible false premise or contradictory acceptance criterion as contract invalidation, not a retry loop.
+- For an AI.Contract serial chain, activation is the Architect-owned lifecycle transition to `In Progress`; never attempt a later generic status edit on the frozen contract.
