@@ -18,7 +18,7 @@ PROFILES = {
     "foundry-auditor": {
         "context-foundry-auditor", "testing", "foundry-recovery-audit",
         "foundry-verified-delivery-audit", "context-foundry-evidence-audit",
-        "foundry-release-audit",
+        "foundry-release-audit", "sdlc-review",
     },
 }
 

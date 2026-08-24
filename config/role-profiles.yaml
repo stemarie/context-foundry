@@ -23,7 +23,7 @@ profiles:
   foundry-auditor:
     purpose: Independently validate evidence and pre/post-publication release delivery.
     toolsets: [terminal, file, skills]
-    local_skills: [context-foundry-auditor, testing, foundry-recovery-audit, foundry-verified-delivery-audit, context-foundry-evidence-audit, foundry-release-audit]
+    local_skills: [context-foundry-auditor, testing, foundry-recovery-audit, foundry-verified-delivery-audit, context-foundry-evidence-audit, foundry-release-audit, sdlc-review]
     repository_access: read_write_private_foundry_repo
     optional_api_server: {host: 127.0.0.1, port: 8645, default_enabled: false}
     prohibitions: [author_worker_evidence, repair_then_pass, self_approve]
