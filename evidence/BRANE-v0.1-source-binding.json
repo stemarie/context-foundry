@@ -1,0 +1,35 @@
+{
+  "document": {
+    "cbor_marker_present": true,
+    "frozen_decision_appendix_present": true,
+    "id": "1IJpQaoZiWKtxCuaYcfzYCmt1LjouyQ5J1fmx5K9Ncu4",
+    "q32_32_marker_present": true,
+    "rust_marker_present": true,
+    "title": "BRANE \u2014 Technical Specification"
+  },
+  "kind": "BRANE v0.1 authenticated source-binding receipt",
+  "local_read_only_checkout": {
+    "clean": true,
+    "head": "22300ca3cc8eb7726321c5d5e51a9b7fdd0a6289",
+    "head_matches_baseline": true,
+    "origin": "https://github.com/stemarie/brane.git",
+    "path": "/tmp/brane-preflight"
+  },
+  "scope": "Verification-only evidence. It does not authorize BRANE implementation, Worker/Auditor dispatch, or external mutation.",
+  "target_repository": {
+    "baseline_matches": true,
+    "branch": "main",
+    "expected_baseline_sha": "22300ca3cc8eb7726321c5d5e51a9b7fdd0a6289",
+    "remote_sha": "22300ca3cc8eb7726321c5d5e51a9b7fdd0a6289",
+    "slug": "stemarie/brane"
+  },
+  "tracking_issue": {
+    "idempotency_marker_present": true,
+    "number": 1,
+    "state": "open",
+    "title": "BRANE v0.1: Architect contract and implementation plan",
+    "url": "https://github.com/stemarie/brane/issues/1"
+  },
+  "verified_at_utc": "2026-08-24T03:07:02.459433+00:00",
+  "verified_by": "default profile via authenticated Google Docs and GitHub APIs"
+}
