@@ -13,7 +13,7 @@ adapted_for: foundry-auditor
 2. Re-run packet-approved read-only validators and targeted reproducibility checks. A Worker narrative is never sufficient.
 3. Confirm every claimed test, lint, hash, and diff check has real output; classify skipped/unavailable checks as not run, never pass.
 4. Confirm repair scope: no unapproved source expansion, evidence rewrite by Auditor, secret leakage, generated debris, or unrelated checkout mutation.
-5. For a delivery claim, require equality among local revision, authenticated remote branch, and fetched tracking branch. A local commit alone fails this check.
+5. For a delivery claim, require equality among local revision, authenticated remote branch, and fetched tracking branch. Authenticate Git reads only through `python3 /home/karell/context-foundry/scripts/foundry_authenticated_git.py`; a bare HTTPS Git failure is not credential evidence. A local commit alone fails this check.
 6. Return PASS only if material facts are cited, packet scope holds, validators pass, recovery claims are evidenced, and no unapproved action occurred.
 
 ## Error correction handling

@@ -18,7 +18,7 @@ Use only for a bounded Worker packet or Architect-routed correction with named s
 4. Apply the smallest reversible, authorized correction. Preserve unrelated changes; never expand source set, question, operations, or side effects.
 5. Regenerate only the packet-defined evidence/receipt outputs. Run every required validator, focused test, lint/diff check, and cleanup check. Record actual commands and outcomes.
 6. Inspect the exact final diff for secrets, generated debris, accidental path exposure, or scope expansion.
-7. Commit/push only when authorized. For delivery, verify local `HEAD`, authenticated remote branch, and fetched tracking branch agree. A local commit is not delivery proof.
+7. Commit/push only when authorized. For every authenticated GitHub read or branch delivery, invoke `python3 /home/karell/context-foundry/scripts/foundry_authenticated_git.py` with only its permitted `fetch`, `ls-remote`, or non-force explicit-branch `push` form. Never use bare HTTPS Git or copy/export a credential. For delivery, verify local `HEAD`, authenticated remote branch, and fetched tracking branch agree. A local commit is not delivery proof.
 8. Write and re-read the Kanban receipt with changed paths, repair evidence, validation output, limitations, delivery evidence, and unresolved facts. Do not self-audit or declare the Auditor verdict.
 
 ## Contract invalidation

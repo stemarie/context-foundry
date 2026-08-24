@@ -14,7 +14,7 @@ Use after Architect supplies a bounded target-repository release packet. Do not 
 ## Contract
 - Worker owns approved source commits, issue evidence/linking/closure, tag/release publication, and remote read-back.
 - Before every external write, require target repository slug = checkout remote = GitHub API target.
-- Use only the packet’s non-secret authentication helper; never print, copy, or change credentials.
+- Use only the packet’s non-secret authentication helper: `python3 /home/karell/context-foundry/scripts/foundry_authenticated_git.py` for authenticated Git reads and non-force branch delivery. Never print, copy, export, or change credentials.
 - Publish only after pre-publication Auditor PASS; close the issue only after post-publication Auditor PASS.
 
 ## Procedure

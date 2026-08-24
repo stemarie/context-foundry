@@ -84,6 +84,10 @@ python3 -m unittest discover -s tests -v
 
 The profiles may run independent gateways. Their optional loopback API-server ports are reserved as Architect `8643`, Worker `8644`, and Auditor `8645`; all start disabled. Before enabling one, configure a unique `API_SERVER_KEY` only in that profile’s private `.env`, run the port check, and start/restart only that profile’s gateway. Do not copy credentials between profiles.
 
+### Authenticated Foundry Git transport
+
+Hermes strips `GITHUB_TOKEN` from terminal subprocesses by design. The three Foundry roles therefore use the source-controlled, non-secret helper `python3 /home/karell/context-foundry/scripts/foundry_authenticated_git.py` for authenticated GitHub transport. It reads only the invoking role's own private `.env`, never prints or exports the token to the agent shell, accepts only `fetch`, `ls-remote`, and non-force explicit-branch `push`, and rejects any origin outside Karell's `stemarie` GitHub namespace. Packets cite this helper; Workers use it for delivery and Auditors use it for remote read-back.
+
 ## Generic reusable skill pack
 
 The profile kit includes generic reusable skills: Architect has `context-foundry-intake`, `context-foundry-map`, `context-foundry-synthesis`, `context-foundry-retrospective`, and `foundry-release-brief`; Worker has `context-foundry-evidence` and `foundry-release-delivery`; Auditor has `context-foundry-evidence-audit` and `foundry-release-audit` alongside its independent recovery and delivery-audit skills. Release coordination remains role guidance, not a runtime: Architect creates only the initial issue, Worker performs approved delivery, and Auditor independently gates publication and closure. This pack does not install a control-plane runtime, dependency graph automation, heartbeat/checkpoint behavior, cron/monitor, gateway, or external automation.

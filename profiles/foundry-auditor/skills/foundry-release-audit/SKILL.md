@@ -13,7 +13,7 @@ Use to independently audit a Worker release packet for a declared target reposit
 
 ## Contract
 - Verify target repository slug, checkout remote, and GitHub API target match before accepting evidence.
-- Require authenticated remote read-back through the packet’s non-secret helper reference.
+- Require authenticated remote read-back through `python3 /home/karell/context-foundry/scripts/foundry_authenticated_git.py`, the packet’s non-secret helper reference. It permits only GitHub `fetch`, `ls-remote`, and non-force explicit-branch `push` against a `stemarie` origin.
 - Return `PASS`, `REQUEST_CHANGES`, or `BLOCKED_WITH_EVIDENCE` only.
 - Perform distinct pre-publication and post-publication audits.
 

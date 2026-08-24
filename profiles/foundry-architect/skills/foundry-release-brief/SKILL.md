@@ -20,7 +20,7 @@ Use for an explicitly authorized GitHub release in a declared target repository.
 ## Procedure
 1. Read the target repository state and authenticated remote inventory; record facts, not assumptions.
 2. State the candidate SHA, proposed version/tag, release type, notes, assets policy, and required validations.
-3. Specify an approved non-secret authentication helper reference for Worker and Auditor; never copy a credential into the packet.
+3. Specify `python3 /home/karell/context-foundry/scripts/foundry_authenticated_git.py` as the approved non-secret authentication helper reference for Worker and Auditor; never copy a credential into the packet. The helper supports only authenticated `fetch`, `ls-remote`, and non-force explicit-branch `push` against a `stemarie` GitHub origin.
 4. Create the initial issue only after the three-way repository binding matches.
 5. Produce a Worker packet and pre/post-publication Auditor packet. Architect performs no further GitHub write.
 
