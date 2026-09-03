@@ -18,7 +18,7 @@ Default profile names are recommendations and configurable in `config/foundry.ya
 
 - **Architect** (`foundry-architect`) — owns intake, source mapping, packet design, routing, human gates, and synthesis. It does not execute Worker or Auditor tasks and never audits its own conclusions.
 - **Worker** (`foundry-worker`) — performs one bounded packet, writes authorized artifacts, and returns cited evidence.
-- **Auditor** (`foundry-auditor`) — independently checks scope, citations, evidence schema/classification, and safe deterministic reproducibility checks. It returns `PASS`, `REQUEST_CHANGES`, or `BLOCKED_WITH_EVIDENCE`.
+- **Auditor** (`foundry-auditor`) — independently checks scope, citations, evidence schema/classification, and safe deterministic reproducibility checks. It returns `PASS`, `REQUEST_CHANGES`, or last-resort `BLOCKED`; structured evidence is mandatory for every verdict.
 
 All roles may write this private repository and its GitHub Issues. Kanban is the durable control plane and permits only one active repository writer. The Auditor may not pass evidence or audit rules it materially authored or changed.
 
@@ -55,12 +55,12 @@ reports/      Durable run reports
 ```text
 Architect: initialize and map the bounded pilot corpus
   → Worker: produce cited evidence
-  → Auditor: PASS / REQUEST_CHANGES / BLOCKED_WITH_EVIDENCE
+  → Auditor: PASS / REQUEST_CHANGES / BLOCKED
   → Architect: synthesis
   → Verified and stop
 ```
 
-A `REQUEST_CHANGES` verdict would create a bounded Worker correction card and require a fresh independent audit if a future authorized packet uses this workflow. Phase 1 itself is terminal: its former completion-triggered recovery loop and hourly fallback were removed after the independent `PASS` audit and Architect synthesis. The authorized Phase 1 work order covered Architect selection of the bounded 3–5-source pilot corpus; only material corpus changes would have required renewed Architect review.
+A `REQUEST_CHANGES` verdict creates a bounded Worker correction card and requires a fresh independent audit if a future authorized packet uses this workflow. `BLOCKED` is a last-resort safety escalation: it preserves evidence and stops automatic continuation until an Architect or human makes a new decision. Phase 1 itself is terminal: its former completion-triggered recovery loop and hourly fallback were removed after the independent `PASS` audit and Architect synthesis. The authorized Phase 1 work order covered Architect selection of the bounded 3–5-source pilot corpus; only material corpus changes would have required renewed Architect review.
 
 ## Quick start and checks
 

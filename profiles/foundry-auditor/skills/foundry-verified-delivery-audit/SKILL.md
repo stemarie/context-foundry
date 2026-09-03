@@ -18,5 +18,5 @@ adapted_for: foundry-auditor
 
 ## Error correction handling
 - `REQUEST_CHANGES`: identify precise bounded Worker corrections and require a fresh independent audit.
-- `BLOCKED_WITH_EVIDENCE`: record concrete external barrier or contract-invalidating evidence; do not remedy it.
+- `BLOCKED`: use only as a last-resort safety escalation for compromised evidence integrity, an unapproved external effect or security boundary breach, a materially contradictory contract, or an exhausted correction budget. Preserve the evidence; do not remedy it.
 - Never weaken a validation rule or change a Worker artifact to make the result pass.

@@ -34,7 +34,7 @@ Produce a concise decision record that separates verified facts, implementation 
 
 ## Pitfalls
 - Do not label a local commit, profile sync, or issue closure as a release without remote proof.
-- Do not collapse an Auditor `REQUEST_CHANGES` or `BLOCKED_WITH_EVIDENCE` into success.
+- Do not collapse an Auditor `REQUEST_CHANGES` or `BLOCKED` into success. `REQUEST_CHANGES` is recoverable; `BLOCKED` is a last-resort safety escalation requiring a new decision.
 - Do not convert recommendations into active profiles, cron jobs, or gateways.
 
 ## Verification

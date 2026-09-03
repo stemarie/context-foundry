@@ -46,4 +46,4 @@ How should AI.Contract's current Coordinator/Worker model be extended into Archi
 
 ## Terminal handling
 
-On `REQUEST_CHANGES`, the Architect creates a bounded correction card and a fresh independent audit. On `BLOCKED_WITH_EVIDENCE`, stop and surface only the concrete blocker. No Phase 2 capability is enabled by this work.
+On `REQUEST_CHANGES`, the Architect creates a bounded correction card and a fresh independent audit. `BLOCKED` is reserved for last-resort unsafe continuation under existing authority: preserve the evidence, stop automatic continuation, and require a new Architect or human decision. No Phase 2 capability is enabled by this work.

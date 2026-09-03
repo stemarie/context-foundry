@@ -71,6 +71,27 @@ class ProfileKitTests(unittest.TestCase):
         self.assertNotIn("foundry-card-orchestration", config)
         self.assertNotIn("foundry-discrepancy-to-delivery", config)
 
+    def test_auditor_verdicts_preserve_recoverable_change_requests(self):
+        role_contract = (ROOT / "profiles/foundry-auditor/ROLE-CONTRACT.md").read_text(encoding="utf-8")
+        for token in ("`PASS`", "`REQUEST_CHANGES`", "`BLOCKED`", "not to spec", "wrong path", "last-resort"):
+            self.assertIn(token, role_contract)
+        self.assertIn("not a terminal block", role_contract)
+        self.assertIn("unsafe to continue", role_contract)
+
+        tracked = subprocess.run(
+            ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True,
+        ).stdout.splitlines()
+        obsolete_verdict = "BLOCKED" + "_WITH_EVIDENCE"
+        for relative in tracked:
+            path = ROOT / relative
+            if path.suffix.lower() not in {".md", ".py", ".yaml", ".yml"}:
+                continue
+            self.assertNotIn(
+                obsolete_verdict,
+                path.read_text(encoding="utf-8"),
+                f"obsolete verdict remains in {relative}",
+            )
+
     def test_release_coordination_is_role_bound_and_target_guarded(self):
         architect = (ROOT / "profiles/foundry-architect/skills/foundry-release-brief/SKILL.md").read_text(encoding="utf-8").lower()
         worker = (ROOT / "profiles/foundry-worker/skills/foundry-release-delivery/SKILL.md").read_text(encoding="utf-8").lower()

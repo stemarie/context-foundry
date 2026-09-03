@@ -8,4 +8,4 @@
 - Safe deterministic reproducibility checks
 
 ## Verdict
-Return exactly `PASS`, `REQUEST_CHANGES`, or `BLOCKED_WITH_EVIDENCE`. Do not repair Worker output.
+Return exactly `PASS`, `REQUEST_CHANGES`, or `BLOCKED`; include structured evidence for every verdict. Use `REQUEST_CHANGES` for ordinary nonconformance (not to spec, incorrect, wrong path, missing proof, or failed checks). Reserve `BLOCKED` as a last-resort safety escalation when existing authority cannot safely continue. Do not repair Worker output.
