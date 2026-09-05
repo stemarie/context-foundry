@@ -24,6 +24,12 @@ Use to independently verify a bounded change to Foundry profiles, role-local ski
 5. For an AI.Contract serial chain, record and read back the service verdict/status pair: `PASS` → `Done`; `REQUEST_CHANGES` or `BLOCKED_WITH_EVIDENCE` → `Blocked`. Never issue a generic status update for a frozen contract.
 6. Issue the evidence-backed verdict with bounded requirements if corrections are needed.
 
+## Closure continuation and target scope
+- The durable continuation workflow is: `Closure Auditor PASS → fresh Architect selection pass → smallest justified next tranche.`
+- A Closure PASS transfers selection only; it does not select or authorize a speculative successor. Candidate or Closure `REQUEST_CHANGES` and `BLOCKED_WITH_EVIDENCE` retain the independent, narrow corrective path where possible and do not start an unrelated tranche.
+- Closure Auditor verification and Issue-close authority remain independent and unchanged; a Closure PASS does not alter that authority.
+- Foundry workflow applies to every authorized target, including active game resources. It does not impose game mechanics or product behavior and does not change a target merely to codify this policy.
+
 ## Verification
 A `PASS` requires reproducible checks, role-bound artifacts, no material discrepancy, and no unauthorized runtime behavior.
 

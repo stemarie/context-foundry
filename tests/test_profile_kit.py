@@ -89,6 +89,34 @@ class ProfileKitTests(unittest.TestCase):
         self.assertIn("authentication: packet_supplied_nonsecret_helper", config)
         self.assertIn("closure: worker_after_post_publication_auditor_pass", config)
 
+    def test_closure_continuation_policy_is_role_bound_and_target_neutral(self):
+        auditor = (ROOT / "profiles/foundry-auditor/skills/context-foundry-auditor/SKILL.md").read_text(encoding="utf-8")
+        architect = (ROOT / "profiles/foundry-architect/skills/context-foundry-architect/SKILL.md").read_text(encoding="utf-8")
+        workflow = "Closure Auditor PASS → fresh Architect selection pass → smallest justified next tranche."
+        scope = "Foundry workflow applies to every authorized target, including active game resources."
+
+        self.assertIn(workflow, auditor)
+        self.assertIn("Closure PASS transfers selection only; it does not select or authorize a speculative successor.", auditor)
+        self.assertIn("Candidate or Closure `REQUEST_CHANGES` and `BLOCKED_WITH_EVIDENCE` retain the independent, narrow corrective path", auditor)
+        self.assertIn("do not start an unrelated tranche.", auditor)
+        self.assertIn("Closure Auditor verification and Issue-close authority remain independent and unchanged", auditor)
+        self.assertIn(scope, auditor)
+        self.assertIn("does not impose game mechanics or product behavior", auditor)
+        self.assertIn("does not change a target merely to codify this policy.", auditor)
+
+        self.assertIn(workflow, architect)
+        self.assertIn("inspects current specifications and open/nonterminal work", architect)
+        self.assertIn("selects only the smallest evidence-justified tranche", architect)
+        self.assertIn("not permission to create a speculative implementation chain", architect)
+        self.assertIn("`NO ACTIONABLE NEXT STEP`", architect)
+        self.assertIn("specifications are exhausted", architect)
+        self.assertIn("non-corrective tool, capability, or integration; onboarding or access; a material decision", architect)
+        self.assertIn("not a simple corrective action", architect)
+        self.assertIn("exhausted boundary, non-corrective dependency, and smallest restart decision or enablement", architect)
+        self.assertIn(scope, architect)
+        self.assertIn("does not impose game mechanics or product behavior", architect)
+        self.assertIn("does not change a target merely to codify this policy.", architect)
+
     def test_contract_orchestration_kit_is_self_validating(self):
         result = subprocess.run(
             [sys.executable, "kits/contract-orchestration/verification/validate.py", "--self-test"],
