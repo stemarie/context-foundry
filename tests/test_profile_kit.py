@@ -100,10 +100,14 @@ class ProfileKitTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)
             (target / "foundry-auditor").mkdir()
+            (target / "foundry-architect").mkdir()
             self.assertEqual(sync_foundry_profiles.sync("foundry-auditor", True, target), [])
+            self.assertEqual(sync_foundry_profiles.sync("foundry-architect", True, target), [])
             self.assertTrue((target / "foundry-auditor/adapters/closure_auditor.py").is_file())
+            self.assertTrue((target / "foundry-architect/adapters/task_bound_issue.py").is_file())
             self.assertTrue((target / "foundry-auditor/ROLE-CONTRACT.md").is_file())
             self.assertEqual(sync_foundry_profiles.sync("foundry-auditor", False, target), [])
+            self.assertEqual(sync_foundry_profiles.sync("foundry-architect", False, target), [])
         result = subprocess.run(
             [sys.executable, "scripts/sync_foundry_profiles.py", "--check-source"],
             cwd=ROOT, capture_output=True, text=True,
