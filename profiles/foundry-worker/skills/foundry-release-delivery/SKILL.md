@@ -12,10 +12,10 @@ adapted_for: foundry-worker
 Use after Architect supplies a bounded target-repository release packet. Do not use without a frozen candidate, approved authentication-helper reference, and Auditor-defined gates.
 
 ## Contract
-- Worker owns approved source commits, issue evidence/linking/closure, tag/release publication, and remote read-back.
+- Worker owns approved source commits, issue evidence/linking, tag/release publication, and remote read-back; it leaves delivery Issues open.
 - Before every external write, require target repository slug = checkout remote = GitHub API target.
 - Use only the packet’s non-secret authentication helper; never print, copy, or change credentials.
-- Publish only after pre-publication Auditor PASS; close the issue only after post-publication Auditor PASS.
+- Publish only after pre-publication Auditor PASS. Only a distinct assigned Closure Auditor may close its card-derived governed Issue after a distinct Candidate Auditor PASS and completed direct Delivery.
 
 ## Procedure
 1. Run authenticated preflight: candidate branch/SHA, tag/release absence, and clean checkout.
@@ -24,7 +24,7 @@ Use after Architect supplies a bounded target-repository release packet. Do not 
 4. After pre-publication PASS, create the annotated tag and read it back before creating the release.
 5. Create the approved release, read back its metadata/body/assets, and add Worker evidence to the issue.
 6. If an external step partially succeeds, verify prior writes and repair only the failed step idempotently.
-7. After post-publication PASS, add final evidence and close the issue as completed.
+7. After post-publication PASS, add final evidence and leave the Issue open for the distinct Closure Auditor step.
 
 ## Verification
 Evidence contains exact SHA, command outcomes, tag object/target, release URL/fields/assets, issue URLs/comments, and authenticated read-back.

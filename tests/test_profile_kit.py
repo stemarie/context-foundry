@@ -1,9 +1,16 @@
+import importlib.util
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+SYNC_PATH = ROOT / "scripts/sync_foundry_profiles.py"
+spec = importlib.util.spec_from_file_location("sync_foundry_profiles", SYNC_PATH)
+assert spec and spec.loader
+sync_foundry_profiles = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(sync_foundry_profiles)
 PROFILES = {
     "foundry-architect": {
         "context-foundry-architect", "context-foundry-intake",
@@ -81,13 +88,28 @@ class ProfileKitTests(unittest.TestCase):
         self.assertIn("initial tracking issue", architect)
         self.assertIn("committing, commenting, linking, closing, tagging, or publishing as architect", architect)
         self.assertIn("pre-publication auditor pass", worker)
-        self.assertIn("post-publication auditor pass", worker)
+        self.assertIn("candidate auditor pass", worker)
         self.assertIn("external step partially succeeds", worker)
         self.assertIn("pre-publication audit", auditor)
         self.assertIn("post-publication audit", auditor)
-        self.assertIn("worker may close the issue", auditor)
+        self.assertIn("closure auditor may use its card-derived closure adapter", auditor)
         self.assertIn("authentication: packet_supplied_nonsecret_helper", config)
-        self.assertIn("closure: worker_after_post_publication_auditor_pass", config)
+        self.assertIn("closure: closure_auditor_after_candidate_pass_and_delivery", config)
+
+    def test_source_assets_deploy_to_an_isolated_target_and_check_source_avoids_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            (target / "foundry-auditor").mkdir()
+            self.assertEqual(sync_foundry_profiles.sync("foundry-auditor", True, target), [])
+            self.assertTrue((target / "foundry-auditor/adapters/closure_auditor.py").is_file())
+            self.assertTrue((target / "foundry-auditor/ROLE-CONTRACT.md").is_file())
+            self.assertEqual(sync_foundry_profiles.sync("foundry-auditor", False, target), [])
+        result = subprocess.run(
+            [sys.executable, "scripts/sync_foundry_profiles.py", "--check-source"],
+            cwd=ROOT, capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("mode=check-source", result.stdout)
 
     def test_closure_continuation_policy_is_role_bound_and_target_neutral(self):
         auditor = (ROOT / "profiles/foundry-auditor/skills/context-foundry-auditor/SKILL.md").read_text(encoding="utf-8")

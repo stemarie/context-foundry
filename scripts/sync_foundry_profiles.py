@@ -15,28 +15,36 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PROFILES = ("foundry-architect", "foundry-worker", "foundry-auditor")
 INSTALLED_ROOT = Path.home() / ".hermes" / "profiles"
-BASE_ASSETS = (Path("profile.yaml"), Path("config.yaml"), Path("SOUL.md"))
+BASE_ASSETS = (Path("profile.yaml"), Path("config.yaml"), Path("SOUL.md"), Path("ROLE-CONTRACT.md"))
+DISCOVERED_ASSET_GLOBS = ("skills/*/SKILL.md", "adapters/*.py")
+REQUIRED_PROFILE_ASSETS = {
+    "foundry-auditor": (Path("adapters/closure_auditor.py"),),
+}
 
 
 def assets(profile: str) -> list[Path]:
     source = ROOT / "profiles" / profile
     found = list(BASE_ASSETS)
-    found.extend(sorted(path.relative_to(source) for path in (source / "skills").glob("*/SKILL.md")))
+    for pattern in DISCOVERED_ASSET_GLOBS:
+        found.extend(sorted(path.relative_to(source) for path in source.glob(pattern)))
     return found
 
 
 def validate_source(profile: str) -> list[str]:
     source = ROOT / "profiles" / profile
     errors: list[str] = []
-    for required in (*BASE_ASSETS, Path("ROLE-CONTRACT.md")):
+    for required in (*BASE_ASSETS, *REQUIRED_PROFILE_ASSETS.get(profile, ())):
         if not (source / required).is_file():
             errors.append(f"missing repository asset: {profile}/{required}")
+    for relative in assets(profile):
+        if not (source / relative).is_file():
+            errors.append(f"missing discovered repository asset: {profile}/{relative}")
     return errors
 
 
-def sync(profile: str, apply: bool) -> list[str]:
+def sync(profile: str, apply: bool, installed_root: Path = INSTALLED_ROOT) -> list[str]:
     source_root = ROOT / "profiles" / profile
-    target_root = INSTALLED_ROOT / profile
+    target_root = installed_root / profile
     errors = validate_source(profile)
     if not target_root.is_dir():
         return errors + [f"missing installed profile: {profile}"]
@@ -69,16 +77,18 @@ def main() -> int:
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--check", action="store_true")
     action.add_argument("--apply", action="store_true")
+    action.add_argument("--check-source", action="store_true")
     args = parser.parse_args()
     errors: list[str] = []
     for profile in PROFILES:
-        errors.extend(sync(profile, args.apply))
+        errors.extend(validate_source(profile) if args.check_source else sync(profile, args.apply))
     if errors:
         print("PROFILE_KIT_INVALID")
         print("\n".join(f"- {error}" for error in errors))
         return 1
     print("PROFILE_KIT_VALID")
-    print(f"mode={'apply' if args.apply else 'check'} profiles={len(PROFILES)}")
+    mode = "apply" if args.apply else "check-source" if args.check_source else "check"
+    print(f"mode={mode} profiles={len(PROFILES)}")
     print("source_of_truth=profiles/")
     print("excluded=credentials,runtime_state,logs,caches,databases,sessions,gateway_process_state")
     return 0

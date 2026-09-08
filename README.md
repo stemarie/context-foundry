@@ -75,6 +75,7 @@ These scripts use only the Python standard library. Run them from the repository
 `profiles/` is the canonical Architect, Worker, and Auditor profile package: role contracts, `profile.yaml`, non-secret `config.yaml`, `SOUL.md`, gateway-port policy, and every role-local skill. `kits/contract-orchestration/` is the canonical portable work-contract/recovery/orchestration kit. Both are owned by Context Foundry and can be used without AI.Contract. Credentials, runtime databases, logs, caches, sessions, and gateway process state are deliberately excluded.
 
 ```bash
+python3 scripts/sync_foundry_profiles.py --check-source
 python3 scripts/sync_foundry_profiles.py --check
 python3 scripts/check_foundry_gateway_ports.py
 python3 -m unittest discover -s tests -v

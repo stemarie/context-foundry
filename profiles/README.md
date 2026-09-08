@@ -15,12 +15,13 @@ Do **not** commit runtime or private profile state: `.env` values, API keys, bot
 `profiles/` is canonical. The installed copies under `~/.hermes/profiles/foundry-*` must match it for declarative files. Use:
 
 ```bash
+python3 scripts/sync_foundry_profiles.py --check-source
 python3 scripts/sync_foundry_profiles.py --check
 python3 scripts/sync_foundry_profiles.py --apply
 python3 scripts/sync_foundry_profiles.py --check
 ```
 
-`--apply` copies only canonical non-secret profile files: `profile.yaml`, `config.yaml`, `SOUL.md`, and declared `skills/*/SKILL.md` files. It removes superseded managed skill directories, but never reads, writes, prints, or replaces `.env`, credentials, databases, sessions, logs, caches, or gateway process state.
+`--check-source` validates the complete repository-managed source kit without inspecting installed profile state. `--apply` copies only canonical non-secret profile assets: `profile.yaml`, `config.yaml`, `SOUL.md`, `ROLE-CONTRACT.md`, declared `skills/*/SKILL.md` files, and declared `adapters/*.py` files. It removes superseded managed skill directories, but never reads, writes, prints, or replaces `.env`, credentials, databases, sessions, logs, caches, or gateway process state.
 
 ## Gateway ports
 

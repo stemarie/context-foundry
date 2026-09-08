@@ -26,7 +26,7 @@ Use to independently audit a Worker release packet for a declared target reposit
 1. Verify annotated tag object resolves to the audited SHA.
 2. Verify release title/tag, draft/prerelease/latest status, body, and assets match the packet.
 3. Verify issue evidence, unchanged source state, and no unauthorized external side effect.
-4. Return PASS only when Worker may close the issue.
+4. Return PASS only when the separately assigned Closure Auditor may use its card-derived closure adapter; Worker leaves the Issue open.
 
 ## Verification
 The verdict cites independent command/API output and distinguishes a missing credential adapter from an unavailable service.

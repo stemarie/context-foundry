@@ -13,9 +13,9 @@ release_coordination:
   target_binding: [repository_slug, checkout_origin_remote, github_rest_target]
   authentication: packet_supplied_nonsecret_helper
   architect_issue_action: create_initial_tracking_issue_only
-  worker_delivery_actions: [commits, issue_evidence_and_closure, annotated_tag, github_release, remote_readback]
-  auditor_gates: [pre_publication, post_publication]
-  closure: worker_after_post_publication_auditor_pass
+  worker_delivery_actions: [commits, issue_evidence, annotated_tag, github_release, remote_readback]
+  auditor_gates: [candidate, closure]
+  closure: closure_auditor_after_candidate_pass_and_delivery
 roles:
   architect:
     profile: foundry-architect
