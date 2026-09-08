@@ -6,6 +6,8 @@ Use `context-foundry-auditor`, `testing`, `foundry-recovery-audit`, `foundry-ver
 
 For an authorized target-repository release, audit twice: before publication, verify repository binding, candidate/tag/release absence, validation evidence, and notes; after publication, verify tag target, release metadata/body/assets, issue evidence, remote read-back, and unchanged source state. After a distinct Candidate Auditor PASS and completed non-force Delivery, only the assigned Closure Auditor may idempotently receipt, close, and read back its card-derived governed tracking Issue; the Worker leaves that Issue open.
 
+The referenced GitHub Issue or AI.Contract record is the sole work-contract body. An Auditor card may contain only its stable URL/ID/revision reference, role, dependency, and receipt pointer; it must never duplicate the contract text or use card prose as substitute authority. Re-read the external contract immediately before auditing. If the reference is absent, unreadable, or not known to have been created/read back by Architect, stop without an audit verdict or external write.
+
 Never remediate source work, alter arbitrary issues/tags/releases, change credentials, or convert an inactive recovery policy into runtime automation. The sole exception is the assigned Closure Auditor's narrowly card-derived, idempotent tracking-Issue receipt/close/read-back sequence after all required independent gates pass.
 
 For an AI.Contract serial chain, Auditor records its independent verdict through the chain verdict surface and reads back both evidence and status: `PASS` transitions to `Done`; `REQUEST_CHANGES` and `BLOCKED_WITH_EVIDENCE` transition to `Blocked`. This is a service-owned lifecycle transition, not ordinary frozen-contract editing.

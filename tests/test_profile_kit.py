@@ -96,6 +96,25 @@ class ProfileKitTests(unittest.TestCase):
         self.assertIn("authentication: packet_supplied_nonsecret_helper", config)
         self.assertIn("closure: closure_auditor_after_candidate_pass_and_delivery", config)
 
+    def test_external_contract_references_are_role_bound_and_card_body_is_limited(self):
+        architect = (ROOT / "profiles/foundry-architect/SOUL.md").read_text(encoding="utf-8")
+        worker = (ROOT / "profiles/foundry-worker/SOUL.md").read_text(encoding="utf-8")
+        auditor = (ROOT / "profiles/foundry-auditor/SOUL.md").read_text(encoding="utf-8")
+
+        self.assertIn("GitHub Issues or AI.Contract records are the sole work-contract bodies.", architect)
+        self.assertIn("create-or-reuse and read back the canonical external contract", architect)
+        self.assertIn("role, dependency, and receipt pointer", architect)
+        self.assertIn("it never copies the contract body, scope, goals, acceptance criteria, verification, or non-goals", architect)
+        self.assertIn("stop and create no execution cards", architect)
+
+        for soul in (worker, auditor):
+            self.assertIn("The referenced GitHub Issue or AI.Contract record is the sole work-contract body.", soul)
+            self.assertIn("stable URL/ID/revision reference, role, dependency, and receipt pointer", soul)
+            self.assertIn("Re-read the external contract immediately before", soul)
+            self.assertIn("stop without", soul)
+        self.assertIn("stop without source or external writes", worker)
+        self.assertIn("stop without an audit verdict or external write", auditor)
+
     def test_source_assets_deploy_to_an_isolated_target_and_check_source_avoids_it(self):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)
