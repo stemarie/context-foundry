@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Foundry Closure Auditor governed packet v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["closure_card", "delivery_receipt", "candidate_auditor_receipt"],
+  "properties": {
+    "closure_card": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonical_contract_url", "issue", "marker", "role", "delivery_receipt_pointer"],
+      "properties": {
+        "canonical_contract_url": {"const": "https://github.com/stemarie/context-foundry/issues/19"},
+        "issue": {"const": 19},
+        "marker": {"const": "FOUNDRY-WATCHDOG-INITIAL-CONTRACT-V1"},
+        "role": {"const": "Closure Auditor"},
+        "delivery_receipt_pointer": {"type": "string", "pattern": "^t_[0-9a-f]{8}$"}
+      }
+    },
+    "delivery_receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "outcome", "delivery_mode", "repository", "origin", "api_target", "issue", "branch", "candidate_sha", "delivered_sha", "candidate_auditor_task_id"],
+      "properties": {
+        "schema_version": {"const": "closure_delivery_receipt_v1"},
+        "outcome": {"const": "DELIVERED"},
+        "delivery_mode": {"const": "non-force-direct-main"},
+        "repository": {"const": "stemarie/context-foundry"},
+        "origin": {"const": "https://github.com/stemarie/context-foundry.git"},
+        "api_target": {"const": "https://api.github.com/repos/stemarie/context-foundry"},
+        "issue": {"const": 19},
+        "branch": {"const": "main"},
+        "candidate_sha": {"const": "f54e7812e5fb5e06efd2c08eea28e66b1c9b25dc"},
+        "delivered_sha": {"const": "f54e7812e5fb5e06efd2c08eea28e66b1c9b25dc"},
+        "candidate_auditor_task_id": {"const": "t_484e8099"}
+      }
+    },
+    "candidate_auditor_receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "verdict", "repository", "origin", "api_target", "issue", "branch", "candidate_sha"],
+      "properties": {
+        "schema_version": {"const": "closure_candidate_audit_v1"},
+        "verdict": {"const": "PASS"},
+        "repository": {"const": "stemarie/context-foundry"},
+        "origin": {"const": "https://github.com/stemarie/context-foundry.git"},
+        "api_target": {"const": "https://api.github.com/repos/stemarie/context-foundry"},
+        "issue": {"const": 19},
+        "branch": {"const": "main"},
+        "candidate_sha": {"const": "f54e7812e5fb5e06efd2c08eea28e66b1c9b25dc"}
+      }
+    }
+  }
+}

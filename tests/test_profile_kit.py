@@ -127,6 +127,7 @@ class ProfileKitTests(unittest.TestCase):
             self.assertEqual(sync_foundry_profiles.sync("foundry-architect", True, target), [])
             self.assertEqual(sync_foundry_profiles.sync("foundry-brainiac", True, target), [])
             self.assertTrue((target / "foundry-auditor/adapters/closure_auditor.py").is_file())
+            self.assertTrue((target / "foundry-auditor/schemas/closure_auditor_packet.schema.json").is_file())
             self.assertTrue((target / "foundry-architect/adapters/task_bound_issue.py").is_file())
             self.assertTrue((target / "foundry-auditor/ROLE-CONTRACT.md").is_file())
             self.assertTrue((target / "foundry-brainiac/SOUL.md").is_file())
