@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Deterministic, event-driven Brainiac reliability-learning state machine.
 
-This module never starts a hook, scheduler, gateway, or model.  A separately
-operator-controlled integration may call its functions when new durable,
-structured incident evidence arrives.  Runtime state must live outside this
-source checkout.
+Evaluator commands never start a hook, scheduler, gateway, or model.  The
+separately operator-controlled bridge commands may invoke the isolated
+read-only Brainiac profile only for qualifying durable structured evidence.
+Runtime state must live outside this source checkout.
 """
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ WEEKLY_EXPORT_FIELDS = {"schema", "evidence_revision", "synthesis_window", "obse
 PROPOSAL_FIELDS = {"proposal", "invariant", "regression_test", "metric"}
 BRAINIAC_COMMAND = (
     "hermes", "-p", "foundry-brainiac", "chat", "--oneshot",
-    "--provider", "openai-codex", "--model", "gpt-6-astra", "--toolsets", "kanban",
+    "--provider", "openai-codex", "--model", "gpt-6-astra", "--toolsets", "bot_room",
 )
 
 

@@ -1,6 +1,6 @@
 # Brainiac reliability-learning activation
 
-`python3 scripts/brainiac_learning.py` is a deterministic state machine, not a runtime service. It evaluates one newly available durable structured incident event at a time, normalizes its fingerprint, records its decision in an operator-selected SQLite database outside this checkout, and emits a durable Astra-invocation record only for a high-severity event or the second same fingerprint within the preceding 30 days. A repeated event ID is a no-op. No LLM, gateway, hook, scheduler, cron job, service, monitor, card, GitHub action, or source mutation is started by this command.
+`python3 scripts/brainiac_learning.py` is a deterministic state machine, not a runtime service. Its `incident` and `synthesis` evaluator commands evaluate one newly available durable structured incident event at a time, normalize its fingerprint, record their decision in an operator-selected SQLite database outside this checkout, and emit a durable Astra-invocation record only for a high-severity event or the second same fingerprint within the preceding 30 days. A repeated event ID is a no-op. Evaluator commands start no LLM, gateway, hook, scheduler, cron job, service, monitor, card, GitHub action, or source mutation.
 
 The weekly command records one synthesis request for a changed evidence revision and explicit ISO week. Repeating that revision/window is a no-op. It does not poll.
 
@@ -18,7 +18,7 @@ After the Candidate Auditor PASS, an authorized operator may explicitly run the 
     python3 scripts/brainiac_learning.py --state /var/lib/context-foundry/brainiac.sqlite bridge-event --input /secure/evidence/watchdog-event.json
     python3 scripts/brainiac_learning.py --state /var/lib/context-foundry/brainiac.sqlite bridge-weekly --input /secure/evidence/watchdog-weekly.json
 
-The bridge calls the evaluator first. Only a newly qualifying event or a changed weekly revision/window invokes the isolated profile with `hermes -p foundry-brainiac chat --oneshot --provider openai-codex --model gpt-6-astra --toolsets kanban`. Its external state records one terminal execution receipt per evaluator key and, after fixed-schema output validation, an `architect_consideration` outbox entry. It stores no raw prompt, model transcript, credentials, tokens, sessions, logs, caches, generated runtime state, or source checkout. A failed execution is terminal for that key, so a retry cannot invoke the model a second time.
+The bridge calls the evaluator first. Only a newly qualifying event or a changed weekly revision/window invokes the isolated profile with `hermes -p foundry-brainiac chat --oneshot --provider openai-codex --model gpt-6-astra --toolsets bot_room`. `bot_room` resolves to an empty tool surface, so the model has no Kanban/card, source, GitHub, profile, contract, audit, cron, or task-dispatch capability. Its external state records one terminal execution receipt per evaluator key and, after fixed-schema output validation, an `architect_consideration` outbox entry. It stores no raw prompt, model transcript, credentials, tokens, sessions, logs, caches, generated runtime state, or source checkout. A failed execution is terminal for that key, so a retry cannot invoke the model a second time.
 
 Brainiac's output is a proposal for Architect consideration, never authorization for a change.
 

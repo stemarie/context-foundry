@@ -137,6 +137,8 @@ class BrainiacLearningTests(unittest.TestCase):
         self.assertEqual(calls[0][0][2], "foundry-brainiac")
         self.assertIn("openai-codex", calls[0][0])
         self.assertIn("gpt-6-astra", calls[0][0])
+        self.assertEqual(calls[0][0][-2:], ("--toolsets", "bot_room"))
+        self.assertNotIn("kanban", calls[0][0])
         with brainiac.connect(self.state) as db:
             route, proposal = db.execute("SELECT route, proposal_json FROM architect_outbox").fetchone()
         self.assertEqual(route, "architect_consideration")
