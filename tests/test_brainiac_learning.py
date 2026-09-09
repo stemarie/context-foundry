@@ -27,6 +27,13 @@ class BrainiacLearningTests(unittest.TestCase):
     def incident(event_id, occurred_at, severity="normal", summary="worker timeout", revision="r1"):
         return {"event_id": event_id, "occurred_at": occurred_at, "severity": severity, "source": "kanban", "category": "dispatch", "summary": summary, "evidence_revision": revision}
 
+    @staticmethod
+    def proposal():
+        return json.dumps({"proposal": "Bound retries.", "invariant": "One invocation per key.", "regression_test": "Replay the event.", "metric": "Repeat incidents."})
+
+    def event_export(self, incident):
+        return {"schema": brainiac.EVIDENCE_SCHEMA, "incident": incident}
+
     def test_no_qualifying_evidence_causes_no_astra_call(self):
         result = brainiac.process_incident(self.state, self.incident("one", "2026-01-01T00:00:00Z"))
         self.assertEqual(result["decision"], "not_qualified")
@@ -99,6 +106,72 @@ class BrainiacLearningTests(unittest.TestCase):
         self.assertIn("enabled: []", config)
         self.assertIn("dispatch_in_gateway: false", config)
         self.assertIn("cron_mode: deny", config)
+
+    def test_bridge_low_normal_and_unchanged_weekly_noops_do_not_call_runner(self):
+        calls = []
+        runner = lambda command, prompt: calls.append((command, prompt)) or self.proposal()
+        low = brainiac.process_board_event(self.state, self.event_export(self.incident("low", "2026-01-01T00:00:00Z")), runner)
+        normal = brainiac.process_board_event(self.state, self.event_export(self.incident("normal", "2026-01-02T00:00:00Z", summary="separate incident")), runner)
+        weekly = {"schema": brainiac.EVIDENCE_SCHEMA, "evidence_revision": "r1", "synthesis_window": "2026-W01", "observed_at": "2026-01-05T00:00:00Z"}
+        first_weekly = brainiac.process_weekly_board_evidence(self.state, weekly, runner)
+        unchanged_weekly = brainiac.process_weekly_board_evidence(self.state, weekly, runner)
+        self.assertFalse(low["model_invoked"])
+        self.assertFalse(normal["model_invoked"])
+        self.assertTrue(first_weekly["model_invoked"])
+        self.assertFalse(unchanged_weekly["model_invoked"])
+        self.assertEqual(len(calls), 1)
+
+    def test_bridge_high_event_invokes_exact_isolated_command_once_and_routes_receipt(self):
+        calls = []
+        runner = lambda command, prompt: calls.append((command, json.loads(prompt))) or self.proposal()
+        export = self.event_export(self.incident("high-bridge", "2026-01-01T00:00:00Z", "high"))
+        first = brainiac.process_board_event(self.state, export, runner)
+        duplicate = brainiac.process_board_event(self.state, export, runner)
+        self.assertTrue(first["model_invoked"])
+        self.assertEqual(first["outcome"], "completed")
+        self.assertEqual(first["route"], "architect_consideration")
+        self.assertFalse(duplicate["model_invoked"])
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][0], brainiac.BRAINIAC_COMMAND)
+        self.assertEqual(calls[0][0][1], "-p")
+        self.assertEqual(calls[0][0][2], "foundry-brainiac")
+        self.assertIn("openai-codex", calls[0][0])
+        self.assertIn("gpt-6-astra", calls[0][0])
+        with brainiac.connect(self.state) as db:
+            route, proposal = db.execute("SELECT route, proposal_json FROM architect_outbox").fetchone()
+        self.assertEqual(route, "architect_consideration")
+        self.assertEqual(json.loads(proposal)["proposal"], "Bound retries.")
+
+    def test_bridge_rejects_sensitive_or_unsupported_export_before_persistence_or_runner(self):
+        calls = []
+        runner = lambda command, prompt: calls.append((command, prompt)) or self.proposal()
+        bad = self.event_export(self.incident("bad-export", "2026-01-01T00:00:00Z", "high"))
+        bad["credentials"] = "never"
+        with self.assertRaisesRegex(brainiac.BrainiacInputError, "sensitive incident field is prohibited"):
+            brainiac.process_board_event(self.state, bad, runner)
+        self.assertFalse(self.state.exists())
+        self.assertEqual(calls, [])
+        unsupported = self.event_export(self.incident("unsupported", "2026-01-01T00:00:00Z", "high"))
+        unsupported["unapproved"] = "field"
+        with self.assertRaisesRegex(brainiac.BrainiacInputError, "unsupported board evidence fields"):
+            brainiac.process_board_event(self.state, unsupported, runner)
+        self.assertEqual(calls, [])
+
+    def test_failed_execution_is_terminal_and_never_retries(self):
+        calls = []
+        runner = lambda command, prompt: calls.append((command, prompt)) or "not-json"
+        result = brainiac.execute_qualified(self.state, kind="event", invocation_key_value="fixed", evidence={"event_id": "one"}, observed_at="2026-01-01T00:00:00Z", runner=runner)
+        retry = brainiac.execute_qualified(self.state, kind="event", invocation_key_value="fixed", evidence={"event_id": "one"}, observed_at="2026-01-01T00:00:00Z", runner=runner)
+        self.assertEqual(result["outcome"], "failed")
+        self.assertEqual(retry["decision"], "execution_duplicate_noop")
+        self.assertEqual(len(calls), 1)
+
+    def test_sensitive_proposal_is_not_routed_or_persisted_as_a_receipt(self):
+        sensitive = json.dumps({"proposal": "Bound retries.", "invariant": "One invocation per key.", "regression_test": "Replay.", "metric": "Repeat incidents.", "accessToken": "never-store"})
+        result = brainiac.execute_qualified(self.state, kind="event", invocation_key_value="sensitive", evidence={"event_id": "one"}, observed_at="2026-01-01T00:00:00Z", runner=lambda command, prompt: sensitive)
+        self.assertEqual(result["outcome"], "failed")
+        with brainiac.connect(self.state) as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM architect_outbox").fetchone()[0], 0)
 
 
 if __name__ == "__main__":

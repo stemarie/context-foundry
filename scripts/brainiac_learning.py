@@ -14,8 +14,9 @@ import hashlib
 import json
 import re
 import sqlite3
+import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 ROOT = Path(__file__).resolve().parents[1]
 WINDOW_DAYS = 30
@@ -31,6 +32,14 @@ PERSISTED_INCIDENT_FIELDS = (
     "evidence_revision",
 )
 SENSITIVE_FIELD_NAMES = {"credential", "credentials", "token", "tokens", "session", "sessions", "log", "logs", "cache", "caches"}
+EVIDENCE_SCHEMA = "foundry-watchdog-evidence-v1"
+EVENT_EXPORT_FIELDS = {"schema", "incident"}
+WEEKLY_EXPORT_FIELDS = {"schema", "evidence_revision", "synthesis_window", "observed_at"}
+PROPOSAL_FIELDS = {"proposal", "invariant", "regression_test", "metric"}
+BRAINIAC_COMMAND = (
+    "hermes", "-p", "foundry-brainiac", "chat", "--oneshot",
+    "--provider", "openai-codex", "--model", "gpt-6-astra", "--toolsets", "kanban",
+)
 
 
 class BrainiacInputError(ValueError):
@@ -74,6 +83,9 @@ def reject_sensitive_fields(value: Any, path: str = "incident") -> None:
 
 
 def validate_incident(incident: dict[str, Any]) -> tuple[str, dt.datetime, str]:
+    unsupported = set(incident) - set(PERSISTED_INCIDENT_FIELDS)
+    if unsupported:
+        raise BrainiacInputError(f"unsupported incident fields: {', '.join(sorted(unsupported))}")
     for field in ("event_id", "occurred_at", "severity"):
         if not isinstance(incident.get(field), str) or not incident[field].strip():
             raise BrainiacInputError(f"{field} is required")
@@ -123,6 +135,20 @@ def connect(state_path: Path) -> sqlite3.Connection:
             synthesis_window TEXT NOT NULL,
             created_at TEXT NOT NULL,
             UNIQUE(evidence_revision, synthesis_window)
+        );
+        CREATE TABLE IF NOT EXISTS brainiac_executions (
+            invocation_key TEXT PRIMARY KEY,
+            kind TEXT NOT NULL,
+            outcome TEXT NOT NULL CHECK(outcome IN ('running', 'completed', 'failed')),
+            receipt_json TEXT,
+            created_at TEXT NOT NULL,
+            completed_at TEXT
+        );
+        CREATE TABLE IF NOT EXISTS architect_outbox (
+            invocation_key TEXT PRIMARY KEY,
+            route TEXT NOT NULL,
+            proposal_json TEXT NOT NULL,
+            created_at TEXT NOT NULL
         );
         """
     )
@@ -183,20 +209,134 @@ def record_weekly_synthesis(state_path: Path, evidence_revision: str, synthesis_
     return {"synthesis_key": key, "evidence_revision": evidence_revision, "synthesis_window": synthesis_window, "decision": "synthesis_queued" if inserted else "unchanged_noop", "synthesis_required": inserted}
 
 
+def validate_board_evidence(export: dict[str, Any], expected_fields: set[str]) -> None:
+    """Reject non-Foundry, unsupported, or sensitive exports before state access."""
+    reject_sensitive_fields(export, "evidence")
+    if set(export) - expected_fields:
+        raise BrainiacInputError("unsupported board evidence fields")
+    if export.get("schema") != EVIDENCE_SCHEMA:
+        raise BrainiacInputError("unsupported board evidence schema")
+
+
+def build_prompt(kind: str, invocation_key_value: str, evidence: dict[str, Any]) -> str:
+    """Build the sole non-secret model input from an allowlisted export."""
+    return json.dumps({
+        "task": "Produce one bounded reliability improvement proposal for Architect consideration.",
+        "kind": kind,
+        "invocation_key": invocation_key_value,
+        "evidence": evidence,
+        "required_json_fields": sorted(PROPOSAL_FIELDS),
+        "boundary": "Read-only proposal only: no source, GitHub, profile, contract, audit, or task mutation.",
+    }, sort_keys=True)
+
+
+def validate_proposal(output: str) -> dict[str, str]:
+    """Keep only a fixed non-secret proposal receipt, never a model transcript."""
+    try:
+        proposal = json.loads(output)
+    except json.JSONDecodeError as exc:
+        raise BrainiacInputError("Brainiac output must be a JSON proposal") from exc
+    reject_sensitive_fields(proposal, "proposal")
+    if not isinstance(proposal, dict) or set(proposal) != PROPOSAL_FIELDS:
+        raise BrainiacInputError("Brainiac output must contain only the proposal receipt schema")
+    if any(not isinstance(value, str) or not value.strip() for value in proposal.values()):
+        raise BrainiacInputError("Brainiac proposal receipt values must be non-empty strings")
+    return {field: proposal[field].strip() for field in sorted(PROPOSAL_FIELDS)}
+
+
+def default_runner(command: tuple[str, ...], prompt: str) -> str:
+    completed = subprocess.run([*command, "--query", prompt], check=True, capture_output=True, text=True, timeout=300)
+    return completed.stdout
+
+
+def execute_qualified(
+    state_path: Path,
+    *,
+    kind: str,
+    invocation_key_value: str,
+    evidence: dict[str, Any],
+    observed_at: str,
+    runner: Callable[[tuple[str, ...], str], str] = default_runner,
+) -> dict[str, Any]:
+    """Invoke the isolated profile once and leave a terminal, non-secret receipt."""
+    timestamp = parse_timestamp(observed_at).isoformat()
+    with connect(state_path) as db:
+        existing = db.execute("SELECT outcome FROM brainiac_executions WHERE invocation_key = ?", (invocation_key_value,)).fetchone()
+        if existing:
+            return {"invocation_key": invocation_key_value, "decision": "execution_duplicate_noop", "model_invoked": False, "outcome": existing[0]}
+        db.execute(
+            "INSERT INTO brainiac_executions VALUES (?, ?, 'running', NULL, ?, NULL)",
+            (invocation_key_value, kind, timestamp),
+        )
+    try:
+        proposal = validate_proposal(runner(BRAINIAC_COMMAND, build_prompt(kind, invocation_key_value, evidence)))
+    except (BrainiacInputError, subprocess.SubprocessError, TimeoutError, OSError):
+        receipt = {"invocation_key": invocation_key_value, "kind": kind, "outcome": "failed"}
+        with connect(state_path) as db:
+            db.execute("UPDATE brainiac_executions SET outcome = 'failed', receipt_json = ?, completed_at = ? WHERE invocation_key = ?", (json.dumps(receipt, sort_keys=True), timestamp, invocation_key_value))
+        return {**receipt, "model_invoked": True}
+    receipt = {"invocation_key": invocation_key_value, "kind": kind, "outcome": "completed", "route": "architect_consideration"}
+    with connect(state_path) as db:
+        db.execute("INSERT INTO architect_outbox VALUES (?, 'architect_consideration', ?, ?)", (invocation_key_value, json.dumps(proposal, sort_keys=True), timestamp))
+        db.execute("UPDATE brainiac_executions SET outcome = 'completed', receipt_json = ?, completed_at = ? WHERE invocation_key = ?", (json.dumps(receipt, sort_keys=True), timestamp, invocation_key_value))
+    return {**receipt, "model_invoked": True}
+
+
+def process_board_event(
+    state_path: Path,
+    export: dict[str, Any],
+    runner: Callable[[tuple[str, ...], str], str] = default_runner,
+) -> dict[str, Any]:
+    """Evaluate one explicit Watchdog/Foundry event export before any model call."""
+    validate_board_evidence(export, EVENT_EXPORT_FIELDS)
+    incident = export.get("incident")
+    if not isinstance(incident, dict):
+        raise BrainiacInputError("board evidence incident must be an object")
+    decision = process_incident(state_path, incident)
+    if not decision["astra_invoked"]:
+        return {**decision, "model_invoked": False}
+    return {**decision, **execute_qualified(state_path, kind="event", invocation_key_value=decision["invocation_key"], evidence={field: incident[field] for field in PERSISTED_INCIDENT_FIELDS}, observed_at=incident["occurred_at"], runner=runner)}
+
+
+def process_weekly_board_evidence(
+    state_path: Path,
+    export: dict[str, Any],
+    runner: Callable[[tuple[str, ...], str], str] = default_runner,
+) -> dict[str, Any]:
+    """Evaluate one explicit changed weekly evidence revision before any model call."""
+    validate_board_evidence(export, WEEKLY_EXPORT_FIELDS)
+    for field in ("evidence_revision", "synthesis_window", "observed_at"):
+        if not isinstance(export.get(field), str) or not export[field].strip():
+            raise BrainiacInputError(f"board evidence {field} is required")
+    decision = record_weekly_synthesis(state_path, export["evidence_revision"], export["synthesis_window"], export["observed_at"])
+    if not decision["synthesis_required"]:
+        return {**decision, "model_invoked": False}
+    evidence = {field: export[field] for field in ("evidence_revision", "synthesis_window")}
+    return {**decision, **execute_qualified(state_path, kind="weekly", invocation_key_value=decision["synthesis_key"], evidence=evidence, observed_at=export["observed_at"], runner=runner)}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--state", required=True, type=Path)
     command = parser.add_subparsers(dest="command", required=True)
     incident = command.add_parser("incident")
     incident.add_argument("--input", required=True, type=Path)
+    bridge_event = command.add_parser("bridge-event")
+    bridge_event.add_argument("--input", required=True, type=Path)
     synthesis = command.add_parser("synthesis")
     synthesis.add_argument("--evidence-revision", required=True)
     synthesis.add_argument("--window", required=True)
     synthesis.add_argument("--observed-at", required=True)
+    bridge_weekly = command.add_parser("bridge-weekly")
+    bridge_weekly.add_argument("--input", required=True, type=Path)
     args = parser.parse_args()
     try:
         if args.command == "incident":
             result = process_incident(args.state, json.loads(args.input.read_text(encoding="utf-8")))
+        elif args.command == "bridge-event":
+            result = process_board_event(args.state, json.loads(args.input.read_text(encoding="utf-8")))
+        elif args.command == "bridge-weekly":
+            result = process_weekly_board_evidence(args.state, json.loads(args.input.read_text(encoding="utf-8")))
         else:
             result = record_weekly_synthesis(args.state, args.evidence_revision, args.window, args.observed_at)
     except (BrainiacInputError, json.JSONDecodeError) as exc:
