@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Close only the fixed canonical Issue derived from a governed Closure card."""
+"""Close only the canonical Issue dynamically derived from a governed card."""
 from __future__ import annotations
 
 import json
@@ -19,13 +19,10 @@ REPOSITORY = "stemarie/context-foundry"
 ORIGIN = "https://github.com/stemarie/context-foundry.git"
 API_TARGET = "https://api.github.com/repos/stemarie/context-foundry"
 BRANCH = "main"
-ISSUE = 19
-CONTRACT_URL = "https://github.com/stemarie/context-foundry/issues/19"
-ISSUE_MARKER = "FOUNDRY-WATCHDOG-INITIAL-CONTRACT-V1"
-FIXTURE_CANDIDATE_SHA = "f54e7812e5fb5e06efd2c08eea28e66b1c9b25dc"
-FIXTURE_CANDIDATE_AUDITOR = "t_484e8099"
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 TASK_ID = re.compile(r"^t_[0-9a-f]{8}$")
+CONTRACT_URL = re.compile(r"^https://github\.com/stemarie/context-foundry/issues/([1-9][0-9]*)$")
+CONTRACT_MARKER = re.compile(r"^FOUNDRY-[A-Z0-9-]+-CONTRACT-V1$")
 
 
 class ClosureError(RuntimeError):
@@ -38,7 +35,7 @@ def exact_dict(value: Any, keys: set[str], label: str) -> dict[str, Any]:
     return value
 
 
-def contract_reference(closure: dict[str, Any]) -> str:
+def contract_reference(closure: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     if closure.get("assignee") != PROFILE or not str(closure.get("title", "")).startswith("Closure Auditor:"):
         raise ClosureError("assigned task is not a foundry-auditor Closure Auditor card")
     body = closure.get("body")
@@ -47,29 +44,44 @@ def contract_reference(closure: dict[str, Any]) -> str:
     lines = body.splitlines()
     if len(lines) != 5:
         raise ClosureError("Closure Auditor card must contain only the canonical reference fields")
-    expected = [
-        f"Canonical external contract: {CONTRACT_URL}",
-        f"Contract ID/revision: Issue #{ISSUE} / {ISSUE_MARKER}",
-        "Role: Closure Auditor",
-        "Dependency: completed direct Delivery parent",
-    ]
-    if lines[:4] != expected:
-        raise ClosureError("Closure Auditor card does not exactly reference the canonical contract")
-    match = re.fullmatch(r"Receipt pointer: Delivery `(t_[0-9a-f]{8})`", lines[4])
-    if not match:
+    url_match = re.fullmatch(r"Canonical external contract: (https://github\.com/stemarie/context-foundry/issues/[1-9][0-9]*)", lines[0])
+    revision_match = re.fullmatch(r"Contract ID/revision: Issue #([1-9][0-9]*) / (FOUNDRY-[A-Z0-9-]+-CONTRACT-V1)", lines[1])
+    if not url_match or not revision_match or lines[2:4] != ["Role: Closure Auditor", "Dependency: completed direct Delivery parent"]:
+        raise ClosureError("Closure Auditor card does not exactly reference one canonical contract")
+    issue_match = CONTRACT_URL.fullmatch(url_match.group(1))
+    if not issue_match or int(issue_match.group(1)) != int(revision_match.group(1)) or not CONTRACT_MARKER.fullmatch(revision_match.group(2)):
+        raise ClosureError("Closure Auditor contract reference is malformed or inconsistent")
+    receipt_match = re.fullmatch(r"Receipt pointer: Delivery `(t_[0-9a-f]{8})`", lines[4])
+    if not receipt_match:
         raise ClosureError("Closure Auditor card has no exact Delivery receipt pointer")
-    return match.group(1)
+    return receipt_match.group(1), {"repository": REPOSITORY, "origin": ORIGIN, "api_target": API_TARGET, "issue": int(issue_match.group(1)), "branch": BRANCH, "issue_marker": revision_match.group(2), "receipt_marker": RECEIPT_MARKER}
 
 
 def completed_parent(card: dict[str, Any], lookup: Callable[[str], dict[str, Any]], prefix: str) -> tuple[str, dict[str, Any]]:
     parents = card.get("parents")
-    if not isinstance(parents, list) or len(parents) != 1 or not isinstance(parents[0], str):
-        raise ClosureError(f"{prefix} card requires exactly one parent")
+    if not isinstance(parents, list) or len(parents) != 1 or not isinstance(parents[0], str) or not TASK_ID.fullmatch(parents[0]):
+        raise ClosureError(f"{prefix} card requires exactly one valid parent")
     task_id = parents[0]
     task = lookup(task_id).get("task")
     if not isinstance(task, dict) or task.get("id") != task_id or task.get("status") != "done" or not str(task.get("title", "")).startswith(prefix + ":"):
         raise ClosureError(f"direct parent is not a completed {prefix} card")
     return task_id, task
+
+
+def candidate_has_completed_worker_parent(candidate: dict[str, Any], lookup: Callable[[str], dict[str, Any]]) -> str:
+    parents = candidate.get("parents")
+    if not isinstance(parents, list) or len(parents) != len(set(parents)):
+        raise ClosureError("Candidate Auditor has invalid or duplicate parents")
+    workers = []
+    for task_id in parents:
+        if not isinstance(task_id, str) or not TASK_ID.fullmatch(task_id):
+            raise ClosureError("Candidate Auditor has an invalid parent identity")
+        task = lookup(task_id).get("task")
+        if isinstance(task, dict) and task.get("id") == task_id and task.get("status") == "done" and task.get("assignee") == "foundry-worker" and str(task.get("title", "")).startswith("Worker:"):
+            workers.append(task_id)
+    if len(workers) != 1:
+        raise ClosureError("Candidate Auditor requires exactly one completed Worker parent")
+    return workers[0]
 
 
 def bound_fields(receipt: dict[str, Any], scope: dict[str, Any], fields: tuple[str, ...], label: str) -> None:
@@ -78,14 +90,18 @@ def bound_fields(receipt: dict[str, Any], scope: dict[str, Any], fields: tuple[s
             raise ClosureError(f"{label} does not exactly bind {field}")
 
 
-def candidate_receipt(candidate: dict[str, Any], scope: dict[str, Any]) -> None:
+def candidate_receipt(candidate: dict[str, Any], scope: dict[str, Any]) -> str:
     if candidate.get("assignee") != PROFILE:
         raise ClosureError("Candidate Auditor is not independently assigned to foundry-auditor")
     metadata = exact_dict(candidate.get("metadata"), {"closure_candidate_audit_v1"}, "Candidate Auditor metadata")
     receipt = exact_dict(metadata["closure_candidate_audit_v1"], {"schema_version", "verdict", "repository", "origin", "api_target", "issue", "branch", "candidate_sha"}, "Candidate Auditor receipt")
     if receipt["schema_version"] != "closure_candidate_audit_v1" or receipt["verdict"] != "PASS":
         raise ClosureError("Candidate Auditor receipt is not a PASS")
-    bound_fields(receipt, scope, ("repository", "origin", "api_target", "issue", "branch", "candidate_sha"), "Candidate Auditor receipt")
+    bound_fields(receipt, scope, ("repository", "origin", "api_target", "issue", "branch"), "Candidate Auditor receipt")
+    candidate_sha = receipt.get("candidate_sha")
+    if not isinstance(candidate_sha, str) or not HEX40.fullmatch(candidate_sha):
+        raise ClosureError("Candidate Auditor receipt has an invalid candidate SHA")
+    return candidate_sha
 
 
 def delivery_receipt(delivery: dict[str, Any], candidate_id: str, scope: dict[str, Any]) -> None:
@@ -99,17 +115,15 @@ def delivery_receipt(delivery: dict[str, Any], candidate_id: str, scope: dict[st
 
 
 def derive_scope(closure: dict[str, Any], lookup: Callable[[str], dict[str, Any]]) -> dict[str, Any]:
-    receipt_delivery_id = contract_reference(closure)
+    receipt_delivery_id, scope = contract_reference(closure)
     delivery_id, delivery = completed_parent(closure, lookup, "Delivery")
     if receipt_delivery_id != delivery_id:
         raise ClosureError("Closure Auditor receipt pointer is not its direct Delivery parent")
     candidate_id, candidate = completed_parent(delivery, lookup, "Candidate Auditor")
-    if len({closure.get("id"), delivery_id, candidate_id}) != 3:
-        raise ClosureError("Closure Auditor, Delivery, and Candidate Auditor must be distinct")
-    if candidate_id != FIXTURE_CANDIDATE_AUDITOR:
-        raise ClosureError("Candidate Auditor does not match the canonical Issue #19 fixture")
-    scope = {"repository": REPOSITORY, "origin": ORIGIN, "api_target": API_TARGET, "issue": ISSUE, "branch": BRANCH, "candidate_sha": FIXTURE_CANDIDATE_SHA, "receipt_marker": RECEIPT_MARKER}
-    candidate_receipt(candidate, scope)
+    worker_id = candidate_has_completed_worker_parent(candidate, lookup)
+    if len({closure.get("id"), delivery_id, candidate_id, worker_id}) != 4:
+        raise ClosureError("Worker, Candidate Auditor, Delivery, and Closure Auditor must be distinct")
+    scope["candidate_sha"] = candidate_receipt(candidate, scope)
     delivery_receipt(delivery, candidate_id, scope)
     return scope
 
@@ -171,7 +185,7 @@ def execute(closure: dict[str, Any], lookup: Callable[[str], dict[str, Any]], re
         raise ClosureError("GitHub API branch does not resolve to delivered candidate SHA")
     issue_url = f"{base}/issues/{issue_number}"
     issue = request("GET", issue_url, None)
-    if ISSUE_MARKER not in str(issue.get("body", "")):
+    if f"<!-- {scope['issue_marker']} -->" not in str(issue.get("body", "")):
         raise ClosureError("canonical Issue lacks the required marker")
     comments_url = issue_url + "/comments?per_page=100"
     comments = request("GET", comments_url, None)
@@ -186,7 +200,7 @@ def execute(closure: dict[str, Any], lookup: Callable[[str], dict[str, Any]], re
         return {"operation": "idempotent-readback", "repository": scope["repository"], "issue": issue_number, "candidate_sha": sha}
     if issue.get("state") != "open" or existing:
         raise ClosureError("open Issue has an invalid pre-existing closure receipt or state")
-    request("POST", comments_url, {"body": f"<!-- {marker} -->\nFoundry Closure Auditor PASS\n\n- Closure card: `{closure['id']}`\n- Delivered `{branch}` SHA: `{sha}`\n- Required Issue marker verified: `{ISSUE_MARKER}`"})
+    request("POST", comments_url, {"body": f"<!-- {marker} -->\nFoundry Closure Auditor PASS\n\n- Closure card: `{closure['id']}`\n- Delivered `{branch}` SHA: `{sha}`\n- Required Issue marker verified: `{scope['issue_marker']}`"})
     readback_comments = request("GET", comments_url, None)
     if not isinstance(readback_comments, list) or receipt_count(readback_comments, marker) != 1:
         raise ClosureError("closure receipt read-back was not exactly one")

@@ -1,4 +1,3 @@
-import copy
 import importlib.util
 import json
 import unittest
@@ -13,66 +12,79 @@ assert spec and spec.loader
 closure_auditor = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(closure_auditor)
 
-SHA = closure_auditor.FIXTURE_CANDIDATE_SHA
-CANDIDATE_ID = closure_auditor.FIXTURE_CANDIDATE_AUDITOR
+SHA = "f54e7812e5fb5e06efd2c08eea28e66b1c9b25dc"
+WORKER_ID = "t_3fbcbdcd"
+CANDIDATE_ID = "t_484e8099"
 DELIVERY_ID = "t_d3110001"
 CLOSURE_ID = "t_c1050001"
-SCOPE = {"repository": closure_auditor.REPOSITORY, "origin": closure_auditor.ORIGIN, "api_target": closure_auditor.API_TARGET, "issue": closure_auditor.ISSUE, "branch": closure_auditor.BRANCH, "candidate_sha": SHA, "receipt_marker": closure_auditor.RECEIPT_MARKER}
+MARKER = "FOUNDRY-WATCHDOG-INITIAL-CONTRACT-V1"
 
 
-def card_body(delivery_id=DELIVERY_ID):
+def scope(issue=19, marker=MARKER, sha=SHA):
+    return {"repository": closure_auditor.REPOSITORY, "origin": closure_auditor.ORIGIN, "api_target": closure_auditor.API_TARGET, "issue": issue, "branch": closure_auditor.BRANCH, "candidate_sha": sha, "issue_marker": marker, "receipt_marker": closure_auditor.RECEIPT_MARKER}
+
+
+def card_body(issue=19, marker=MARKER, delivery_id=DELIVERY_ID):
     return "\n".join((
-        f"Canonical external contract: {closure_auditor.CONTRACT_URL}",
-        f"Contract ID/revision: Issue #{closure_auditor.ISSUE} / {closure_auditor.ISSUE_MARKER}",
+        f"Canonical external contract: https://github.com/stemarie/context-foundry/issues/{issue}",
+        f"Contract ID/revision: Issue #{issue} / {marker}",
         "Role: Closure Auditor",
         "Dependency: completed direct Delivery parent",
         f"Receipt pointer: Delivery `{delivery_id}`",
     ))
 
 
-def cards():
-    candidate = {"id": CANDIDATE_ID, "assignee": "foundry-auditor", "status": "done", "title": "Candidate Auditor: Watchdog gate", "metadata": {"closure_candidate_audit_v1": {"schema_version": "closure_candidate_audit_v1", "verdict": "PASS", **{key: SCOPE[key] for key in ("repository", "origin", "api_target", "issue", "branch", "candidate_sha")}}}}
-    delivery = {"id": DELIVERY_ID, "status": "done", "title": "Delivery: Watchdog", "parents": [candidate["id"]], "metadata": {"closure_delivery_receipt_v1": {"schema_version": "closure_delivery_receipt_v1", "outcome": "DELIVERED", "delivery_mode": "non-force-direct-main", **{key: SCOPE[key] for key in ("repository", "origin", "api_target", "issue", "branch", "candidate_sha")}, "delivered_sha": SHA, "candidate_auditor_task_id": candidate["id"]}}}
-    closure = {"id": CLOSURE_ID, "assignee": "foundry-auditor", "status": "running", "title": "Closure Auditor: Watchdog", "body": card_body(), "parents": [delivery["id"]], "workspace_path": "/tmp/example"}
-    return {candidate["id"]: {"task": candidate}, delivery["id"]: {"task": delivery}}, closure
+def cards(issue=19, marker=MARKER, sha=SHA):
+    packet_scope = scope(issue, marker, sha)
+    worker = {"id": WORKER_ID, "assignee": "foundry-worker", "status": "done", "title": "Worker: Watchdog candidate"}
+    candidate = {"id": CANDIDATE_ID, "assignee": "foundry-auditor", "status": "done", "title": "Candidate Auditor: Watchdog gate", "parents": [WORKER_ID], "metadata": {"closure_candidate_audit_v1": {"schema_version": "closure_candidate_audit_v1", "verdict": "PASS", **{key: packet_scope[key] for key in ("repository", "origin", "api_target", "issue", "branch", "candidate_sha")}}}}
+    delivery = {"id": DELIVERY_ID, "status": "done", "title": "Delivery: Watchdog", "parents": [CANDIDATE_ID], "metadata": {"closure_delivery_receipt_v1": {"schema_version": "closure_delivery_receipt_v1", "outcome": "DELIVERED", "delivery_mode": "non-force-direct-main", **{key: packet_scope[key] for key in ("repository", "origin", "api_target", "issue", "branch", "candidate_sha")}, "delivered_sha": sha, "candidate_auditor_task_id": CANDIDATE_ID}}}
+    closure = {"id": CLOSURE_ID, "assignee": "foundry-auditor", "status": "running", "title": "Closure Auditor: Watchdog", "body": card_body(issue, marker), "parents": [DELIVERY_ID], "workspace_path": "/tmp/example"}
+    return {WORKER_ID: {"task": worker}, CANDIDATE_ID: {"task": candidate}, DELIVERY_ID: {"task": delivery}}, closure
 
 
 class Api:
-    def __init__(self):
-        self.closed, self.comments, self.writes = False, [], []
+    def __init__(self, packet_scope):
+        self.scope, self.closed, self.comments, self.writes = packet_scope, False, [], []
 
     def __call__(self, method, url, payload):
         if method in {"POST", "PATCH"}:
             self.writes.append(method)
-        if url == SCOPE["api_target"]:
-            return {"full_name": SCOPE["repository"], "default_branch": "main"}
+        if url == self.scope["api_target"]:
+            return {"full_name": self.scope["repository"], "default_branch": self.scope["branch"]}
         if url.endswith("/git/ref/heads/main"):
-            return {"object": {"sha": SHA}}
+            return {"object": {"sha": self.scope["candidate_sha"]}}
         if url.endswith("/comments?per_page=100"):
             if method == "POST": self.comments.append(payload)
             return self.comments
-        if url.endswith("/issues/19"):
+        if url.endswith(f"/issues/{self.scope['issue']}"):
             if method == "PATCH": self.closed = True
-            return {"body": closure_auditor.ISSUE_MARKER, "state": "closed" if self.closed else "open", "closed_at": "now" if self.closed else None}
+            return {"body": f"<!-- {self.scope['issue_marker']} -->", "state": "closed" if self.closed else "open", "closed_at": "now" if self.closed else None}
         raise AssertionError(url)
 
 
 class ClosureAdapterTests(unittest.TestCase):
-    def test_issue_19_fixture_closes_then_idempotently_reads_back(self):
+    def test_lawful_issue_19_fixture_closes_then_idempotently_reads_back(self):
         lookup, closure = cards()
-        api = Api()
+        api = Api(scope())
         with patch.object(closure_auditor, "validate_workspace"):
             self.assertEqual(closure_auditor.execute(closure, lookup.__getitem__, api)["operation"], "closed")
             self.assertEqual(closure_auditor.execute(closure, lookup.__getitem__, api)["operation"], "idempotent-readback")
         self.assertEqual(api.writes, ["POST", "PATCH"])
 
-    def test_card_only_contract_reference_rejects_target_selection_and_bad_receipt_pointer(self):
+    def test_scope_is_dynamically_derived_from_card_and_receipts(self):
+        dynamic_marker = "FOUNDRY-ALTERNATE-CONTRACT-V1"
+        dynamic_sha = "a" * 40
+        lookup, closure = cards(issue=42, marker=dynamic_marker, sha=dynamic_sha)
+        self.assertEqual(closure_auditor.derive_scope(closure, lookup.__getitem__), scope(42, dynamic_marker, dynamic_sha))
+
+    def test_rejects_card_target_selection_and_contract_reference_mismatches(self):
         for mutate in (
             lambda lookup, closure: closure.update({"body": closure["body"] + "\nPayload: arbitrary"}),
-            lambda lookup, closure: closure.update({"body": closure["body"].replace(closure_auditor.CONTRACT_URL, "https://github.com/other/repo/issues/19")}),
+            lambda lookup, closure: closure.update({"body": closure["body"].replace("stemarie/context-foundry", "other/repo")}),
             lambda lookup, closure: closure.update({"body": closure["body"].replace("Issue #19", "Issue #20")}),
-            lambda lookup, closure: closure.update({"body": closure["body"].replace(closure_auditor.ISSUE_MARKER, "wrong")}),
-            lambda lookup, closure: closure.update({"body": card_body("t_d3110002")}),
+            lambda lookup, closure: closure.update({"body": closure["body"].replace(MARKER, "wrong")}),
+            lambda lookup, closure: closure.update({"body": card_body(delivery_id="t_d3110002")}),
             lambda lookup, closure: closure.update({"assignee": "foundry-worker"}),
             lambda lookup, closure: closure.update({"title": "Worker: close"}),
         ):
@@ -81,15 +93,16 @@ class ClosureAdapterTests(unittest.TestCase):
             with self.assertRaises(closure_auditor.ClosureError):
                 closure_auditor.derive_scope(closure, lookup.__getitem__)
 
-    def test_rejects_identity_parent_and_receipt_mismatches(self):
+    def test_rejects_every_identity_and_parent_mismatch(self):
         mutations = (
             lambda lookup, closure: closure.update({"id": DELIVERY_ID}),
             lambda lookup, closure: closure.update({"parents": [CANDIDATE_ID]}),
             lambda lookup, closure: lookup[DELIVERY_ID]["task"].update({"parents": [DELIVERY_ID]}),
-            lambda lookup, closure: lookup[CANDIDATE_ID]["task"].update({"id": "t_cand0001"}),
             lambda lookup, closure: lookup[CANDIDATE_ID]["task"].update({"assignee": "foundry-worker"}),
-            lambda lookup, closure: lookup[DELIVERY_ID]["task"]["metadata"]["closure_delivery_receipt_v1"].update({"candidate_auditor_task_id": "t_c1050001"}),
-            lambda lookup, closure: lookup[DELIVERY_ID]["task"].update({"status": "running"}),
+            lambda lookup, closure: lookup[CANDIDATE_ID]["task"].update({"parents": []}),
+            lambda lookup, closure: lookup[CANDIDATE_ID]["task"].update({"parents": [WORKER_ID, WORKER_ID]}),
+            lambda lookup, closure: lookup[WORKER_ID]["task"].update({"status": "running"}),
+            lambda lookup, closure: lookup[DELIVERY_ID]["task"]["metadata"]["closure_delivery_receipt_v1"].update({"candidate_auditor_task_id": CLOSURE_ID}),
         )
         for mutate in mutations:
             lookup, closure = cards()
@@ -113,26 +126,29 @@ class ClosureAdapterTests(unittest.TestCase):
                 with self.assertRaises(closure_auditor.ClosureError, msg=f"missing {field}"):
                     closure_auditor.derive_scope(closure, lookup.__getitem__)
 
-    def test_rejects_workspace_remote_api_and_issue_marker_bypasses_before_writes(self):
+    def test_rejects_workspace_remote_api_marker_and_remote_delivery_bypasses_before_writes(self):
         lookup, closure = cards()
-        with patch.object(closure_auditor, "git_output", side_effect=[SCOPE["origin"], "b" * 40]):
+        packet_scope = scope()
+        with patch.object(closure_auditor, "git_output", side_effect=[packet_scope["origin"], "b" * 40]):
             with self.assertRaises(closure_auditor.ClosureError):
                 closure_auditor.validate_workspace(closure, closure_auditor.derive_scope(closure, lookup.__getitem__))
         for response in (
-            lambda method, url, payload: {"full_name": "other/repo", "default_branch": "main"} if url == SCOPE["api_target"] else Api()(method, url, payload),
-            lambda method, url, payload: {"object": {"sha": "b" * 40}} if url.endswith("/git/ref/heads/main") else Api()(method, url, payload),
-            lambda method, url, payload: {"body": "missing marker", "state": "open", "closed_at": None} if url.endswith("/issues/19") else Api()(method, url, payload),
+            lambda method, url, payload: {"full_name": "other/repo", "default_branch": "main"} if url == packet_scope["api_target"] else Api(packet_scope)(method, url, payload),
+            lambda method, url, payload: {"object": {"sha": "b" * 40}} if url.endswith("/git/ref/heads/main") else Api(packet_scope)(method, url, payload),
+            lambda method, url, payload: {"body": "missing marker", "state": "open", "closed_at": None} if url.endswith("/issues/19") else Api(packet_scope)(method, url, payload),
         ):
             lookup, closure = cards()
             with patch.object(closure_auditor, "validate_workspace"):
                 with self.assertRaises(closure_auditor.ClosureError):
                     closure_auditor.execute(closure, lookup.__getitem__, response)
 
-    def test_source_managed_schema_declares_only_canonical_fixture_and_is_valid_json(self):
+    def test_source_managed_schema_is_dynamic_but_repository_bound_and_valid_json(self):
         schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-        self.assertEqual(schema["properties"]["closure_card"]["properties"]["canonical_contract_url"]["const"], closure_auditor.CONTRACT_URL)
-        self.assertEqual(schema["properties"]["delivery_receipt"]["properties"]["candidate_sha"]["const"], SHA)
-        self.assertEqual(schema["properties"]["delivery_receipt"]["properties"]["candidate_auditor_task_id"]["const"], CANDIDATE_ID)
+        closure_properties = schema["properties"]["closure_card"]["properties"]
+        self.assertIn("pattern", closure_properties["canonical_contract_url"])
+        self.assertNotIn("const", closure_properties["issue"])
+        self.assertEqual(schema["properties"]["delivery_receipt"]["properties"]["repository"]["const"], closure_auditor.REPOSITORY)
+        self.assertEqual(schema["properties"]["delivery_receipt"]["properties"]["branch"]["const"], closure_auditor.BRANCH)
 
 
 if __name__ == "__main__":
