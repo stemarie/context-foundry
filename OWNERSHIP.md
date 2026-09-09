@@ -2,7 +2,7 @@
 
 Context Foundry is the canonical home for:
 
-- Architect / Worker / Auditor profile definitions;
+- Architect / Worker / Auditor / Watchdog profile definitions;
 - profile metadata, non-secret config, role instructions, gateway-port policy, and role-local skills;
 - portable recovery, delivery, and validation guidance that remains profile/skill-only and does not activate runtime automation.
 
@@ -26,4 +26,4 @@ python3 scripts/check_foundry_gateway_ports.py
 python3 -m unittest discover -s tests -v
 ```
 
-The sync tool manages only `profile.yaml`, non-secret `config.yaml`, `SOUL.md`, and declared skills. It excludes all credentials and runtime state.
+The sync tool manages only `profile.yaml`, non-secret `config.yaml`, `SOUL.md`, and declared skills. It excludes all credentials and runtime state. The separate Watchdog wrapper installer writes only `~/.hermes/scripts/foundry_watchdog_scan.sh`; it does not create cron or start a gateway.

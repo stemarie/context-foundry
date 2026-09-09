@@ -13,10 +13,10 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PROFILES = ("foundry-architect", "foundry-worker", "foundry-auditor", "foundry-brainiac")
+PROFILES = ("foundry-architect", "foundry-worker", "foundry-auditor", "foundry-brainiac", "foundry-watchdog")
 INSTALLED_ROOT = Path.home() / ".hermes" / "profiles"
 BASE_ASSETS = (Path("profile.yaml"), Path("config.yaml"), Path("SOUL.md"), Path("ROLE-CONTRACT.md"))
-DISCOVERED_ASSET_GLOBS = ("skills/*/SKILL.md", "adapters/*.py", "schemas/*.json")
+DISCOVERED_ASSET_GLOBS = ("skills/*/SKILL.md", "adapters/*.py", "schemas/*.json", "scripts/*")
 REQUIRED_PROFILE_ASSETS = {
     "foundry-auditor": (
         Path("adapters/closure_auditor.py"),
@@ -45,6 +45,34 @@ def validate_source(profile: str) -> list[str]:
     return errors
 
 
+def copy_managed_asset(source: Path, target: Path, relative: Path) -> None:
+    """Copy canonical content without discarding the private platforms block.
+
+    Runtime API configuration belongs only to the installed profile. Canonical
+    configs deliberately do not declare a ``platforms:`` section, so preserve
+    that installed suffix verbatim while refreshing the source-managed prefix.
+    """
+    if relative != Path("config.yaml") or not target.is_file():
+        shutil.copyfile(source, target)
+        return
+    installed = target.read_text(encoding="utf-8")
+    marker = "platforms:\n"
+    private_suffix = installed[installed.index(marker):] if marker in installed else ""
+    source_text = source.read_text(encoding="utf-8")
+    target.write_text(source_text + private_suffix, encoding="utf-8")
+
+
+def managed_asset_matches(source: Path, target: Path, relative: Path) -> bool:
+    if not target.is_file():
+        return False
+    if relative != Path("config.yaml"):
+        return filecmp.cmp(source, target, shallow=False)
+    source_text = source.read_text(encoding="utf-8")
+    target_text = target.read_text(encoding="utf-8")
+    suffix = target_text.removeprefix(source_text)
+    return target_text.startswith(source_text) and (not suffix or suffix.startswith("platforms:\n"))
+
+
 def sync(profile: str, apply: bool, installed_root: Path = INSTALLED_ROOT) -> list[str]:
     source_root = ROOT / "profiles" / profile
     target_root = installed_root / profile
@@ -68,9 +96,9 @@ def sync(profile: str, apply: bool, installed_root: Path = INSTALLED_ROOT) -> li
             continue
         if apply:
             target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(source, target)
-            target.chmod(0o644)
-        if not target.is_file() or not filecmp.cmp(source, target, shallow=False):
+            copy_managed_asset(source, target, relative)
+            target.chmod(source.stat().st_mode & 0o777)
+        if not managed_asset_matches(source, target, relative):
             errors.append(f"drift: {profile}/{relative}")
     return errors
 

@@ -1,0 +1,2 @@
+description: 'Context Foundry Watchdog: board-only lifecycle observer and recovery router; it never authors contracts, edits source, operates GitHub, accesses credentials, alters cron or profile configuration, or audits.'
+description_auto: false

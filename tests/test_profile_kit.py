@@ -1,4 +1,6 @@
 import importlib.util
+import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -28,6 +30,7 @@ PROFILES = {
         "foundry-release-audit",
     },
     "foundry-brainiac": set(),
+    "foundry-watchdog": {"foundry-lifecycle-orchestration"},
 }
 
 
@@ -44,7 +47,10 @@ class ProfileKitTests(unittest.TestCase):
             role_contract = (root / "ROLE-CONTRACT.md").read_text(encoding="utf-8")
             soul_template = (root / "SOUL.md").read_text(encoding="utf-8")
             self.assertIn("role contract", role_contract.lower())
-            expected_heading = "# Brainiac" if profile == "foundry-brainiac" else "# Context Foundry"
+            expected_heading = {
+                "foundry-brainiac": "# Brainiac",
+                "foundry-watchdog": "# Foundry Watchdog",
+            }.get(profile, "# Context Foundry")
             self.assertIn(expected_heading, soul_template)
             for skill in actual:
                 content = (root / "skills" / skill / "SKILL.md").read_text(encoding="utf-8")
@@ -68,6 +74,136 @@ class ProfileKitTests(unittest.TestCase):
                 self.assertIn("## contract", content)
                 self.assertIn("## verification", content)
                 self.assertTrue(all(token not in content for token in forbidden), f"{profile}/{skill} adds runtime behavior")
+
+    def test_watchdog_is_board_only_and_does_not_add_runtime_automation(self):
+        profile = ROOT / "profiles/foundry-watchdog"
+        contract = (profile / "ROLE-CONTRACT.md").read_text(encoding="utf-8").lower()
+        soul = (profile / "SOUL.md").read_text(encoding="utf-8").lower()
+        skill = (profile / "skills/foundry-lifecycle-orchestration/SKILL.md").read_text(encoding="utf-8").lower()
+        for token in ("observes only", "never authors", "edits source", "operates github", "accesses credentials", "changes cron", "issues an audit"):
+            self.assertIn(token, contract)
+        self.assertIn("empty or unchanged", soul)
+        self.assertIn("do nothing", soul)
+        self.assertIn("re-read every cited card", skill)
+        self.assertNotIn("cronjob(", skill)
+
+    def test_watchdog_scanner_handles_current_envelopes_and_nonhealthy_scope(self):
+        scanner = ROOT / "profiles/foundry-watchdog/scripts/foundry_watchdog_scan.py"
+        identity = (
+            "Canonical external contract: https://github.com/stemarie/context-foundry/issues/19\n"
+            "Contract ID/revision: Issue #19 / FOUNDRY-WATCHDOG-INITIAL-CONTRACT-V1 / " + "a" * 64
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = Path(directory) / "tasks.json"
+            fixture.write_text(json.dumps({"tasks": []}), encoding="utf-8")
+            empty = subprocess.run([sys.executable, scanner, "--input", fixture], capture_output=True, text=True)
+            self.assertEqual(empty.returncode, 0, empty.stderr)
+            self.assertEqual(empty.stdout, "")
+
+            fixture.write_text(json.dumps({"tasks": [
+                {"id": "t_worker", "status": "done", "title": "Worker: complete kit", "body": identity,
+                 "events": [{"kind": "completed", "created_at": 1, "payload": {"candidate": "a"}}]},
+                {"id": "t_auditor", "status": "done", "title": "Candidate Auditor: audit kit", "body": identity,
+                 "runs": [{"id": 2, "status": "completed", "summary": "PASS", "metadata": {"verdict": "PASS"}}]},
+            ]}), encoding="utf-8")
+            first = subprocess.run([sys.executable, scanner, "--input", fixture], capture_output=True, text=True)
+            self.assertEqual(first.returncode, 0, first.stderr)
+            payload = json.loads(first.stdout)
+            self.assertEqual([event["id"] for event in payload["events"]], ["t_auditor", "t_worker"])
+            digest_file = Path(directory) / "digest"
+            digest_file.write_text(payload["digest"], encoding="utf-8")
+            unchanged = subprocess.run(
+                [sys.executable, scanner, "--input", fixture, "--previous-digest-file", digest_file],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(unchanged.returncode, 0, unchanged.stderr)
+            self.assertEqual(unchanged.stdout, "")
+
+            changed = json.loads(fixture.read_text(encoding="utf-8"))
+            changed["tasks"][1]["runs"][0]["summary"] = "REQUEST_CHANGES"
+            fixture.write_text(json.dumps(changed), encoding="utf-8")
+            changed_result = subprocess.run([sys.executable, scanner, "--input", fixture], capture_output=True, text=True)
+            self.assertEqual(changed_result.returncode, 0, changed_result.stderr)
+            self.assertNotEqual(json.loads(changed_result.stdout)["digest"], payload["digest"])
+
+            fixture.write_text(json.dumps({"tasks": [
+                {"id": "t_historical", "status": "done", "title": "Worker: historical", "body": identity},
+            ]}), encoding="utf-8")
+            historical = subprocess.run([sys.executable, scanner, "--input", fixture], capture_output=True, text=True)
+            self.assertEqual(historical.returncode, 0, historical.stderr)
+            self.assertEqual(historical.stdout, "")
+
+            fixture.write_text(json.dumps({"tasks": [
+                {"id": "t_malformed", "status": "review", "title": "Candidate Auditor: malformed", "body": "Canonical external contract: https://github.com/stemarie/context-foundry/issues/19"},
+                {"id": "t_unrecognized", "status": "review", "title": "Worker: foreign", "body": "Canonical external contract: https://github.com/example/other/issues/19\nContract ID/revision: Issue #19 / MARKER / " + "b" * 64},
+            ]}), encoding="utf-8")
+            nonhealthy = subprocess.run([sys.executable, scanner, "--input", fixture], capture_output=True, text=True)
+            self.assertEqual(nonhealthy.returncode, 0, nonhealthy.stderr)
+            self.assertEqual(json.loads(nonhealthy.stdout)["scanner_status"], "non_healthy")
+
+            closure = (
+                "Canonical external contract: https://github.com/stemarie/context-foundry/issues/19\n"
+                "Contract ID/revision: Issue #19 / FOUNDRY-WATCHDOG-INITIAL-CONTRACT-V1\n"
+                "Role: Closure Auditor\nDependency: completed direct Delivery parent\nReceipt pointer: Delivery `t_delivery`"
+            )
+            fixture.write_text(json.dumps({"tasks": [{"id": "t_closure", "status": "review", "title": "Closure Auditor: close", "body": closure,
+                                                       "events": [{"kind": "review_requested", "created_at": 2}]}]}), encoding="utf-8")
+            closure_result = subprocess.run([sys.executable, scanner, "--input", fixture], capture_output=True, text=True)
+            self.assertEqual(closure_result.returncode, 0, closure_result.stderr)
+            self.assertEqual(json.loads(closure_result.stdout)["events"][0]["contract"]["sha256"], "")
+
+            legacy = (
+                "External contract: https://github.com/stemarie/context-foundry/issues/19\n"
+                "Contract identity/revision: Issue #19; `FOUNDRY-WATCHDOG-INITIAL-CONTRACT-V1`; body SHA-256 `" + "c" * 64 + "`."
+            )
+            fixture.write_text(json.dumps({"tasks": [{"id": "t_legacy", "status": "review", "title": "Worker: legacy", "body": legacy}]}), encoding="utf-8")
+            legacy_result = subprocess.run([sys.executable, scanner, "--input", fixture], capture_output=True, text=True)
+            self.assertEqual(legacy_result.returncode, 0, legacy_result.stderr)
+            self.assertEqual(json.loads(legacy_result.stdout)["events"][0]["contract"]["sha256"], "c" * 64)
+
+    def test_watchdog_wrapper_installer_is_explicit_and_executable(self):
+        installer = ROOT / "scripts/install_foundry_watchdog_wrapper.py"
+        source = ROOT / "profiles/foundry-watchdog/scripts/foundry_watchdog_scan.sh"
+        with tempfile.TemporaryDirectory() as directory:
+            environment = {**os.environ, "HOME": directory}
+            result = subprocess.run([sys.executable, installer], cwd=ROOT, env=environment, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            target = Path(directory) / ".hermes/scripts/foundry_watchdog_scan.sh"
+            self.assertTrue(target.is_file())
+            self.assertTrue(os.access(target, os.X_OK))
+            self.assertEqual(target.read_text(encoding="utf-8"), source.read_text(encoding="utf-8"))
+            self.assertIn("cron_created=false gateway_started=false", result.stdout)
+
+    def test_sync_installs_watchdog_scanner_and_preserves_runtime_only_files(self):
+        sync = ROOT / "scripts/sync_foundry_profiles.py"
+        with tempfile.TemporaryDirectory() as directory:
+            profiles = Path(directory) / ".hermes/profiles"
+            for profile in PROFILES:
+                (profiles / profile).mkdir(parents=True)
+            worker = profiles / "foundry-worker"
+            runtime_config = "platforms:\n  api_server:\n    enabled: true\n    key: private\n"
+            (worker / "config.yaml").write_text(runtime_config, encoding="utf-8")
+            (worker / ".env").write_text("PRIVATE_TOKEN=not-source\n", encoding="utf-8")
+            environment = {**os.environ, "HOME": directory}
+            apply = subprocess.run([sys.executable, sync, "--apply"], cwd=ROOT, env=environment, capture_output=True, text=True)
+            self.assertEqual(apply.returncode, 0, apply.stderr)
+            self.assertIn("profiles=5", apply.stdout)
+            scanner = profiles / "foundry-watchdog/scripts/foundry_watchdog_scan.py"
+            wrapper = profiles / "foundry-watchdog/scripts/foundry_watchdog_scan.sh"
+            self.assertTrue(scanner.is_file())
+            self.assertTrue(os.access(scanner, os.X_OK))
+            self.assertTrue(os.access(wrapper, os.X_OK))
+            self.assertIn("api_server:\n    enabled: true", (worker / "config.yaml").read_text(encoding="utf-8"))
+            self.assertEqual((worker / ".env").read_text(encoding="utf-8"), "PRIVATE_TOKEN=not-source\n")
+            fake_hermes = Path(directory) / "hermes"
+            fake_hermes.write_text("#!/bin/sh\nprintf '%s\\n' '{\"tasks\": []}'\n", encoding="utf-8")
+            fake_hermes.chmod(0o755)
+            resolved = subprocess.run([wrapper], env={**environment, "HERMES_BIN": str(fake_hermes)}, capture_output=True, text=True)
+            self.assertEqual(resolved.returncode, 0, resolved.stderr)
+            self.assertEqual(resolved.stdout, "")
+            check = subprocess.run([sys.executable, sync, "--check"], cwd=ROOT, env=environment, capture_output=True, text=True)
+            self.assertEqual(check.returncode, 0, check.stderr)
+            self.assertIn("PROFILE_KIT_VALID", check.stdout)
 
     def test_scope_configuration_preserves_inactive_recovery_only(self):
         config = (ROOT / "config" / "foundry.yaml").read_text(encoding="utf-8")

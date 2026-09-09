@@ -27,3 +27,10 @@ profiles:
     repository_access: read_write_private_foundry_repo
     optional_api_server: {host: 127.0.0.1, port: 8645, default_enabled: false}
     prohibitions: [author_worker_evidence, repair_then_pass, self_approve]
+  foundry-watchdog:
+    purpose: Observe board lifecycle state and route deterministic bounded recovery through the Architect.
+    toolsets: [kanban, skills, terminal]
+    local_skills: [foundry-lifecycle-orchestration]
+    repository_access: none
+    gateway: {default_enabled: false}
+    prohibitions: [author_contracts, edit_source, operate_github, access_credentials, alter_cron_or_profile_configuration, audit, delivery, closure]

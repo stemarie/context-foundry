@@ -19,8 +19,9 @@ Default profile names are recommendations and configurable in `config/foundry.ya
 - **Architect** (`foundry-architect`) — owns intake, source mapping, packet design, routing, human gates, and synthesis. It does not execute Worker or Auditor tasks and never audits its own conclusions.
 - **Worker** (`foundry-worker`) — performs one bounded packet, writes authorized artifacts, and returns cited evidence.
 - **Auditor** (`foundry-auditor`) — independently checks scope, citations, evidence schema/classification, and safe deterministic reproducibility checks. It returns `PASS`, `REQUEST_CHANGES`, or `BLOCKED_WITH_EVIDENCE`.
+- **Watchdog** (`foundry-watchdog`) — scans only the `context-foundry` board for contract-identified lifecycle changes and routes defined recovery through the Architect. It cannot author contracts, edit source, operate GitHub, access credentials, alter cron/profile configuration, audit, deliver, or close.
 
-All roles may write this private repository and its GitHub Issues. Kanban is the durable control plane and permits only one active repository writer. The Auditor may not pass evidence or audit rules it materially authored or changed.
+Architect, Worker, and Auditor have only their packet-defined repository/Issue authority. Watchdog has neither repository nor GitHub authority. Kanban is the durable control plane and permits only one active repository writer. The Auditor may not pass evidence or audit rules it materially authored or changed.
 
 ## Safety boundaries
 
@@ -43,7 +44,7 @@ state/        Idempotency/checkpoint state; not a Kanban replacement
 scripts/      Deterministic inventory, extraction, and validation utilities
 templates/    Kanban card and artifact templates
 skills/       Canonical Foundry role skills
-profiles/     Canonical Architect/Worker/Auditor profile definitions; no runtime state
+profiles/     Canonical role profile definitions, including the board-only Watchdog; no runtime state
 kits/         Portable Foundry-owned contract-orchestration kit
 reports/      Durable run reports
 ```
@@ -72,7 +73,7 @@ These scripts use only the Python standard library. Run them from the repository
 
 ## Versioned role profiles and gateways
 
-`profiles/` is the canonical Architect, Worker, and Auditor profile package: role contracts, `profile.yaml`, non-secret `config.yaml`, `SOUL.md`, gateway-port policy, and every role-local skill. `kits/contract-orchestration/` is the canonical portable work-contract/recovery/orchestration kit. Both are owned by Context Foundry and can be used without AI.Contract. Credentials, runtime databases, logs, caches, sessions, and gateway process state are deliberately excluded.
+`profiles/` is the canonical Architect, Worker, Auditor, Brainiac, and Watchdog profile package: role contracts, `profile.yaml`, non-secret `config.yaml`, `SOUL.md`, gateway-port policy where applicable, and every role-local skill. `kits/contract-orchestration/` is the canonical portable work-contract/recovery/orchestration kit. Both are owned by Context Foundry and can be used without AI.Contract. Credentials, runtime databases, logs, caches, sessions, and gateway process state are deliberately excluded.
 
 ```bash
 python3 scripts/sync_foundry_profiles.py --check-source
@@ -82,6 +83,23 @@ python3 -m unittest discover -s tests -v
 ```
 
 The profiles may run independent gateways. Their optional loopback API-server ports are reserved as Architect `8643`, Worker `8644`, and Auditor `8645`; all start disabled. Before enabling one, configure a unique `API_SERVER_KEY` only in that profile’s private `.env`, run the port check, and start/restart only that profile’s gateway. Do not copy credentials between profiles.
+
+### Watchdog installation and operation
+
+Source synchronization installs only the canonical non-secret Watchdog kit; it does not start a gateway, create a cron job, or write scanner state. After a successful source sync, the separately authorized operator may install the scheduler-visible wrapper:
+
+```bash
+python3 scripts/install_foundry_watchdog_wrapper.py
+~/.hermes/scripts/foundry_watchdog_scan.sh
+```
+
+The wrapper invokes the installed profile scanner and writes its digest only under `~/.hermes/profiles/foundry-watchdog/state/`. A profile-owned Hermes cron and any Watchdog gateway startup are separate operator actions; neither is created by source sync or the wrapper installer. Read-only verification commands are:
+
+```bash
+python3 scripts/sync_foundry_profiles.py --check
+test -x ~/.hermes/scripts/foundry_watchdog_scan.sh
+~/.hermes/scripts/foundry_watchdog_scan.sh
+```
 
 ## Generic reusable skill pack
 
