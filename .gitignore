@@ -6,3 +6,6 @@ __pycache__/
 # Local, run-specific Foundry state and generated artifacts
 *.extract
 *.tmp
+
+# Brainiac persistent learning state must remain outside the source checkout.
+*.sqlite

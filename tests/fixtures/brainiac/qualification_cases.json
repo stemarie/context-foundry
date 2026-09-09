@@ -1,0 +1,28 @@
+[
+  {
+    "incident": {
+      "event_id": "fixture-normal",
+      "occurred_at": "2026-01-01T00:00:00Z",
+      "severity": "normal",
+      "source": "kanban",
+      "category": "dispatch",
+      "summary": "fixture timeout",
+      "evidence_revision": "fixture-r1"
+    },
+    "decision": "not_qualified",
+    "astra_invoked": false
+  },
+  {
+    "incident": {
+      "event_id": "fixture-high",
+      "occurred_at": "2026-01-01T00:00:00Z",
+      "severity": "high",
+      "source": "kanban",
+      "category": "dispatch",
+      "summary": "fixture timeout",
+      "evidence_revision": "fixture-r1"
+    },
+    "decision": "high_severity",
+    "astra_invoked": true
+  }
+]

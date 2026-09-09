@@ -13,7 +13,7 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PROFILES = ("foundry-architect", "foundry-worker", "foundry-auditor")
+PROFILES = ("foundry-architect", "foundry-worker", "foundry-auditor", "foundry-brainiac")
 INSTALLED_ROOT = Path.home() / ".hermes" / "profiles"
 BASE_ASSETS = (Path("profile.yaml"), Path("config.yaml"), Path("SOUL.md"), Path("ROLE-CONTRACT.md"))
 DISCOVERED_ASSET_GLOBS = ("skills/*/SKILL.md", "adapters/*.py")

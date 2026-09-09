@@ -1,0 +1,11 @@
+model:
+  provider: openai-codex
+  default: gpt-6-astra
+plugins:
+  enabled: []
+approvals:
+  cron_mode: deny
+kanban:
+  dispatch_in_gateway: false
+platform_toolsets:
+  cli: [file, skills, terminal]

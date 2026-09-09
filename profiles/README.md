@@ -1,6 +1,6 @@
 # Versioned Foundry profile kit
 
-This directory is the **canonical, reviewable source of truth** for the three Context Foundry profiles. Context Foundry owns the profile definitions and its contract-orchestration/recovery skill material; AI.Contract owns only its Go service and its service contract.
+This directory is the **canonical, reviewable source of truth** for the Architect, Worker, Auditor, and Brainiac Context Foundry profiles. Context Foundry owns the profile definitions and its contract-orchestration/recovery skill material; AI.Contract owns only its Go service and its service contract.
 
 - profile description and model/toolset template;
 - versioned role contracts and all role-local skills, including recovery and error-correction guidance now owned by Context Foundry;
@@ -32,5 +32,6 @@ The profiles are allowed to run independent Hermes gateways. Their optional loca
 | `foundry-architect` | `8643` | disabled until explicitly enabled |
 | `foundry-worker` | `8644` | disabled until explicitly enabled |
 | `foundry-auditor` | `8645` | disabled until explicitly enabled |
+| `foundry-brainiac` | none | no gateway; inactive unless separately operator-installed |
 
 They use unique systemd user units (`hermes-gateway-<profile>.service`), so the gateway processes themselves do not clash. Before enabling an API server, configure that profile's own `.env` with a unique `API_SERVER_KEY`, enable it there, run `python3 scripts/check_foundry_gateway_ports.py`, then start/restart only that profile's gateway. Do not copy the default profile's credentials into a Foundry profile.
