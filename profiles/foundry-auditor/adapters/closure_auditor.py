@@ -35,6 +35,12 @@ def exact_dict(value: Any, keys: set[str], label: str) -> dict[str, Any]:
     return value
 
 
+def named_receipt(metadata: Any, name: str, keys: set[str], label: str) -> dict[str, Any]:
+    if not isinstance(metadata, dict) or name not in metadata:
+        raise ClosureError(f"{label} is absent")
+    return exact_dict(metadata[name], keys, label)
+
+
 def normalize_envelope(envelope: dict[str, Any], *, completed_metadata: bool) -> dict[str, Any]:
     """Normalize the real ``hermes kanban show --json`` producer envelope."""
     if not isinstance(envelope, dict):
@@ -109,8 +115,7 @@ def bound_fields(receipt: dict[str, Any], scope: dict[str, Any], fields: tuple[s
 def candidate_receipt(candidate: dict[str, Any], scope: dict[str, Any]) -> str:
     if candidate.get("assignee") != PROFILE:
         raise ClosureError("Candidate Auditor is not independently assigned to foundry-auditor")
-    metadata = exact_dict(candidate.get("metadata"), {"closure_candidate_audit_v1"}, "Candidate Auditor metadata")
-    receipt = exact_dict(metadata["closure_candidate_audit_v1"], {"schema_version", "verdict", "repository", "origin", "api_target", "issue", "branch", "candidate_sha"}, "Candidate Auditor receipt")
+    receipt = named_receipt(candidate.get("metadata"), "closure_candidate_audit_v1", {"schema_version", "verdict", "repository", "origin", "api_target", "issue", "branch", "candidate_sha"}, "Candidate Auditor receipt")
     if receipt["schema_version"] != "closure_candidate_audit_v1" or receipt["verdict"] != "PASS":
         raise ClosureError("Candidate Auditor receipt is not a PASS")
     bound_fields(receipt, scope, ("repository", "origin", "api_target", "issue", "branch"), "Candidate Auditor receipt")
@@ -121,8 +126,7 @@ def candidate_receipt(candidate: dict[str, Any], scope: dict[str, Any]) -> str:
 
 
 def delivery_receipt(delivery: dict[str, Any], candidate_id: str, scope: dict[str, Any]) -> None:
-    metadata = exact_dict(delivery.get("metadata"), {"closure_delivery_receipt_v1"}, "Delivery metadata")
-    receipt = exact_dict(metadata["closure_delivery_receipt_v1"], {"schema_version", "outcome", "delivery_mode", "repository", "origin", "api_target", "issue", "branch", "candidate_sha", "delivered_sha", "candidate_auditor_task_id"}, "Delivery receipt")
+    receipt = named_receipt(delivery.get("metadata"), "closure_delivery_receipt_v1", {"schema_version", "outcome", "delivery_mode", "repository", "origin", "api_target", "issue", "branch", "candidate_sha", "delivered_sha", "candidate_auditor_task_id"}, "Delivery receipt")
     if receipt["schema_version"] != "closure_delivery_receipt_v1" or receipt["outcome"] != "DELIVERED" or receipt["delivery_mode"] != "non-force-direct-main":
         raise ClosureError("Delivery receipt has invalid delivery state")
     bound_fields(receipt, scope, ("repository", "origin", "api_target", "issue", "branch", "candidate_sha"), "Delivery receipt")

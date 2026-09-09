@@ -1,0 +1,37 @@
+{
+  "provenance": {
+    "source_command": "/home/karell/.local/bin/hermes kanban --board context-foundry show t_9fb2f2fb --json",
+    "captured_task_id": "t_9fb2f2fb",
+    "sanitization": "The structural envelope was retained; nonessential task fields were omitted and the runtime session identifier was replaced with REDACTED. No task.parents or task.metadata fields were added."
+  },
+  "envelope": {
+    "task": {
+      "id": "t_9fb2f2fb",
+      "title": "Worker: repair Issue #20 Closure adapter real CLI envelopes",
+      "assignee": "foundry-worker",
+      "status": "done",
+      "workspace_kind": "worktree",
+      "completion_contract": "local-only"
+    },
+    "parents": [],
+    "runs": [
+      {
+        "id": 548,
+        "profile": "foundry-worker",
+        "status": "done",
+        "outcome": "completed",
+        "metadata": {
+          "candidate_sha": "8a17acbdebae5a92179235d277c9f36327d4dc05",
+          "frozen_base": "7028dab10274958ccf80a992c12b951c727be21e",
+          "repository": "stemarie/context-foundry",
+          "origin": "https://github.com/stemarie/context-foundry.git",
+          "api_target": "https://api.github.com/repos/stemarie/context-foundry",
+          "contract_url": "https://github.com/stemarie/context-foundry/issues/20",
+          "contract_revision": "FOUNDRY-CLOSURE-AUDITOR-COMPATIBILITY-CONTRACT-V1",
+          "external_writes": "None. No push, Issue mutation, release, tag, or profile synchronization apply was performed.",
+          "worker_session_id": "REDACTED"
+        }
+      }
+    ]
+  }
+}

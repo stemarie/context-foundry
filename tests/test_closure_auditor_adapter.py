@@ -7,6 +7,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 ADAPTER_PATH = ROOT / "profiles/foundry-auditor/adapters/closure_auditor.py"
 SCHEMA_PATH = ROOT / "profiles/foundry-auditor/schemas/closure_auditor_packet.schema.json"
+LIVE_ENVELOPE_FIXTURE = ROOT / "tests/closure_auditor_live_envelope_fixture.json"
 spec = importlib.util.spec_from_file_location("closure_auditor", ADAPTER_PATH)
 assert spec and spec.loader
 closure_auditor = importlib.util.module_from_spec(spec)
@@ -35,22 +36,30 @@ def card_body(issue=19, marker=MARKER, delivery_id=DELIVERY_ID):
     ))
 
 
-def envelope(task, *, parents, metadata=None):
+def captured_live_envelope():
+    return json.loads(LIVE_ENVELOPE_FIXTURE.read_text(encoding="utf-8"))["envelope"]
+
+
+def patched_hypothetical_envelope(task, *, parents, metadata=None):
+    """Patch receipt content into a separately preserved captured CLI structure."""
+    envelope = captured_live_envelope()
     task = dict(task)
     task.pop("parents", None)
     task.pop("metadata", None)
-    run = {"id": 1, "status": "done", "outcome": "done", "metadata": metadata}
-    return {"task": task, "parents": parents, "runs": [run]}
+    envelope["task"] = task
+    envelope["parents"] = parents
+    envelope["runs"][0]["metadata"] = metadata
+    return envelope
 
 
 def cards(issue=19, marker=MARKER, sha=SHA):
     packet_scope = scope(issue, marker, sha)
-    worker = envelope({"id": WORKER_ID, "assignee": "foundry-worker", "status": "done", "title": "Worker: Watchdog candidate"}, parents=[])
-    other_parent = envelope({"id": OTHER_PARENT_ID, "assignee": "foundry-architect", "status": "done", "title": "Architect: unrelated packet"}, parents=[])
-    candidate_metadata = {"closure_candidate_audit_v1": {"schema_version": "closure_candidate_audit_v1", "verdict": "PASS", **{key: packet_scope[key] for key in ("repository", "origin", "api_target", "issue", "branch", "candidate_sha")}}}
-    candidate = envelope({"id": CANDIDATE_ID, "assignee": "foundry-auditor", "status": "done", "title": "Candidate Auditor: Watchdog gate"}, parents=[WORKER_ID], metadata=candidate_metadata)
-    delivery_metadata = {"closure_delivery_receipt_v1": {"schema_version": "closure_delivery_receipt_v1", "outcome": "DELIVERED", "delivery_mode": "non-force-direct-main", **{key: packet_scope[key] for key in ("repository", "origin", "api_target", "issue", "branch", "candidate_sha")}, "delivered_sha": sha, "candidate_auditor_task_id": CANDIDATE_ID}}
-    delivery = envelope({"id": DELIVERY_ID, "status": "done", "title": "Delivery: Watchdog"}, parents=[CANDIDATE_ID], metadata=delivery_metadata)
+    worker = patched_hypothetical_envelope({"id": WORKER_ID, "assignee": "foundry-worker", "status": "done", "title": "Worker: Watchdog candidate"}, parents=[])
+    other_parent = patched_hypothetical_envelope({"id": OTHER_PARENT_ID, "assignee": "foundry-architect", "status": "done", "title": "Architect: unrelated packet"}, parents=[])
+    candidate_metadata = {"worker_session_id": "ordinary-runtime-sibling", "closure_candidate_audit_v1": {"schema_version": "closure_candidate_audit_v1", "verdict": "PASS", **{key: packet_scope[key] for key in ("repository", "origin", "api_target", "issue", "branch", "candidate_sha")}}}
+    candidate = patched_hypothetical_envelope({"id": CANDIDATE_ID, "assignee": "foundry-auditor", "status": "done", "title": "Candidate Auditor: Watchdog gate"}, parents=[WORKER_ID], metadata=candidate_metadata)
+    delivery_metadata = {"worker_session_id": "ordinary-runtime-sibling", "closure_delivery_receipt_v1": {"schema_version": "closure_delivery_receipt_v1", "outcome": "DELIVERED", "delivery_mode": "non-force-direct-main", **{key: packet_scope[key] for key in ("repository", "origin", "api_target", "issue", "branch", "candidate_sha")}, "delivered_sha": sha, "candidate_auditor_task_id": CANDIDATE_ID}}
+    delivery = patched_hypothetical_envelope({"id": DELIVERY_ID, "status": "done", "title": "Delivery: Watchdog"}, parents=[CANDIDATE_ID], metadata=delivery_metadata)
     closure = {"id": CLOSURE_ID, "assignee": "foundry-auditor", "status": "running", "title": "Closure Auditor: Watchdog", "body": card_body(issue, marker), "parents": [DELIVERY_ID], "workspace_path": "/tmp/example"}
     return {WORKER_ID: worker, OTHER_PARENT_ID: other_parent, CANDIDATE_ID: candidate, DELIVERY_ID: delivery}, closure
 
@@ -91,12 +100,26 @@ class ClosureAdapterTests(unittest.TestCase):
         self.assertEqual(closure_auditor.derive_scope(closure, lookup.__getitem__), scope(42, dynamic_marker, dynamic_sha))
 
     def test_real_cli_envelopes_supply_top_level_parents_and_completed_run_metadata(self):
+        captured = captured_live_envelope()
+        self.assertIn("parents", captured)
+        self.assertIn("runs", captured)
+        self.assertIn("metadata", captured["runs"][0])
+        self.assertNotIn("parents", captured["task"])
+        self.assertNotIn("metadata", captured["task"])
         lookup, closure = cards()
-        closure_envelope = envelope({key: value for key, value in closure.items() if key != "parents"}, parents=closure["parents"])
+        closure_envelope = patched_hypothetical_envelope({key: value for key, value in closure.items() if key != "parents"}, parents=closure["parents"])
         normalized_closure = closure_auditor.normalize_envelope(closure_envelope, completed_metadata=False)
         self.assertEqual(normalized_closure["parents"], [DELIVERY_ID])
         self.assertNotIn("metadata", normalized_closure)
         self.assertEqual(closure_auditor.derive_scope(normalized_closure, lookup.__getitem__)["candidate_sha"], SHA)
+        lookup, closure = cards()
+        lookup[CANDIDATE_ID]["runs"][0]["metadata"] = {"worker_session_id": "ordinary-runtime-sibling"}
+        with self.assertRaises(closure_auditor.ClosureError):
+            closure_auditor.derive_scope(closure, lookup.__getitem__)
+        lookup, closure = cards()
+        lookup[DELIVERY_ID]["runs"][0]["metadata"] = {"worker_session_id": "ordinary-runtime-sibling"}
+        with self.assertRaises(closure_auditor.ClosureError):
+            closure_auditor.derive_scope(closure, lookup.__getitem__)
         for mutate in (
             lambda: lookup[CANDIDATE_ID].update({"runs": []}),
             lambda: lookup[CANDIDATE_ID]["runs"].append({"status": "done", "metadata": {}}),
