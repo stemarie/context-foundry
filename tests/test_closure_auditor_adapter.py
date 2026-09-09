@@ -14,6 +14,7 @@ spec.loader.exec_module(closure_auditor)
 
 SHA = "f54e7812e5fb5e06efd2c08eea28e66b1c9b25dc"
 WORKER_ID = "t_3fbcbdcd"
+OTHER_PARENT_ID = "t_ba5eba11"
 CANDIDATE_ID = "t_484e8099"
 DELIVERY_ID = "t_d3110001"
 CLOSURE_ID = "t_c1050001"
@@ -37,10 +38,11 @@ def card_body(issue=19, marker=MARKER, delivery_id=DELIVERY_ID):
 def cards(issue=19, marker=MARKER, sha=SHA):
     packet_scope = scope(issue, marker, sha)
     worker = {"id": WORKER_ID, "assignee": "foundry-worker", "status": "done", "title": "Worker: Watchdog candidate"}
+    other_parent = {"id": OTHER_PARENT_ID, "assignee": "foundry-architect", "status": "done", "title": "Architect: unrelated packet"}
     candidate = {"id": CANDIDATE_ID, "assignee": "foundry-auditor", "status": "done", "title": "Candidate Auditor: Watchdog gate", "parents": [WORKER_ID], "metadata": {"closure_candidate_audit_v1": {"schema_version": "closure_candidate_audit_v1", "verdict": "PASS", **{key: packet_scope[key] for key in ("repository", "origin", "api_target", "issue", "branch", "candidate_sha")}}}}
     delivery = {"id": DELIVERY_ID, "status": "done", "title": "Delivery: Watchdog", "parents": [CANDIDATE_ID], "metadata": {"closure_delivery_receipt_v1": {"schema_version": "closure_delivery_receipt_v1", "outcome": "DELIVERED", "delivery_mode": "non-force-direct-main", **{key: packet_scope[key] for key in ("repository", "origin", "api_target", "issue", "branch", "candidate_sha")}, "delivered_sha": sha, "candidate_auditor_task_id": CANDIDATE_ID}}}
     closure = {"id": CLOSURE_ID, "assignee": "foundry-auditor", "status": "running", "title": "Closure Auditor: Watchdog", "body": card_body(issue, marker), "parents": [DELIVERY_ID], "workspace_path": "/tmp/example"}
-    return {WORKER_ID: {"task": worker}, CANDIDATE_ID: {"task": candidate}, DELIVERY_ID: {"task": delivery}}, closure
+    return {WORKER_ID: {"task": worker}, OTHER_PARENT_ID: {"task": other_parent}, CANDIDATE_ID: {"task": candidate}, DELIVERY_ID: {"task": delivery}}, closure
 
 
 class Api:
@@ -101,6 +103,7 @@ class ClosureAdapterTests(unittest.TestCase):
             lambda lookup, closure: lookup[CANDIDATE_ID]["task"].update({"assignee": "foundry-worker"}),
             lambda lookup, closure: lookup[CANDIDATE_ID]["task"].update({"parents": []}),
             lambda lookup, closure: lookup[CANDIDATE_ID]["task"].update({"parents": [WORKER_ID, WORKER_ID]}),
+            lambda lookup, closure: lookup[CANDIDATE_ID]["task"].update({"parents": [WORKER_ID, OTHER_PARENT_ID]}),
             lambda lookup, closure: lookup[WORKER_ID]["task"].update({"status": "running"}),
             lambda lookup, closure: lookup[DELIVERY_ID]["task"]["metadata"]["closure_delivery_receipt_v1"].update({"candidate_auditor_task_id": CLOSURE_ID}),
         )

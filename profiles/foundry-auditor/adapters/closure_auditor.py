@@ -70,18 +70,13 @@ def completed_parent(card: dict[str, Any], lookup: Callable[[str], dict[str, Any
 
 def candidate_has_completed_worker_parent(candidate: dict[str, Any], lookup: Callable[[str], dict[str, Any]]) -> str:
     parents = candidate.get("parents")
-    if not isinstance(parents, list) or len(parents) != len(set(parents)):
-        raise ClosureError("Candidate Auditor has invalid or duplicate parents")
-    workers = []
-    for task_id in parents:
-        if not isinstance(task_id, str) or not TASK_ID.fullmatch(task_id):
-            raise ClosureError("Candidate Auditor has an invalid parent identity")
-        task = lookup(task_id).get("task")
-        if isinstance(task, dict) and task.get("id") == task_id and task.get("status") == "done" and task.get("assignee") == "foundry-worker" and str(task.get("title", "")).startswith("Worker:"):
-            workers.append(task_id)
-    if len(workers) != 1:
+    if not isinstance(parents, list) or len(parents) != 1 or not isinstance(parents[0], str) or not TASK_ID.fullmatch(parents[0]):
         raise ClosureError("Candidate Auditor requires exactly one completed Worker parent")
-    return workers[0]
+    task_id = parents[0]
+    task = lookup(task_id).get("task")
+    if not isinstance(task, dict) or task.get("id") != task_id or task.get("status") != "done" or task.get("assignee") != "foundry-worker" or not str(task.get("title", "")).startswith("Worker:"):
+        raise ClosureError("Candidate Auditor requires exactly one completed Worker parent")
+    return task_id
 
 
 def bound_fields(receipt: dict[str, Any], scope: dict[str, Any], fields: tuple[str, ...], label: str) -> None:
