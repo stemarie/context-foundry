@@ -14,10 +14,15 @@ Use only after `scripts/foundry_watchdog_scan.sh` emits a changed relevant paylo
 
 ## Contract
 
-A Foundry cohort is identified only by the exact pair:
+A Foundry cohort is identified by the exact current pair:
 
-- `External contract: <URL>`
-- `Contract identity/revision: <marker and SHA-256>`
+- `Canonical external contract: <URL>`
+- `Contract ID/revision: Issue #<number> / <marker> / <body SHA-256>`
+
+The canonical five-line Closure Auditor form may omit the body SHA-256 after
+the marker. The scanner also accepts the legacy compatibility pair
+`External contract: <URL>` and `Contract identity/revision: <marker and
+SHA-256>`; no other field or title-only association is permitted.
 
 Never join cards by title alone. Never invent a contract URL, marker, candidate SHA, audit verdict, or successor.
 

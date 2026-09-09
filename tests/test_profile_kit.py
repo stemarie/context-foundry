@@ -87,6 +87,27 @@ class ProfileKitTests(unittest.TestCase):
         self.assertIn("re-read every cited card", skill)
         self.assertNotIn("cronjob(", skill)
 
+    def test_watchdog_role_instructions_match_scanner_contract_protocol(self):
+        profile = ROOT / "profiles/foundry-watchdog"
+        contract = (profile / "ROLE-CONTRACT.md").read_text(encoding="utf-8")
+        skill = (profile / "skills/foundry-lifecycle-orchestration/SKILL.md").read_text(encoding="utf-8")
+        scanner = (profile / "scripts/foundry_watchdog_scan.py").read_text(encoding="utf-8")
+        current_fields = ("Canonical external contract: <URL>", "Contract ID/revision:")
+        legacy_fields = ("External contract: <URL>", "Contract identity/revision:")
+
+        for field in current_fields:
+            self.assertIn(field, contract)
+            self.assertIn(field, skill)
+        for field in legacy_fields:
+            self.assertIn(field, contract)
+            self.assertIn(field, skill)
+        self.assertIn("CURRENT_CONTRACT_RE", scanner)
+        self.assertIn("CURRENT_REVISION_RE", scanner)
+        self.assertIn("LEGACY_CONTRACT_RE", scanner)
+        self.assertIn("LEGACY_REVISION_RE", scanner)
+        self.assertIn("Closure Auditor form may omit", contract)
+        self.assertIn("Closure Auditor form may omit", skill)
+
     def test_watchdog_scanner_handles_current_envelopes_and_nonhealthy_scope(self):
         scanner = ROOT / "profiles/foundry-watchdog/scripts/foundry_watchdog_scan.py"
         identity = (
