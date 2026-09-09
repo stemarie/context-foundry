@@ -84,6 +84,15 @@ class BrainiacLearningTests(unittest.TestCase):
         with self.assertRaises(brainiac.BrainiacInputError):
             brainiac.process_incident(ROOT / "state" / "brainiac.sqlite", self.incident("bad", "2026-01-01T00:00:00Z"))
 
+    def test_sensitive_incident_fields_are_rejected_before_persistence(self):
+        for field in ("credentials", "accessToken", "session_id", "logs", "nested_cache"):
+            with self.subTest(field=field):
+                incident = self.incident(field, "2026-01-01T00:00:00Z")
+                incident[field] = "must-not-persist"
+                with self.assertRaisesRegex(brainiac.BrainiacInputError, "sensitive incident field is prohibited"):
+                    brainiac.process_incident(self.state, incident)
+        self.assertFalse(self.state.exists())
+
     def test_persistent_state_is_ignored_and_profile_remains_inactive(self):
         self.assertIn("*.sqlite", GITIGNORE.read_text(encoding="utf-8"))
         config = BRAINIAC_CONFIG.read_text(encoding="utf-8")

@@ -21,6 +21,16 @@ ROOT = Path(__file__).resolve().parents[1]
 WINDOW_DAYS = 30
 HIGH_SEVERITY = "high"
 SEVERITIES = {"low", "normal", "high"}
+PERSISTED_INCIDENT_FIELDS = (
+    "event_id",
+    "occurred_at",
+    "severity",
+    "source",
+    "category",
+    "summary",
+    "evidence_revision",
+)
+SENSITIVE_FIELD_NAMES = {"credential", "credentials", "token", "tokens", "session", "sessions", "log", "logs", "cache", "caches"}
 
 
 class BrainiacInputError(ValueError):
@@ -47,6 +57,20 @@ def normalize_fingerprint(incident: dict[str, Any]) -> str:
     if not normalized:
         raise BrainiacInputError("source, category, and summary cannot all be empty")
     return normalized
+
+
+def reject_sensitive_fields(value: Any, path: str = "incident") -> None:
+    """Reject prohibited state categories before they can reach durable state."""
+    if isinstance(value, dict):
+        for key, nested_value in value.items():
+            normalized_key = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", str(key)).lower()
+            key_parts = set(re.split(r"[^a-z0-9]+", normalized_key))
+            if SENSITIVE_FIELD_NAMES & key_parts:
+                raise BrainiacInputError(f"sensitive incident field is prohibited: {path}.{key}")
+            reject_sensitive_fields(nested_value, f"{path}.{key}")
+    elif isinstance(value, list):
+        for index, nested_value in enumerate(value):
+            reject_sensitive_fields(nested_value, f"{path}[{index}]")
 
 
 def validate_incident(incident: dict[str, Any]) -> tuple[str, dt.datetime, str]:
@@ -112,11 +136,16 @@ def invocation_key(event_id: str, evidence_revision: str) -> str:
 
 def process_incident(state_path: Path, incident: dict[str, Any]) -> dict[str, Any]:
     """Persist an event and create at most one durable Astra invocation record."""
+    reject_sensitive_fields(incident)
     event_id, occurred_at, severity = validate_incident(incident)
     evidence_revision = incident.get("evidence_revision")
     if not isinstance(evidence_revision, str) or not evidence_revision.strip():
         raise BrainiacInputError("evidence_revision is required")
-    fingerprint = normalize_fingerprint(incident)
+    for field in ("source", "category", "summary"):
+        if not isinstance(incident.get(field), str):
+            raise BrainiacInputError(f"{field} must be a string")
+    persisted_incident = {field: incident[field] for field in PERSISTED_INCIDENT_FIELDS}
+    fingerprint = normalize_fingerprint(persisted_incident)
     with connect(state_path) as db:
         duplicate = db.execute("SELECT 1 FROM incidents WHERE event_id = ?", (event_id,)).fetchone()
         if duplicate:
@@ -128,7 +157,7 @@ def process_incident(state_path: Path, incident: dict[str, Any]) -> dict[str, An
         ).fetchone()[0]
         db.execute(
             "INSERT INTO incidents VALUES (?, ?, ?, ?, ?, ?)",
-            (event_id, occurred_at.isoformat(), severity, fingerprint, evidence_revision, json.dumps(incident, sort_keys=True)),
+            (event_id, occurred_at.isoformat(), severity, fingerprint, evidence_revision, json.dumps(persisted_incident, sort_keys=True)),
         )
         reason = "high_severity" if severity == HIGH_SEVERITY else "second_in_30_days" if prior_count >= 1 else None
         if reason is None:
