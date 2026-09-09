@@ -35,6 +35,27 @@ def exact_dict(value: Any, keys: set[str], label: str) -> dict[str, Any]:
     return value
 
 
+def normalize_envelope(envelope: dict[str, Any], *, completed_metadata: bool) -> dict[str, Any]:
+    """Normalize the real ``hermes kanban show --json`` producer envelope."""
+    if not isinstance(envelope, dict):
+        raise ClosureError("Kanban response was malformed")
+    task = envelope.get("task")
+    parents = envelope.get("parents")
+    if not isinstance(task, dict) or not isinstance(parents, list):
+        raise ClosureError("Kanban response lacks task and top-level parents")
+    if "parents" in task or "metadata" in task:
+        raise ClosureError("Kanban response must not use task-level parents or metadata")
+    card = dict(task)
+    card["parents"] = parents
+    if completed_metadata:
+        runs = envelope.get("runs")
+        terminal_runs = [run for run in runs if isinstance(run, dict) and run.get("status") == "done"] if isinstance(runs, list) else []
+        if len(terminal_runs) != 1 or not isinstance(terminal_runs[0].get("metadata"), dict):
+            raise ClosureError("completed card requires exactly one terminal run metadata object")
+        card["metadata"] = terminal_runs[0]["metadata"]
+    return card
+
+
 def contract_reference(closure: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     if closure.get("assignee") != PROFILE or not str(closure.get("title", "")).startswith("Closure Auditor:"):
         raise ClosureError("assigned task is not a foundry-auditor Closure Auditor card")
@@ -62,7 +83,7 @@ def completed_parent(card: dict[str, Any], lookup: Callable[[str], dict[str, Any
     if not isinstance(parents, list) or len(parents) != 1 or not isinstance(parents[0], str) or not TASK_ID.fullmatch(parents[0]):
         raise ClosureError(f"{prefix} card requires exactly one valid parent")
     task_id = parents[0]
-    task = lookup(task_id).get("task")
+    task = normalize_envelope(lookup(task_id), completed_metadata=True)
     if not isinstance(task, dict) or task.get("id") != task_id or task.get("status") != "done" or not str(task.get("title", "")).startswith(prefix + ":"):
         raise ClosureError(f"direct parent is not a completed {prefix} card")
     return task_id, task
@@ -73,7 +94,7 @@ def candidate_has_completed_worker_parent(candidate: dict[str, Any], lookup: Cal
     if not isinstance(parents, list) or len(parents) != 1 or not isinstance(parents[0], str) or not TASK_ID.fullmatch(parents[0]):
         raise ClosureError("Candidate Auditor requires exactly one completed Worker parent")
     task_id = parents[0]
-    task = lookup(task_id).get("task")
+    task = normalize_envelope(lookup(task_id), completed_metadata=False)
     if not isinstance(task, dict) or task.get("id") != task_id or task.get("status") != "done" or task.get("assignee") != "foundry-worker" or not str(task.get("title", "")).startswith("Worker:"):
         raise ClosureError("Candidate Auditor requires exactly one completed Worker parent")
     return task_id
@@ -164,8 +185,13 @@ def api(method: str, url: str, payload: dict[str, Any] | None = None) -> Any:
         raise ClosureError(f"GitHub {method} {url} returned HTTP {error.code}") from error
 
 
-def receipt_count(comments: list[dict[str, Any]], marker: str) -> int:
-    return sum(marker in str(comment.get("body", "")) for comment in comments)
+def receipt_body(closure_id: str, scope: dict[str, Any]) -> str:
+    return f"<!-- {scope['receipt_marker']} -->\nFoundry Closure Auditor PASS\n\n- Closure card: `{closure_id}`\n- Delivered `{scope['branch']}` SHA: `{scope['candidate_sha']}`\n- Required Issue marker verified: `{scope['issue_marker']}`"
+
+
+def marker_receipts(comments: list[dict[str, Any]], marker: str) -> list[dict[str, Any]]:
+    marker_line = f"<!-- {marker} -->"
+    return [comment for comment in comments if marker_line in str(comment.get("body", "")).splitlines()]
 
 
 def execute(closure: dict[str, Any], lookup: Callable[[str], dict[str, Any]], request: Callable[[str, str, dict[str, Any] | None], Any] = api) -> dict[str, Any]:
@@ -186,23 +212,29 @@ def execute(closure: dict[str, Any], lookup: Callable[[str], dict[str, Any]], re
     comments = request("GET", comments_url, None)
     if not isinstance(comments, list):
         raise ClosureError("Issue comments response is malformed")
-    existing = receipt_count(comments, marker)
-    if existing > 1:
+    expected_body = receipt_body(closure["id"], scope)
+    existing = marker_receipts(comments, marker)
+    if len(existing) > 1:
         raise ClosureError("multiple closure receipts exist")
     if issue.get("state") == "closed":
-        if existing != 1 or not issue.get("closed_at"):
+        if len(existing) != 1 or existing[0].get("body") != expected_body or not issue.get("closed_at"):
             raise ClosureError("closed Issue lacks exactly one closure receipt")
         return {"operation": "idempotent-readback", "repository": scope["repository"], "issue": issue_number, "candidate_sha": sha}
-    if issue.get("state") != "open" or existing:
-        raise ClosureError("open Issue has an invalid pre-existing closure receipt or state")
-    request("POST", comments_url, {"body": f"<!-- {marker} -->\nFoundry Closure Auditor PASS\n\n- Closure card: `{closure['id']}`\n- Delivered `{branch}` SHA: `{sha}`\n- Required Issue marker verified: `{scope['issue_marker']}`"})
+    if issue.get("state") != "open":
+        raise ClosureError("Issue has an invalid state")
+    if existing and existing[0].get("body") != expected_body:
+        raise ClosureError("open Issue has a conflicting closure receipt")
+    if not existing:
+        request("POST", comments_url, {"body": expected_body})
     readback_comments = request("GET", comments_url, None)
-    if not isinstance(readback_comments, list) or receipt_count(readback_comments, marker) != 1:
+    readback_receipts = marker_receipts(readback_comments, marker) if isinstance(readback_comments, list) else []
+    if len(readback_receipts) != 1 or readback_receipts[0].get("body") != expected_body:
         raise ClosureError("closure receipt read-back was not exactly one")
     request("PATCH", issue_url, {"state": "closed", "state_reason": "completed"})
     final_issue = request("GET", issue_url, None)
     final_comments = request("GET", comments_url, None)
-    if final_issue.get("state") != "closed" or not final_issue.get("closed_at") or not isinstance(final_comments, list) or receipt_count(final_comments, marker) != 1:
+    final_receipts = marker_receipts(final_comments, marker) if isinstance(final_comments, list) else []
+    if final_issue.get("state") != "closed" or not final_issue.get("closed_at") or len(final_receipts) != 1 or final_receipts[0].get("body") != expected_body:
         raise ClosureError("Issue close read-back failed")
     return {"operation": "closed", "repository": scope["repository"], "issue": issue_number, "candidate_sha": sha}
 
@@ -224,8 +256,7 @@ def main() -> None:
     task_id = os.environ.get("HERMES_KANBAN_TASK")
     if not task_id or not TASK_ID.fullmatch(task_id):
         raise ClosureError("adapter requires its assigned canonical HERMES_KANBAN_TASK")
-    closure = live_card(task_id)["task"]
-    closure["id"] = task_id
+    closure = normalize_envelope(live_card(task_id), completed_metadata=False)
     print(json.dumps(execute(closure, live_card), sort_keys=True))
 
 

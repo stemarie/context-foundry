@@ -35,14 +35,24 @@ def card_body(issue=19, marker=MARKER, delivery_id=DELIVERY_ID):
     ))
 
 
+def envelope(task, *, parents, metadata=None):
+    task = dict(task)
+    task.pop("parents", None)
+    task.pop("metadata", None)
+    run = {"id": 1, "status": "done", "outcome": "done", "metadata": metadata}
+    return {"task": task, "parents": parents, "runs": [run]}
+
+
 def cards(issue=19, marker=MARKER, sha=SHA):
     packet_scope = scope(issue, marker, sha)
-    worker = {"id": WORKER_ID, "assignee": "foundry-worker", "status": "done", "title": "Worker: Watchdog candidate"}
-    other_parent = {"id": OTHER_PARENT_ID, "assignee": "foundry-architect", "status": "done", "title": "Architect: unrelated packet"}
-    candidate = {"id": CANDIDATE_ID, "assignee": "foundry-auditor", "status": "done", "title": "Candidate Auditor: Watchdog gate", "parents": [WORKER_ID], "metadata": {"closure_candidate_audit_v1": {"schema_version": "closure_candidate_audit_v1", "verdict": "PASS", **{key: packet_scope[key] for key in ("repository", "origin", "api_target", "issue", "branch", "candidate_sha")}}}}
-    delivery = {"id": DELIVERY_ID, "status": "done", "title": "Delivery: Watchdog", "parents": [CANDIDATE_ID], "metadata": {"closure_delivery_receipt_v1": {"schema_version": "closure_delivery_receipt_v1", "outcome": "DELIVERED", "delivery_mode": "non-force-direct-main", **{key: packet_scope[key] for key in ("repository", "origin", "api_target", "issue", "branch", "candidate_sha")}, "delivered_sha": sha, "candidate_auditor_task_id": CANDIDATE_ID}}}
+    worker = envelope({"id": WORKER_ID, "assignee": "foundry-worker", "status": "done", "title": "Worker: Watchdog candidate"}, parents=[])
+    other_parent = envelope({"id": OTHER_PARENT_ID, "assignee": "foundry-architect", "status": "done", "title": "Architect: unrelated packet"}, parents=[])
+    candidate_metadata = {"closure_candidate_audit_v1": {"schema_version": "closure_candidate_audit_v1", "verdict": "PASS", **{key: packet_scope[key] for key in ("repository", "origin", "api_target", "issue", "branch", "candidate_sha")}}}
+    candidate = envelope({"id": CANDIDATE_ID, "assignee": "foundry-auditor", "status": "done", "title": "Candidate Auditor: Watchdog gate"}, parents=[WORKER_ID], metadata=candidate_metadata)
+    delivery_metadata = {"closure_delivery_receipt_v1": {"schema_version": "closure_delivery_receipt_v1", "outcome": "DELIVERED", "delivery_mode": "non-force-direct-main", **{key: packet_scope[key] for key in ("repository", "origin", "api_target", "issue", "branch", "candidate_sha")}, "delivered_sha": sha, "candidate_auditor_task_id": CANDIDATE_ID}}
+    delivery = envelope({"id": DELIVERY_ID, "status": "done", "title": "Delivery: Watchdog"}, parents=[CANDIDATE_ID], metadata=delivery_metadata)
     closure = {"id": CLOSURE_ID, "assignee": "foundry-auditor", "status": "running", "title": "Closure Auditor: Watchdog", "body": card_body(issue, marker), "parents": [DELIVERY_ID], "workspace_path": "/tmp/example"}
-    return {WORKER_ID: {"task": worker}, OTHER_PARENT_ID: {"task": other_parent}, CANDIDATE_ID: {"task": candidate}, DELIVERY_ID: {"task": delivery}}, closure
+    return {WORKER_ID: worker, OTHER_PARENT_ID: other_parent, CANDIDATE_ID: candidate, DELIVERY_ID: delivery}, closure
 
 
 class Api:
@@ -80,6 +90,24 @@ class ClosureAdapterTests(unittest.TestCase):
         lookup, closure = cards(issue=42, marker=dynamic_marker, sha=dynamic_sha)
         self.assertEqual(closure_auditor.derive_scope(closure, lookup.__getitem__), scope(42, dynamic_marker, dynamic_sha))
 
+    def test_real_cli_envelopes_supply_top_level_parents_and_completed_run_metadata(self):
+        lookup, closure = cards()
+        closure_envelope = envelope({key: value for key, value in closure.items() if key != "parents"}, parents=closure["parents"])
+        normalized_closure = closure_auditor.normalize_envelope(closure_envelope, completed_metadata=False)
+        self.assertEqual(normalized_closure["parents"], [DELIVERY_ID])
+        self.assertNotIn("metadata", normalized_closure)
+        self.assertEqual(closure_auditor.derive_scope(normalized_closure, lookup.__getitem__)["candidate_sha"], SHA)
+        for mutate in (
+            lambda: lookup[CANDIDATE_ID].update({"runs": []}),
+            lambda: lookup[CANDIDATE_ID]["runs"].append({"status": "done", "metadata": {}}),
+            lambda: lookup[CANDIDATE_ID]["runs"][0].update({"metadata": None}),
+            lambda: lookup[CANDIDATE_ID]["task"].update({"metadata": {"closure_candidate_audit_v1": {}}}),
+        ):
+            lookup, closure = cards()
+            mutate()
+            with self.assertRaises(closure_auditor.ClosureError):
+                closure_auditor.derive_scope(closure, lookup.__getitem__)
+
     def test_rejects_card_target_selection_and_contract_reference_mismatches(self):
         for mutate in (
             lambda lookup, closure: closure.update({"body": closure["body"] + "\nPayload: arbitrary"}),
@@ -99,13 +127,13 @@ class ClosureAdapterTests(unittest.TestCase):
         mutations = (
             lambda lookup, closure: closure.update({"id": DELIVERY_ID}),
             lambda lookup, closure: closure.update({"parents": [CANDIDATE_ID]}),
-            lambda lookup, closure: lookup[DELIVERY_ID]["task"].update({"parents": [DELIVERY_ID]}),
+            lambda lookup, closure: lookup[DELIVERY_ID].update({"parents": [DELIVERY_ID]}),
             lambda lookup, closure: lookup[CANDIDATE_ID]["task"].update({"assignee": "foundry-worker"}),
-            lambda lookup, closure: lookup[CANDIDATE_ID]["task"].update({"parents": []}),
-            lambda lookup, closure: lookup[CANDIDATE_ID]["task"].update({"parents": [WORKER_ID, WORKER_ID]}),
-            lambda lookup, closure: lookup[CANDIDATE_ID]["task"].update({"parents": [WORKER_ID, OTHER_PARENT_ID]}),
+            lambda lookup, closure: lookup[CANDIDATE_ID].update({"parents": []}),
+            lambda lookup, closure: lookup[CANDIDATE_ID].update({"parents": [WORKER_ID, WORKER_ID]}),
+            lambda lookup, closure: lookup[CANDIDATE_ID].update({"parents": [WORKER_ID, OTHER_PARENT_ID]}),
             lambda lookup, closure: lookup[WORKER_ID]["task"].update({"status": "running"}),
-            lambda lookup, closure: lookup[DELIVERY_ID]["task"]["metadata"]["closure_delivery_receipt_v1"].update({"candidate_auditor_task_id": CLOSURE_ID}),
+            lambda lookup, closure: lookup[DELIVERY_ID]["runs"][0]["metadata"]["closure_delivery_receipt_v1"].update({"candidate_auditor_task_id": CLOSURE_ID}),
         )
         for mutate in mutations:
             lookup, closure = cards()
@@ -120,12 +148,12 @@ class ClosureAdapterTests(unittest.TestCase):
         ):
             for field in fields:
                 lookup, closure = cards()
-                receipt = lookup[task_id]["task"]["metadata"][receipt_key]
+                receipt = lookup[task_id]["runs"][0]["metadata"][receipt_key]
                 receipt[field] = 99 if field == "issue" else "wrong"
                 with self.assertRaises(closure_auditor.ClosureError, msg=f"changed {field}"):
                     closure_auditor.derive_scope(closure, lookup.__getitem__)
                 lookup, closure = cards()
-                lookup[task_id]["task"]["metadata"][receipt_key].pop(field)
+                lookup[task_id]["runs"][0]["metadata"][receipt_key].pop(field)
                 with self.assertRaises(closure_auditor.ClosureError, msg=f"missing {field}"):
                     closure_auditor.derive_scope(closure, lookup.__getitem__)
 
@@ -144,6 +172,33 @@ class ClosureAdapterTests(unittest.TestCase):
             with patch.object(closure_auditor, "validate_workspace"):
                 with self.assertRaises(closure_auditor.ClosureError):
                     closure_auditor.execute(closure, lookup.__getitem__, response)
+
+    def test_interrupted_exact_receipt_closes_without_post_and_conflicts_are_write_free(self):
+        lookup, closure = cards()
+        api = Api(scope())
+        expected = closure_auditor.receipt_body(CLOSURE_ID, scope())
+        api.comments.append({"body": expected})
+        with patch.object(closure_auditor, "validate_workspace"):
+            self.assertEqual(closure_auditor.execute(closure, lookup.__getitem__, api)["operation"], "closed")
+        self.assertEqual(api.writes, ["PATCH"])
+
+        for comments in ([{"body": "<!-- FOUNDRY_CLOSURE_RECEIPT_V1 -->\nwrong"}], [{"body": expected}, {"body": expected}]):
+            lookup, closure = cards()
+            api = Api(scope())
+            api.comments.extend(comments)
+            with patch.object(closure_auditor, "validate_workspace"):
+                with self.assertRaises(closure_auditor.ClosureError):
+                    closure_auditor.execute(closure, lookup.__getitem__, api)
+            self.assertEqual(api.writes, [])
+
+    def test_closed_issue_requires_one_exact_receipt_without_writes(self):
+        lookup, closure = cards()
+        api = Api(scope())
+        api.closed = True
+        api.comments.append({"body": closure_auditor.receipt_body(CLOSURE_ID, scope())})
+        with patch.object(closure_auditor, "validate_workspace"):
+            self.assertEqual(closure_auditor.execute(closure, lookup.__getitem__, api)["operation"], "idempotent-readback")
+        self.assertEqual(api.writes, [])
 
     def test_source_managed_schema_is_dynamic_but_repository_bound_and_valid_json(self):
         schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
