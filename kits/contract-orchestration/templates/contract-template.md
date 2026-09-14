@@ -40,6 +40,29 @@
 
 <Require local revision, authenticated remote revision, and fetched tracking revision equality when delivery is authorized.>
 
+## Integration disposition
+
+Every source-changing contract must declare exactly one endpoint. The default is `merge_required`; a contract must not silently substitute a candidate audit PASS for integration authority.
+
+```yaml
+integration:
+  disposition: merge_required # candidate_only | merge_required | human_approval_required
+  target_repository: <REPOSITORY_SLUG>
+  target_default_branch: <DEFAULT_BRANCH>
+  base_sha: <AUTHENTICATED_BASE_SHA>
+  candidate_sha: <IMMUTABLE_CANDIDATE_SHA_OR_PENDING>
+  candidate_branch: <CANDIDATE_BRANCH_OR_PENDING>
+  pull_request_url: <URL_OR_NULL>
+  merged_sha: <SHA_OR_NULL>
+  disposition_owner: <NAMED_OWNER>
+  next_decision: <CONCRETE_NEXT_ACTION_AND_DATE_OR_TRIGGER>
+```
+
+- `candidate_only` requires a recorded reason, named disposition owner, and concrete next decision/date. It can close a bounded candidate-only tranche, never a product milestone.
+- `merge_required` requires a PR for the exact candidate or reconciled integration head, independent audit of that exact head, non-force merge under the repository's normal rules, authenticated default-branch read-back, and required post-merge checks before closure.
+- `human_approval_required` requires a merge-ready PR, the exact requested approval, and a named approver. It stops at that approval gate; it does not auto-merge.
+- Candidate-audit PASS certifies only the exact candidate SHA and scoped evidence. It does not certify PR integration, deployment, or milestone completion.
+
 ## Explicit non-goals
 
 <BEHAVIOR_OR_SYSTEM_BOUNDARIES_THAT_MUST_NOT_EXPAND_SILENTLY>

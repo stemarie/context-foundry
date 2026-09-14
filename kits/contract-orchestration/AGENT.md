@@ -13,8 +13,9 @@
 1. Read the selected work record, current specification, and latest comments or amendments.
 2. Inspect repository identity, branch, status, and current remote state. Preserve unrelated work; never discard it to obtain a clean-looking result.
 3. Check duplicate contracts and active writers. Reuse or repair an equivalent contract instead of creating a second implementation lane.
-4. Write one contract with objective, authority, scope, acceptance criteria, verification commands, delivery rule, non-goals, safety boundary, and idempotency key.
-5. Assign one implementation writer only after the contract is authoritative and the checkout is safe to use.
+4. Write one contract with objective, authority, scope, acceptance criteria, verification commands, delivery rule, explicit integration disposition, non-goals, safety boundary, and idempotency key. For every source-changing contract, record the bound default branch/base SHA, candidate branch/SHA, disposition owner, and concrete next decision.
+5. Before selecting a successor, inspect authenticated remote `main`, candidate branches, open PRs, and relevant trackers. A verified candidate without a valid integration disposition is an integration reconciliation, not permission for unrelated new work.
+6. Assign one implementation writer only after the contract is authoritative and the checkout is safe to use.
 
 ## Implementation worker
 

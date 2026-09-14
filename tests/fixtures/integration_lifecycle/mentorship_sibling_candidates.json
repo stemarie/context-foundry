@@ -1,0 +1,39 @@
+{
+  "default_branch_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "open_pull_request": null,
+  "candidates": [
+    {
+      "candidate_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "base_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "candidate_reachable_from_default": false,
+      "candidate_audit_verdict": "PASS",
+      "changed_paths": [
+        "README.md",
+        "Dockerfile.web",
+        "Dockerfile.worker",
+        "compose.yaml",
+        "go.mod",
+        "cmd/web/main.go",
+        "cmd/worker/main.go",
+        "internal/app/app_test.go",
+        "internal/app/config.go",
+        "internal/app/web.go",
+        "internal/app/worker.go"
+      ]
+    },
+    {
+      "candidate_sha": "cccccccccccccccccccccccccccccccccccccccc",
+      "base_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "candidate_reachable_from_default": false,
+      "candidate_audit_verdict": "PASS",
+      "changed_paths": [
+        "README.md",
+        "docs/phase-0/event-permission-baseline.md"
+      ]
+    }
+  ],
+  "tracker_history": [
+    {"issue": 3, "event": "closed"},
+    {"issue": 3, "event": "reopened"}
+  ]
+}
