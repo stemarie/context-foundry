@@ -1,7 +1,7 @@
 ---
 name: foundry-verified-delivery-audit
 description: Audit exact validation and delivery claims for Foundry evidence receipts.
-version: 1.0.0
+version: 1.1.0
 source: kits/contract-orchestration/skills/verified-implementation-delivery.md
 adapted_for: foundry-auditor
 ---
@@ -13,8 +13,10 @@ adapted_for: foundry-auditor
 2. Re-run packet-approved read-only validators and targeted reproducibility checks. A Worker narrative is never sufficient.
 3. Confirm every claimed test, lint, hash, and diff check has real output; classify skipped/unavailable checks as not run, never pass.
 4. Confirm repair scope: no unapproved source expansion, evidence rewrite by Auditor, secret leakage, generated debris, or unrelated checkout mutation.
-5. For a delivery claim, require equality among local revision, authenticated remote branch, and fetched tracking branch. A local commit alone fails this check.
-6. Return PASS only if material facts are cited, packet scope holds, validators pass, recovery claims are evidenced, and no unapproved action occurred.
+5. Candidate Auditor PASS certifies only the exact candidate SHA and scoped evidence; it does not certify PR integration, deployment, or milestone completion.
+6. For `merge_required`, accept closure only after the exact candidate or reconciled integration PR head receives independent audit, merges non-force, the authenticated bound default branch is read back with the integrated result, and required post-merge checks are recorded. For squash/rebase merges, bind the audited PR head to the merge receipt and resulting integrated tree; do not require original-SHA ancestry. A local commit alone fails this check.
+7. For `candidate_only`, require an explicit hold reason, named disposition owner, and concrete next decision/date; it may close a candidate-only tranche, never a product milestone. For `human_approval_required`, require a merge-ready PR, exact approval request, and named approver; it cannot auto-merge.
+8. Return PASS only if material facts are cited, packet scope holds, validators pass, recovery claims are evidenced, and no unapproved action occurred.
 
 ## Error correction handling
 - `REQUEST_CHANGES`: identify precise bounded Worker corrections and require a fresh independent audit.

@@ -1,7 +1,7 @@
 ---
 name: context-foundry-architect
 description: Design bounded reusable Foundry profiles and skills.
-version: 0.2.0
+version: 0.3.0
 source: Context Foundry
 adapted_for: foundry-architect
 ---
@@ -20,9 +20,11 @@ Use to design, map, document, and synthesize reusable Foundry profiles and skill
 ## Procedure
 1. Turn the approved outcome into a bounded profile/skill brief with explicit non-goals and verification.
 2. Map material requirements to one role-local artifact each; avoid duplicate or runtime-oriented skills.
-3. Route a bounded implementation to Worker and define the independent Auditor checks.
-4. Synthesize only evidence and audit outcomes that exist; distinguish delivered source artifacts from future possibilities.
-5. Escalate only for a missing authority, material product decision, irreversible action, or reproducible source-of-truth conflict.
+3. Before creating successor source work, inspect authenticated remote `main`, candidate branches, open PRs, and relevant trackers. Reconcile a verified candidate with no valid disposition before selecting unrelated work.
+4. For each source-changing contract, select `candidate_only`, `merge_required`, or `human_approval_required`; default to `merge_required` when delivery authority exists. Record the bound base, candidate branch/SHA, owner, and concrete next decision. Candidate-only must name its reason and a continuation date/trigger; approval-required must name the approval and approver.
+5. Route a bounded implementation to Worker and define separate candidate and integration/post-merge Auditor checks. Architect may create or advance the PR handoff only when packet authority permits; it never commits, audits, merges, or closes.
+6. Synthesize only evidence and audit outcomes that exist; distinguish candidate produced, candidate verified, integration pending, integrated on main, and milestone closed.
+7. Escalate only for a missing authority, material product decision, irreversible action, or reproducible source-of-truth conflict.
 
 ## Closure continuation and target scope
 - After a Closure Auditor PASS, use the durable continuation workflow: `Closure Auditor PASS → fresh Architect selection pass → smallest justified next tranche.`
