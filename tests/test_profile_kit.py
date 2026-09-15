@@ -111,7 +111,7 @@ class ProfileKitTests(unittest.TestCase):
     def test_watchdog_scanner_handles_current_envelopes_and_nonhealthy_scope(self):
         scanner = ROOT / "profiles/foundry-watchdog/scripts/foundry_watchdog_scan.py"
         identity = (
-            "Canonical external contract: https://github.com/stemarie/context-foundry/issues/19\n"
+            "Canonical external contract: https://github.com/stemarie/AI.Contract/issues/19\n"
             "Contract ID/revision: Issue #19 / FOUNDRY-WATCHDOG-INITIAL-CONTRACT-V1 / " + "a" * 64
         )
         with tempfile.TemporaryDirectory() as directory:
@@ -125,7 +125,8 @@ class ProfileKitTests(unittest.TestCase):
                 {"id": "t_worker", "status": "done", "title": "Worker: complete kit", "body": identity,
                  "events": [{"kind": "completed", "created_at": 1, "payload": {"candidate": "a"}}]},
                 {"id": "t_auditor", "status": "done", "title": "Candidate Auditor: audit kit", "body": identity,
-                 "runs": [{"id": 2, "status": "completed", "summary": "PASS", "metadata": {"verdict": "PASS"}}]},
+                 "assignee": "foundry-auditor", "skills": ["context-foundry-auditor"],
+                 "runs": [{"id": 2, "profile": "foundry-auditor", "status": "completed", "summary": "PASS", "metadata": {"verdict": "PASS"}}]},
             ]}), encoding="utf-8")
             first = subprocess.run([sys.executable, scanner, "--input", fixture], capture_output=True, text=True)
             self.assertEqual(first.returncode, 0, first.stderr)
@@ -145,7 +146,13 @@ class ProfileKitTests(unittest.TestCase):
             fixture.write_text(json.dumps(changed), encoding="utf-8")
             changed_result = subprocess.run([sys.executable, scanner, "--input", fixture], capture_output=True, text=True)
             self.assertEqual(changed_result.returncode, 0, changed_result.stderr)
-            self.assertNotEqual(json.loads(changed_result.stdout)["digest"], payload["digest"])
+            # Narrative-only changes are not new recovery events.
+            self.assertEqual(json.loads(changed_result.stdout)["digest"], payload["digest"])
+            changed["tasks"][1]["runs"][0]["metadata"]["verdict"] = "REQUEST_CHANGES"
+            fixture.write_text(json.dumps(changed), encoding="utf-8")
+            receipt_changed = subprocess.run([sys.executable, scanner, "--input", fixture], capture_output=True, text=True)
+            self.assertEqual(receipt_changed.returncode, 0, receipt_changed.stderr)
+            self.assertNotEqual(json.loads(receipt_changed.stdout)["digest"], payload["digest"])
 
             fixture.write_text(json.dumps({"tasks": [
                 {"id": "t_historical", "status": "done", "title": "Worker: historical", "body": identity},
@@ -155,7 +162,7 @@ class ProfileKitTests(unittest.TestCase):
             self.assertEqual(historical.stdout, "")
 
             fixture.write_text(json.dumps({"tasks": [
-                {"id": "t_malformed", "status": "review", "title": "Candidate Auditor: malformed", "body": "Canonical external contract: https://github.com/stemarie/context-foundry/issues/19"},
+                {"id": "t_malformed", "status": "review", "title": "Candidate Auditor: malformed", "body": "Canonical external contract: https://github.com/stemarie/AI.Contract/issues/19"},
                 {"id": "t_unrecognized", "status": "review", "title": "Worker: foreign", "body": "Canonical external contract: https://github.com/example/other/issues/19\nContract ID/revision: Issue #19 / MARKER / " + "b" * 64},
             ]}), encoding="utf-8")
             nonhealthy = subprocess.run([sys.executable, scanner, "--input", fixture], capture_output=True, text=True)
@@ -163,7 +170,7 @@ class ProfileKitTests(unittest.TestCase):
             self.assertEqual(json.loads(nonhealthy.stdout)["scanner_status"], "non_healthy")
 
             closure = (
-                "Canonical external contract: https://github.com/stemarie/context-foundry/issues/19\n"
+                "Canonical external contract: https://github.com/stemarie/AI.Contract/issues/19\n"
                 "Contract ID/revision: Issue #19 / FOUNDRY-WATCHDOG-INITIAL-CONTRACT-V1\n"
                 "Role: Closure Auditor\nDependency: completed direct Delivery parent\nReceipt pointer: Delivery `t_delivery`"
             )
@@ -174,7 +181,7 @@ class ProfileKitTests(unittest.TestCase):
             self.assertEqual(json.loads(closure_result.stdout)["events"][0]["contract"]["sha256"], "")
 
             legacy = (
-                "External contract: https://github.com/stemarie/context-foundry/issues/19\n"
+                "External contract: https://github.com/stemarie/AI.Contract/issues/19\n"
                 "Contract identity/revision: Issue #19; `FOUNDRY-WATCHDOG-INITIAL-CONTRACT-V1`; body SHA-256 `" + "c" * 64 + "`."
             )
             fixture.write_text(json.dumps({"tasks": [{"id": "t_legacy", "status": "review", "title": "Worker: legacy", "body": legacy}]}), encoding="utf-8")
@@ -216,10 +223,16 @@ class ProfileKitTests(unittest.TestCase):
             self.assertTrue(os.access(wrapper, os.X_OK))
             self.assertIn("api_server:\n    enabled: true", (worker / "config.yaml").read_text(encoding="utf-8"))
             self.assertEqual((worker / ".env").read_text(encoding="utf-8"), "PRIVATE_TOKEN=not-source\n")
-            fake_hermes = Path(directory) / "hermes"
-            fake_hermes.write_text("#!/bin/sh\nprintf '%s\\n' '{\"tasks\": []}'\n", encoding="utf-8")
-            fake_hermes.chmod(0o755)
-            resolved = subprocess.run([wrapper], env={**environment, "HERMES_BIN": str(fake_hermes)}, capture_output=True, text=True)
+            import sqlite3
+            board = Path(directory) / "empty-board.db"
+            with sqlite3.connect(board) as conn:
+                conn.executescript("""
+                    CREATE TABLE tasks(id TEXT PRIMARY KEY, skills TEXT);
+                    CREATE TABLE task_runs(task_id TEXT, metadata TEXT);
+                    CREATE TABLE task_links(parent_id TEXT, child_id TEXT);
+                    CREATE TABLE task_events(task_id TEXT, payload TEXT);
+                """)
+            resolved = subprocess.run([wrapper], env={**environment, "FOUNDRY_WATCHDOG_DB": str(board)}, capture_output=True, text=True)
             self.assertEqual(resolved.returncode, 0, resolved.stderr)
             self.assertEqual(resolved.stdout, "")
             check = subprocess.run([sys.executable, sync, "--check"], cwd=ROOT, env=environment, capture_output=True, text=True)
