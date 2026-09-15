@@ -15,6 +15,14 @@ AI.Contract is an independent Go service. It owns only its service source, API/s
 
 Historical Phase 1 evidence may cite AI.Contract because it was a read-only research corpus at that time. Those historical citations are evidence records, not a current runtime, installation, or ownership dependency.
 
+## Direct maintenance and product recovery
+
+Karell-authorized Foundry profile, skill, adapter, and process maintenance is performed directly in source; do not create Kanban maintenance cards or a repair-card chain. A requested GitHub issue tracks these changes and their independent verification, not a new product contract. In the governed installation, AI.Contract remains the sole work-contract plane; GitHub implementation issues do not grant authority.
+
+The Watchdog's read-only recovery evidence never authorizes a product write. Resolve current contract scope and authenticated remote state before selecting a correction. Historical completed repair cards, a Kanban `done` state, and an already merged candidate cannot substitute for current authorization or a structured independent PASS. Unresolved incidents remain inspectable even when duplicate notifications are suppressed.
+
+`skills/improve-foundry-temp/SKILL.md` is the source copy of the default assistant's manually invoked review skill. It does not enable a scheduler or another profile. Deploy it only to the explicitly authorized default-assistant skill location; the profile synchronizer does not install it.
+
 ## Profile deployment
 
 From the Context Foundry repository root:

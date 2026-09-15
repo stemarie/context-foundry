@@ -13,5 +13,5 @@ if [[ -z "${payload}" ]]; then
 fi
 printf '%s\n' "${payload}"
 mkdir -p "${STATE_DIR}"
-python3 -c 'import json,sys; print(json.load(sys.stdin)["digest"])' <<<"${payload}" > "${DIGEST_FILE}.tmp"
+python3 -c 'import json,sys; print(json.load(sys.stdin)["notification_digest"])' <<<"${payload}" > "${DIGEST_FILE}.tmp"
 mv "${DIGEST_FILE}.tmp" "${DIGEST_FILE}"

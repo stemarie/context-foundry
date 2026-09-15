@@ -1,7 +1,7 @@
 ---
 name: foundry-release-audit
 description: Independently audit a GitHub release before and after publication.
-version: 0.1.0
+version: 0.3.0
 source: Context Foundry
 adapted_for: foundry-auditor
 ---
@@ -36,3 +36,12 @@ The verdict cites independent command/API output and distinguishes a missing cre
 - Repairing an API payload or an incomplete publication.
 - Passing a release without a post-publication read-back.
 - Allowing issue closure before post-publication PASS.
+
+## Direct Foundry maintenance boundary
+
+- Do not create Kanban maintenance cards for Foundry profiles, skills, adapters, tests, templates, or process repairs. Karell-authorized maintenance is performed directly in source, independently reviewed, verified against installed behavior, and tracked in a linked GitHub issue when requested.
+- AI.Contract remains the sole contract plane for governed product work. A maintenance issue, an old PASS, and a completed Kanban run do not grant current authorization to deliver or close a product tranche.
+- Treat structured root-run verdicts as evidence; `done` is not `PASS`. Product REQUEST_CHANGES requires one explicitly linked, current, authorized correction path and fresh independent audit. Maintenance failures require direct maintenance, not a replacement card chain.
+- If the target branch has advanced or the old packet is stale, reconcile authenticated current state before selecting an action. Do not redispatch stale Delivery/Closure instructions or close a tracker merely because a merge exists.
+- Before dispatch, preflight the actual authorized role envelopes, lineage, and receipt shape through every required installed adapter. Invalid identity, scope, lineage, or receipt must fail before credential acquisition or network/write actions. A green policy-string test is not runtime proof.
+- Record one named owner, evidence link, and concrete next decision for unresolved work. Preserve holds and audit evidence. Archive only confirmed superseded chains; do not mark unfinished work complete to reduce blocked counts.
