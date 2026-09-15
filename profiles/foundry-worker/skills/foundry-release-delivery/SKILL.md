@@ -15,7 +15,7 @@ Use after Architect supplies a bounded target-repository release packet. Do not 
 - Worker owns approved source commits, issue evidence/linking, tag/release publication, and remote read-back; it leaves delivery Issues open.
 - Before every external write, require target repository slug = checkout remote = GitHub API target.
 - Use only the packet’s non-secret authentication helper; never print, copy, or change credentials.
-- Publish only after pre-publication Auditor PASS. Only a distinct assigned Closure Auditor may close its card-derived governed Issue after a distinct Candidate Auditor PASS and completed direct Delivery.
+- Publish only after Candidate Auditor PASS and pre-publication Auditor PASS. For merge-required source work, a distinct Integration Auditor must PASS the exact integration PR head; Closure Auditor may close a product-milestone Issue only after non-force merge, authenticated default-branch ancestry/read-back, and post-merge checks bound to that read-back revision.
 
 ## Procedure
 1. Run authenticated preflight: candidate branch/SHA, tag/release absence, and clean checkout.

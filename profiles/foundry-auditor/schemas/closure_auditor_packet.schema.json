@@ -1,12 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Foundry Closure Auditor governed packet v1",
+  "title": "Foundry Closure Auditor governed integration packet v2",
   "type": "object",
   "additionalProperties": false,
-  "required": ["closure_card", "delivery_receipt", "candidate_auditor_receipt"],
+  "required": ["closure_card", "candidate_auditor_receipt", "integration_auditor_receipt", "integration_receipt"],
   "properties": {
     "closure_card": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "required": ["canonical_contract_url", "issue", "marker", "role", "delivery_receipt_pointer"],
       "properties": {
         "canonical_contract_url": {"type": "string", "pattern": "^https://github\\.com/stemarie/context-foundry/issues/[1-9][0-9]*$"},
@@ -16,20 +17,73 @@
         "delivery_receipt_pointer": {"type": "string", "pattern": "^t_[0-9a-f]{8}$"}
       }
     },
-    "delivery_receipt": {
-      "type": "object", "additionalProperties": false,
-      "required": ["schema_version", "outcome", "delivery_mode", "repository", "origin", "api_target", "issue", "branch", "candidate_sha", "delivered_sha", "candidate_auditor_task_id"],
-      "properties": {
-        "schema_version": {"const": "closure_delivery_receipt_v1"}, "outcome": {"const": "DELIVERED"}, "delivery_mode": {"const": "non-force-direct-main"},
-        "repository": {"const": "stemarie/context-foundry"}, "origin": {"const": "https://github.com/stemarie/context-foundry.git"}, "api_target": {"const": "https://api.github.com/repos/stemarie/context-foundry"}, "issue": {"type": "integer", "minimum": 1}, "branch": {"const": "main"},
-        "candidate_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"}, "delivered_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"}, "candidate_auditor_task_id": {"type": "string", "pattern": "^t_[0-9a-f]{8}$"}
-      }
-    },
     "candidate_auditor_receipt": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "required": ["schema_version", "verdict", "repository", "origin", "api_target", "issue", "branch", "candidate_sha"],
       "properties": {
-        "schema_version": {"const": "closure_candidate_audit_v1"}, "verdict": {"const": "PASS"}, "repository": {"const": "stemarie/context-foundry"}, "origin": {"const": "https://github.com/stemarie/context-foundry.git"}, "api_target": {"const": "https://api.github.com/repos/stemarie/context-foundry"}, "issue": {"type": "integer", "minimum": 1}, "branch": {"const": "main"}, "candidate_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+        "schema_version": {"const": "closure_candidate_audit_v1"},
+        "verdict": {"const": "PASS"},
+        "repository": {"const": "stemarie/context-foundry"},
+        "origin": {"const": "https://github.com/stemarie/context-foundry.git"},
+        "api_target": {"const": "https://api.github.com/repos/stemarie/context-foundry"},
+        "issue": {"type": "integer", "minimum": 1},
+        "branch": {"const": "main"},
+        "candidate_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "integration_auditor_receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "verdict", "repository", "origin", "api_target", "issue", "branch", "candidate_sha", "integration_pr_number", "integration_head_sha"],
+      "properties": {
+        "schema_version": {"const": "closure_integration_audit_v1"},
+        "verdict": {"const": "PASS"},
+        "repository": {"const": "stemarie/context-foundry"},
+        "origin": {"const": "https://github.com/stemarie/context-foundry.git"},
+        "api_target": {"const": "https://api.github.com/repos/stemarie/context-foundry"},
+        "issue": {"type": "integer", "minimum": 1},
+        "branch": {"const": "main"},
+        "candidate_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "integration_pr_number": {"type": "integer", "minimum": 1},
+        "integration_head_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "integration_receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "outcome", "disposition", "closure_scope", "repository", "origin", "api_target", "issue", "branch", "candidate_sha", "candidate_auditor_task_id", "integration_pr_number", "integration_head_sha", "integration_auditor_task_id", "merged_sha", "default_branch_readback_sha", "post_merge_checks"],
+      "properties": {
+        "schema_version": {"const": "closure_integration_receipt_v1"},
+        "outcome": {"const": "DELIVERED"},
+        "disposition": {"const": "merge_required"},
+        "closure_scope": {"const": "product_milestone"},
+        "repository": {"const": "stemarie/context-foundry"},
+        "origin": {"const": "https://github.com/stemarie/context-foundry.git"},
+        "api_target": {"const": "https://api.github.com/repos/stemarie/context-foundry"},
+        "issue": {"type": "integer", "minimum": 1},
+        "branch": {"const": "main"},
+        "candidate_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "candidate_auditor_task_id": {"type": "string", "pattern": "^t_[0-9a-f]{8}$"},
+        "integration_pr_number": {"type": "integer", "minimum": 1},
+        "integration_head_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "integration_auditor_task_id": {"type": "string", "pattern": "^t_[0-9a-f]{8}$"},
+        "merged_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "default_branch_readback_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "post_merge_checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["command", "outcome", "revision"],
+            "properties": {
+              "command": {"type": "string", "minLength": 1},
+              "outcome": {"const": "PASS"},
+              "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+            }
+          }
+        }
       }
     }
   }

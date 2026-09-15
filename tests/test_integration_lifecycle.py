@@ -54,7 +54,7 @@ class IntegrationLifecycleTests(unittest.TestCase):
     def test_merge_required_candidate_pass_without_pr_is_integration_pending(self):
         result = integration_lifecycle.evaluate(record())
         self.assertEqual(result["state"], "integration_pending")
-        self.assertFalse(result["closable"])
+        self.assertFalse(result["milestone_closable"])
         self.assertIn("pull_request_url", result["missing"])
 
     def test_candidate_only_requires_reason_owner_and_concrete_next_decision(self):
@@ -71,7 +71,7 @@ class IntegrationLifecycleTests(unittest.TestCase):
             ["candidate_only_reason", "disposition_owner", "next_decision"],
         )
 
-    def test_candidate_only_with_owned_hold_is_closable_but_not_milestone_complete(self):
+    def test_candidate_only_can_close_only_a_candidate_record_not_a_milestone(self):
         result = integration_lifecycle.evaluate(
             record(
                 disposition="candidate_only",
@@ -80,24 +80,11 @@ class IntegrationLifecycleTests(unittest.TestCase):
             )
         )
         self.assertEqual(result["state"], "candidate_verified")
-        self.assertTrue(result["closable"])
-        self.assertFalse(result["milestone_complete"])
+        self.assertTrue(result["candidate_record_closable"])
+        self.assertFalse(result["milestone_closable"])
+        self.assertNotIn("closable", result)
 
-    def test_merge_required_merged_pr_without_main_readback_is_rejected(self):
-        result = integration_lifecycle.evaluate(
-            record(
-                pull_request_url="https://github.com/stemarie/example/pull/7",
-                pull_request_head_sha=FOUNDATION,
-                pull_request_merged=True,
-                merged_sha=MERGED,
-            )
-        )
-        self.assertEqual(result["state"], "integration_pending")
-        self.assertFalse(result["closable"])
-        self.assertIn("default_branch_readback", result["missing"])
-        self.assertIn("post_merge_checks", result["missing"])
-
-    def test_merge_required_is_closable_after_merged_pr_main_readback_and_checks(self):
+    def test_normalized_merge_evidence_is_advisory_until_authenticated_by_closure(self):
         result = integration_lifecycle.evaluate(
             record(
                 pull_request_url="https://github.com/stemarie/example/pull/7",
@@ -109,9 +96,39 @@ class IntegrationLifecycleTests(unittest.TestCase):
                 post_merge_checks=[{"command": "go test ./...", "outcome": "PASS", "revision": MERGED}],
             )
         )
-        self.assertEqual(result["state"], "integrated_on_main")
-        self.assertTrue(result["closable"])
-        self.assertTrue(result["milestone_complete"])
+        self.assertEqual(result["state"], "integration_evidence_declared")
+        self.assertFalse(result["milestone_closable"])
+        self.assertNotIn("closable", result)
+
+    def test_merge_required_merged_pr_without_main_readback_is_rejected(self):
+        result = integration_lifecycle.evaluate(
+            record(
+                pull_request_url="https://github.com/stemarie/example/pull/7",
+                pull_request_head_sha=FOUNDATION,
+                pull_request_merged=True,
+                merged_sha=MERGED,
+            )
+        )
+        self.assertEqual(result["state"], "integration_pending")
+        self.assertFalse(result["milestone_closable"])
+        self.assertIn("default_branch_readback", result["missing"])
+        self.assertIn("post_merge_checks", result["missing"])
+
+    def test_merge_required_normalized_evidence_does_not_certify_authenticated_integration(self):
+        result = integration_lifecycle.evaluate(
+            record(
+                pull_request_url="https://github.com/stemarie/example/pull/7",
+                pull_request_head_sha=FOUNDATION,
+                pull_request_merged=True,
+                merged_sha=MERGED,
+                default_branch_head_sha=MERGED,
+                default_branch_contains_merged=True,
+                post_merge_checks=[{"command": "go test ./...", "outcome": "PASS", "revision": MERGED}],
+            )
+        )
+        self.assertEqual(result["state"], "integration_evidence_declared")
+        self.assertFalse(result["candidate_record_closable"])
+        self.assertFalse(result["milestone_closable"])
 
     def test_merge_required_rejects_failed_or_wrong_revision_post_merge_check(self):
         for checks in (
@@ -131,6 +148,29 @@ class IntegrationLifecycleTests(unittest.TestCase):
             )
             self.assertEqual(result["state"], "integration_pending")
             self.assertIn("post_merge_checks", result["missing"])
+
+    def test_milestone_receipt_rejects_boolean_pr_number(self):
+        receipt = {
+            "schema_version": "closure_integration_receipt_v1",
+            "outcome": "DELIVERED",
+            "disposition": "merge_required",
+            "closure_scope": "product_milestone",
+            "repository": "stemarie/example",
+            "origin": "https://github.com/stemarie/example.git",
+            "api_target": "https://api.github.com/repos/stemarie/example",
+            "issue": 7,
+            "branch": "main",
+            "candidate_sha": FOUNDATION,
+            "candidate_auditor_task_id": "t_1234abcd",
+            "integration_pr_number": True,
+            "integration_head_sha": PERMISSIONS,
+            "integration_auditor_task_id": "t_abcd1234",
+            "merged_sha": MERGED,
+            "default_branch_readback_sha": MERGED,
+            "post_merge_checks": [{"command": "go test ./...", "outcome": "PASS", "revision": MERGED}],
+        }
+        with self.assertRaises(ValueError):
+            integration_lifecycle.validate_milestone_merge_receipt(receipt)
 
     def test_human_approval_requires_merge_ready_pr_and_named_approver(self):
         result = integration_lifecycle.evaluate(

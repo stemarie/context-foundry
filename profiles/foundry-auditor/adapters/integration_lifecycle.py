@@ -47,11 +47,24 @@ def _errors_for_common_fields(record: dict[str, Any]) -> list[str]:
     return errors
 
 
-def _result(state: str, *, closable: bool, milestone_complete: bool, errors: list[str] | None = None, missing: list[str] | None = None) -> dict[str, Any]:
+def _result(
+    state: str,
+    *,
+    candidate_record_closable: bool = False,
+    milestone_closable: bool = False,
+    errors: list[str] | None = None,
+    missing: list[str] | None = None,
+) -> dict[str, Any]:
+    """Report advisory lifecycle state without granting milestone authority.
+
+    Only Closure Auditor's authenticated PR/default-branch verification may
+    authorize a product-milestone closure. A candidate hold can be closed as a
+    candidate record, never as a product milestone.
+    """
     return {
         "state": state,
-        "closable": closable,
-        "milestone_complete": milestone_complete,
+        "candidate_record_closable": candidate_record_closable,
+        "milestone_closable": milestone_closable,
         "errors": sorted(set(errors or [])),
         "missing": sorted(set(missing or [])),
     }
@@ -70,10 +83,55 @@ def _post_merge_checks_pass(checks: Any, revision: Any) -> bool:
     )
 
 
+def validate_milestone_merge_receipt(receipt: Any) -> None:
+    """Fail closed for the source evidence a milestone-closure transition needs.
+
+    This validates only immutable record shape and cross-field bindings. The
+    caller must still authenticate the PR, merge result, and branch ancestry
+    against the repository provider before it permits a closure write.
+    """
+    fields = {
+        "schema_version", "outcome", "disposition", "closure_scope",
+        "repository", "origin", "api_target", "issue", "branch",
+        "candidate_sha", "candidate_auditor_task_id", "integration_pr_number",
+        "integration_head_sha", "integration_auditor_task_id", "merged_sha",
+        "default_branch_readback_sha", "post_merge_checks",
+    }
+    if not isinstance(receipt, dict) or set(receipt) != fields:
+        raise ValueError("integration receipt has unsupported or missing fields")
+    if (
+        receipt["schema_version"] != "closure_integration_receipt_v1"
+        or receipt["outcome"] != "DELIVERED"
+        or receipt["disposition"] != "merge_required"
+        or receipt["closure_scope"] != "product_milestone"
+    ):
+        raise ValueError("integration receipt has invalid lifecycle state")
+    if type(receipt["integration_pr_number"]) is not int or receipt["integration_pr_number"] < 1:
+        raise ValueError("integration receipt has invalid PR number")
+    sha_fields = (
+        "candidate_sha", "integration_head_sha", "merged_sha",
+        "default_branch_readback_sha",
+    )
+    if any(not _sha(receipt.get(field)) for field in sha_fields):
+        raise ValueError("integration receipt has invalid SHA evidence")
+    if not _task_id(receipt.get("candidate_auditor_task_id")) or not _task_id(receipt.get("integration_auditor_task_id")):
+        raise ValueError("integration receipt has invalid auditor task evidence")
+    if not _post_merge_checks_pass(receipt["post_merge_checks"], receipt["default_branch_readback_sha"]):
+        raise ValueError("integration receipt lacks PASS checks bound to its read-back SHA")
+
+
+def _sha(value: Any) -> bool:
+    return isinstance(value, str) and len(value) == 40 and all(char in "0123456789abcdef" for char in value)
+
+
+def _task_id(value: Any) -> bool:
+    return isinstance(value, str) and len(value) == 10 and value.startswith("t_") and all(char in "0123456789abcdef" for char in value[2:])
+
+
 def evaluate(record: dict[str, Any]) -> dict[str, Any]:
     """Classify a source-changing tranche without inferring missing authority."""
     if not isinstance(record, dict) or record.get("source_change") is not True:
-        return _result("invalid", closable=False, milestone_complete=False, errors=["source_change"])
+        return _result("invalid", errors=["source_change"])
 
     disposition = record.get("disposition")
     errors = _errors_for_common_fields(record)
@@ -90,8 +148,8 @@ def evaluate(record: dict[str, Any]) -> dict[str, Any]:
         if tracker_state == "closed" and errors:
             errors.append("closed_tracker_with_invalid_candidate_hold")
         if errors:
-            return _result("invalid", closable=False, milestone_complete=False, errors=errors)
-        return _result("candidate_verified", closable=True, milestone_complete=False)
+            return _result("invalid", errors=errors)
+        return _result("candidate_verified", candidate_record_closable=True)
 
     if disposition == "human_approval_required":
         for field in ("pull_request_url", "pull_request_head_sha", "approval_request", "approval_owner"):
@@ -104,8 +162,8 @@ def evaluate(record: dict[str, Any]) -> dict[str, Any]:
         if tracker_state == "closed":
             errors.append("closed_tracker_before_approval")
         if errors:
-            return _result("invalid", closable=False, milestone_complete=False, errors=errors)
-        return _result("approval_pending", closable=False, milestone_complete=False)
+            return _result("invalid", errors=errors)
+        return _result("approval_pending")
 
     # merge_required is the default source-changing endpoint.
     missing: list[str] = []
@@ -129,10 +187,10 @@ def evaluate(record: dict[str, Any]) -> dict[str, Any]:
     if tracker_state == "reopened":
         errors.append("reopened_tracker_requires_reconciliation")
     if errors:
-        return _result("invalid", closable=False, milestone_complete=False, errors=errors, missing=missing)
+        return _result("invalid", errors=errors, missing=missing)
     if missing:
-        return _result("integration_pending", closable=False, milestone_complete=False, missing=missing)
-    return _result("integrated_on_main", closable=True, milestone_complete=True)
+        return _result("integration_pending", missing=missing)
+    return _result("integration_evidence_declared")
 
 
 def evaluate_cohort(cohort: dict[str, Any]) -> dict[str, Any]:

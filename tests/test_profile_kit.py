@@ -247,13 +247,15 @@ class ProfileKitTests(unittest.TestCase):
         self.assertIn("initial tracking issue", architect)
         self.assertIn("committing, commenting, linking, closing, tagging, or publishing as architect", architect)
         self.assertIn("pre-publication auditor pass", worker)
+        self.assertIn("integration auditor must pass", worker)
         self.assertIn("candidate auditor pass", worker)
         self.assertIn("external step partially succeeds", worker)
         self.assertIn("pre-publication audit", auditor)
         self.assertIn("post-publication audit", auditor)
         self.assertIn("closure auditor may use its card-derived closure adapter", auditor)
         self.assertIn("authentication: packet_supplied_nonsecret_helper", config)
-        self.assertIn("closure: closure_auditor_after_candidate_pass_and_delivery", config)
+        self.assertIn("auditor_gates: [candidate, integration, closure]", config)
+        self.assertIn("closure: closure_auditor_after_merged_integration_audit_and_delivery", config)
 
     def test_external_contract_references_are_role_bound_and_card_body_is_limited(self):
         architect = (ROOT / "profiles/foundry-architect/SOUL.md").read_text(encoding="utf-8")
@@ -349,6 +351,11 @@ class ProfileKitTests(unittest.TestCase):
         self.assertIn("merge_required", auditor)
         self.assertIn("does not inspect GitHub", watchdog)
         self.assertTrue(evaluator.is_file())
+        closure_adapter = (ROOT / "profiles/foundry-auditor/adapters/closure_auditor.py").read_text(encoding="utf-8")
+        self.assertIn("validate_milestone_merge_receipt", closure_adapter)
+        self.assertIn("verify_remote_integration", closure_adapter)
+        self.assertIn("closure_integration_receipt_v1", closure_adapter)
+        self.assertIn("Integration Auditor receipt", closure_adapter)
 
     def test_contract_orchestration_kit_is_self_validating(self):
         result = subprocess.run(

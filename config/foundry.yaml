@@ -14,8 +14,8 @@ release_coordination:
   authentication: packet_supplied_nonsecret_helper
   architect_issue_action: create_initial_tracking_issue_only
   worker_delivery_actions: [commits, issue_evidence, annotated_tag, github_release, remote_readback]
-  auditor_gates: [candidate, closure]
-  closure: closure_auditor_after_candidate_pass_and_delivery
+  auditor_gates: [candidate, integration, closure]
+  closure: closure_auditor_after_merged_integration_audit_and_delivery
 roles:
   architect:
     profile: foundry-architect
