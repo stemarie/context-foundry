@@ -12,6 +12,9 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Callable
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from integration_lifecycle import validate_milestone_merge_receipt
+
 PROFILE = "foundry-auditor"
 BOARD = "context-foundry"
 RECEIPT_MARKER = "FOUNDRY_CLOSURE_RECEIPT_V1"
@@ -125,13 +128,38 @@ def candidate_receipt(candidate: dict[str, Any], scope: dict[str, Any]) -> str:
     return candidate_sha
 
 
-def delivery_receipt(delivery: dict[str, Any], candidate_id: str, scope: dict[str, Any]) -> None:
-    receipt = named_receipt(delivery.get("metadata"), "closure_delivery_receipt_v1", {"schema_version", "outcome", "delivery_mode", "repository", "origin", "api_target", "issue", "branch", "candidate_sha", "delivered_sha", "candidate_auditor_task_id"}, "Delivery receipt")
-    if receipt["schema_version"] != "closure_delivery_receipt_v1" or receipt["outcome"] != "DELIVERED" or receipt["delivery_mode"] != "non-force-direct-main":
-        raise ClosureError("Delivery receipt has invalid delivery state")
-    bound_fields(receipt, scope, ("repository", "origin", "api_target", "issue", "branch", "candidate_sha"), "Delivery receipt")
-    if receipt["delivered_sha"] != scope["candidate_sha"] or receipt["candidate_auditor_task_id"] != candidate_id:
-        raise ClosureError("Delivery receipt does not bind delivered SHA and Candidate Auditor parent")
+def integration_audit_receipt(integration_auditor: dict[str, Any], scope: dict[str, Any]) -> dict[str, Any]:
+    if integration_auditor.get("assignee") != PROFILE:
+        raise ClosureError("Integration Auditor is not independently assigned to foundry-auditor")
+    receipt = named_receipt(
+        integration_auditor.get("metadata"),
+        "closure_integration_audit_v1",
+        {"schema_version", "verdict", "repository", "origin", "api_target", "issue", "branch", "candidate_sha", "integration_pr_number", "integration_head_sha"},
+        "Integration Auditor receipt",
+    )
+    if receipt["schema_version"] != "closure_integration_audit_v1" or receipt["verdict"] != "PASS":
+        raise ClosureError("Integration Auditor receipt is not a PASS")
+    bound_fields(receipt, scope, ("repository", "origin", "api_target", "issue", "branch", "candidate_sha"), "Integration Auditor receipt")
+    if type(receipt["integration_pr_number"]) is not int or receipt["integration_pr_number"] < 1 or not isinstance(receipt["integration_head_sha"], str) or not HEX40.fullmatch(receipt["integration_head_sha"]):
+        raise ClosureError("Integration Auditor receipt has invalid PR evidence")
+    return receipt
+
+
+def delivery_receipt(delivery: dict[str, Any], candidate_id: str, integration_auditor_id: str, scope: dict[str, Any]) -> None:
+    receipt = named_receipt(
+        delivery.get("metadata"),
+        "closure_integration_receipt_v1",
+        {"schema_version", "outcome", "disposition", "closure_scope", "repository", "origin", "api_target", "issue", "branch", "candidate_sha", "candidate_auditor_task_id", "integration_pr_number", "integration_head_sha", "integration_auditor_task_id", "merged_sha", "default_branch_readback_sha", "post_merge_checks"},
+        "Integration delivery receipt",
+    )
+    try:
+        validate_milestone_merge_receipt(receipt)
+    except ValueError as error:
+        raise ClosureError(str(error)) from error
+    bound_fields(receipt, scope, ("repository", "origin", "api_target", "issue", "branch", "candidate_sha"), "Integration delivery receipt")
+    if receipt["candidate_auditor_task_id"] != candidate_id or receipt["integration_auditor_task_id"] != integration_auditor_id:
+        raise ClosureError("Integration delivery receipt does not bind its Auditor parents")
+    scope.update({key: receipt[key] for key in ("integration_pr_number", "integration_head_sha", "merged_sha", "default_branch_readback_sha", "post_merge_checks")})
 
 
 def derive_scope(closure: dict[str, Any], lookup: Callable[[str], dict[str, Any]]) -> dict[str, Any]:
@@ -139,12 +167,16 @@ def derive_scope(closure: dict[str, Any], lookup: Callable[[str], dict[str, Any]
     delivery_id, delivery = completed_parent(closure, lookup, "Delivery")
     if receipt_delivery_id != delivery_id:
         raise ClosureError("Closure Auditor receipt pointer is not its direct Delivery parent")
-    candidate_id, candidate = completed_parent(delivery, lookup, "Candidate Auditor")
+    integration_auditor_id, integration_auditor = completed_parent(delivery, lookup, "Integration Auditor")
+    candidate_id, candidate = completed_parent(integration_auditor, lookup, "Candidate Auditor")
     worker_id = candidate_has_completed_worker_parent(candidate, lookup)
-    if len({closure.get("id"), delivery_id, candidate_id, worker_id}) != 4:
-        raise ClosureError("Worker, Candidate Auditor, Delivery, and Closure Auditor must be distinct")
+    if len({closure.get("id"), delivery_id, integration_auditor_id, candidate_id, worker_id}) != 5:
+        raise ClosureError("Worker, Candidate Auditor, Integration Auditor, Delivery, and Closure Auditor must be distinct")
     scope["candidate_sha"] = candidate_receipt(candidate, scope)
-    delivery_receipt(delivery, candidate_id, scope)
+    audit = integration_audit_receipt(integration_auditor, scope)
+    delivery_receipt(delivery, candidate_id, integration_auditor_id, scope)
+    if scope["integration_pr_number"] != audit["integration_pr_number"] or scope["integration_head_sha"] != audit["integration_head_sha"]:
+        raise ClosureError("Integration delivery receipt does not bind Integration Auditor evidence")
     return scope
 
 
@@ -161,9 +193,35 @@ def validate_workspace(closure: dict[str, Any], scope: dict[str, Any]) -> None:
         raise ClosureError("Closure Auditor card has no workspace path")
     if git_output(workspace, "remote", "get-url", "origin") != scope["origin"]:
         raise ClosureError("Closure Auditor workspace origin differs from governed delivery")
-    remote_branch = git_output(workspace, "ls-remote", "origin", f"refs/heads/{scope['branch']}").split()
-    if not remote_branch or remote_branch[0] != scope["candidate_sha"]:
-        raise ClosureError("Closure Auditor workspace remote branch differs from delivered candidate SHA")
+    remote_ref = git_output(workspace, "ls-remote", "origin", f"refs/heads/{scope['branch']}").split()
+    if len(remote_ref) != 2 or not HEX40.fullmatch(remote_ref[0]) or remote_ref[1] != f"refs/heads/{scope['branch']}":
+        raise ClosureError("Closure Auditor workspace default-branch remote reference is invalid")
+
+
+def compare_contains(request: Callable[[str, str, dict[str, Any] | None], Any], base: str, ancestor: str, descendant: str) -> None:
+    comparison = request("GET", f"{base}/compare/{ancestor}...{descendant}", None)
+    if not isinstance(comparison, dict) or comparison.get("status") not in {"ahead", "identical"}:
+        raise ClosureError("authenticated default branch does not contain the required integration revision")
+
+
+def verify_remote_integration(request: Callable[[str, str, dict[str, Any] | None], Any], scope: dict[str, Any]) -> None:
+    base, branch = scope["api_target"], scope["branch"]
+    pull = request("GET", f"{base}/pulls/{scope['integration_pr_number']}", None)
+    if not isinstance(pull, dict) or pull.get("merged") is not True:
+        raise ClosureError("integration pull request is not merged")
+    if pull.get("head", {}).get("sha") != scope["integration_head_sha"]:
+        raise ClosureError("integration pull request head differs from audited integration head")
+    if pull.get("base", {}).get("ref") != branch or pull.get("base", {}).get("repo", {}).get("full_name") != scope["repository"]:
+        raise ClosureError("integration pull request base differs from governed default branch")
+    if pull.get("merge_commit_sha") != scope["merged_sha"]:
+        raise ClosureError("integration pull request merge result differs from delivery receipt")
+    ref = request("GET", f"{base}/git/ref/heads/{branch}", None)
+    current_head = ref.get("object", {}).get("sha") if isinstance(ref, dict) else None
+    if not isinstance(current_head, str) or not HEX40.fullmatch(current_head):
+        raise ClosureError("authenticated default branch read-back is invalid")
+    compare_contains(request, base, scope["merged_sha"], scope["default_branch_readback_sha"])
+    compare_contains(request, base, scope["default_branch_readback_sha"], current_head)
+    scope["current_default_branch_sha"] = current_head
 
 
 def token() -> str:
@@ -190,7 +248,15 @@ def api(method: str, url: str, payload: dict[str, Any] | None = None) -> Any:
 
 
 def receipt_body(closure_id: str, scope: dict[str, Any]) -> str:
-    return f"<!-- {scope['receipt_marker']} -->\nFoundry Closure Auditor PASS\n\n- Closure card: `{closure_id}`\n- Delivered `{scope['branch']}` SHA: `{scope['candidate_sha']}`\n- Required Issue marker verified: `{scope['issue_marker']}`"
+    return (
+        f"<!-- {scope['receipt_marker']} -->\nFoundry Closure Auditor PASS\n\n"
+        f"- Closure card: `{closure_id}`\n"
+        f"- Candidate SHA: `{scope['candidate_sha']}`\n"
+        f"- Integration PR: `#{scope['integration_pr_number']}` at `{scope['integration_head_sha']}`\n"
+        f"- Merged SHA: `{scope['merged_sha']}`\n"
+        f"- Authenticated default-branch readback SHA: `{scope['default_branch_readback_sha']}`\n"
+        f"- Required Issue marker verified: `{scope['issue_marker']}`"
+    )
 
 
 def marker_receipts(comments: list[dict[str, Any]], marker: str) -> list[dict[str, Any]]:
@@ -201,13 +267,11 @@ def marker_receipts(comments: list[dict[str, Any]], marker: str) -> list[dict[st
 def execute(closure: dict[str, Any], lookup: Callable[[str], dict[str, Any]], request: Callable[[str, str, dict[str, Any] | None], Any] = api) -> dict[str, Any]:
     scope = derive_scope(closure, lookup)
     validate_workspace(closure, scope)
-    base, branch, issue_number, sha, marker = scope["api_target"], scope["branch"], scope["issue"], scope["candidate_sha"], scope["receipt_marker"]
+    base, branch, issue_number, marker = scope["api_target"], scope["branch"], scope["issue"], scope["receipt_marker"]
     repo = request("GET", base, None)
-    if repo.get("full_name") != scope["repository"] or repo.get("default_branch") != branch:
+    if not isinstance(repo, dict) or repo.get("full_name") != scope["repository"] or repo.get("default_branch") != branch:
         raise ClosureError("GitHub API repository does not resolve to governed delivery")
-    ref = request("GET", f"{base}/git/ref/heads/{branch}", None)
-    if ref.get("object", {}).get("sha") != sha:
-        raise ClosureError("GitHub API branch does not resolve to delivered candidate SHA")
+    verify_remote_integration(request, scope)
     issue_url = f"{base}/issues/{issue_number}"
     issue = request("GET", issue_url, None)
     if f"<!-- {scope['issue_marker']} -->" not in str(issue.get("body", "")):
@@ -223,7 +287,7 @@ def execute(closure: dict[str, Any], lookup: Callable[[str], dict[str, Any]], re
     if issue.get("state") == "closed":
         if len(existing) != 1 or existing[0].get("body") != expected_body or not issue.get("closed_at"):
             raise ClosureError("closed Issue lacks exactly one closure receipt")
-        return {"operation": "idempotent-readback", "repository": scope["repository"], "issue": issue_number, "candidate_sha": sha}
+        return {"operation": "idempotent-readback", "repository": scope["repository"], "issue": issue_number, "candidate_sha": scope["candidate_sha"], "merged_sha": scope["merged_sha"], "default_branch_readback_sha": scope["default_branch_readback_sha"]}
     if issue.get("state") != "open":
         raise ClosureError("Issue has an invalid state")
     if existing and existing[0].get("body") != expected_body:
@@ -240,7 +304,7 @@ def execute(closure: dict[str, Any], lookup: Callable[[str], dict[str, Any]], re
     final_receipts = marker_receipts(final_comments, marker) if isinstance(final_comments, list) else []
     if final_issue.get("state") != "closed" or not final_issue.get("closed_at") or len(final_receipts) != 1 or final_receipts[0].get("body") != expected_body:
         raise ClosureError("Issue close read-back failed")
-    return {"operation": "closed", "repository": scope["repository"], "issue": issue_number, "candidate_sha": sha}
+    return {"operation": "closed", "repository": scope["repository"], "issue": issue_number, "candidate_sha": scope["candidate_sha"], "merged_sha": scope["merged_sha"], "default_branch_readback_sha": scope["default_branch_readback_sha"]}
 
 
 def live_card(task_id: str) -> dict[str, Any]:

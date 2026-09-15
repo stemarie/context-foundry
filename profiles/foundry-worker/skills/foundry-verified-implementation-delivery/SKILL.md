@@ -1,7 +1,7 @@
 ---
 name: foundry-verified-implementation-delivery
 description: Execute bounded Foundry corrections with real checks and delivery proof.
-version: 1.0.0
+version: 1.1.0
 source: kits/contract-orchestration/skills/verified-implementation-delivery.md
 adapted_for: foundry-worker
 ---
@@ -18,8 +18,9 @@ Use only for a bounded Worker packet or Architect-routed correction with named s
 4. Apply the smallest reversible, authorized correction. Preserve unrelated changes; never expand source set, question, operations, or side effects.
 5. Regenerate only the packet-defined evidence/receipt outputs. Run every required validator, focused test, lint/diff check, and cleanup check. Record actual commands and outcomes.
 6. Inspect the exact final diff for secrets, generated debris, accidental path exposure, or scope expansion.
-7. Commit/push only when authorized. For delivery, verify local `HEAD`, authenticated remote branch, and fetched tracking branch agree. A local commit is not delivery proof.
-8. Write and re-read the Kanban receipt with changed paths, repair evidence, validation output, limitations, delivery evidence, and unresolved facts. Do not self-audit or declare the Auditor verdict.
+7. For every source-changing packet, record the contract's integration disposition and the authenticated base SHA, candidate branch/SHA, changed paths, exact commands, and next owner/decision. A pushed candidate is `candidate produced`; after independent PASS it is `candidate verified`. Neither is `delivered`, `complete`, or `merged`.
+8. Commit/push only when authorized. For `merge_required`, open or update the exact candidate/reconciled integration PR only when the packet grants that write, then wait for the independent audit of that exact PR head. Delivery is proven only by the non-force merge, authenticated default-branch read-back, and required post-merge checks. For `human_approval_required`, stop at the merge-ready PR and named approval; do not auto-merge. A local commit is not delivery proof.
+9. Write and re-read the receipt with changed paths, repair evidence, validation output, integration disposition/state, limitations, remote evidence, and unresolved facts. Do not self-audit or declare the Auditor verdict.
 
 ## Contract invalidation
 If a reproducible probe proves the packet/work order has a false premise, contradictory scope/non-goals, incompatible acceptance rule, or has been superseded, do not retry unchanged work or silently broaden scope. Record the exact evidence and stop for Architect routing; only the Architect can invalidate/archive/re-audit the contract.

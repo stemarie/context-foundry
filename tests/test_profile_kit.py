@@ -247,13 +247,15 @@ class ProfileKitTests(unittest.TestCase):
         self.assertIn("initial tracking issue", architect)
         self.assertIn("committing, commenting, linking, closing, tagging, or publishing as architect", architect)
         self.assertIn("pre-publication auditor pass", worker)
+        self.assertIn("integration auditor must pass", worker)
         self.assertIn("candidate auditor pass", worker)
         self.assertIn("external step partially succeeds", worker)
         self.assertIn("pre-publication audit", auditor)
         self.assertIn("post-publication audit", auditor)
         self.assertIn("closure auditor may use its card-derived closure adapter", auditor)
         self.assertIn("authentication: packet_supplied_nonsecret_helper", config)
-        self.assertIn("closure: closure_auditor_after_candidate_pass_and_delivery", config)
+        self.assertIn("auditor_gates: [candidate, integration, closure]", config)
+        self.assertIn("closure: closure_auditor_after_merged_integration_audit_and_delivery", config)
 
     def test_external_contract_references_are_role_bound_and_card_body_is_limited(self):
         architect = (ROOT / "profiles/foundry-architect/SOUL.md").read_text(encoding="utf-8")
@@ -325,6 +327,35 @@ class ProfileKitTests(unittest.TestCase):
         self.assertIn(scope, architect)
         self.assertIn("does not impose game mechanics or product behavior", architect)
         self.assertIn("does not change a target merely to codify this policy.", architect)
+
+    def test_integration_disposition_policy_is_source_managed_and_role_bound(self):
+        kit = ROOT / "kits/contract-orchestration"
+        contract_template = (kit / "templates/contract-template.md").read_text(encoding="utf-8")
+        receipt_template = (kit / "templates/completion-receipt.md").read_text(encoding="utf-8")
+        kit_readme = (kit / "README.md").read_text(encoding="utf-8")
+        architect = (ROOT / "profiles/foundry-architect/ROLE-CONTRACT.md").read_text(encoding="utf-8")
+        worker = (ROOT / "profiles/foundry-worker/ROLE-CONTRACT.md").read_text(encoding="utf-8")
+        auditor = (ROOT / "profiles/foundry-auditor/ROLE-CONTRACT.md").read_text(encoding="utf-8")
+        watchdog = (ROOT / "profiles/foundry-watchdog/ROLE-CONTRACT.md").read_text(encoding="utf-8")
+        evaluator = ROOT / "profiles/foundry-auditor/adapters/integration_lifecycle.py"
+
+        for token in ("candidate_only", "merge_required", "human_approval_required", "candidate_sha", "candidate_branch", "disposition_owner", "next_decision"):
+            self.assertIn(token, contract_template)
+        self.assertIn("Integration disposition", receipt_template)
+        self.assertIn("candidate produced → candidate verified → integration pending → integrated on main → milestone closed", kit_readme)
+        self.assertIn("candidate-only", kit_readme)
+        self.assertIn("Held for approval", kit_readme)
+        self.assertIn("remote `main`, candidate branches, open pull requests", architect)
+        self.assertIn("candidate produced", worker)
+        self.assertIn("does not certify PR integration, deployment, or milestone completion", auditor)
+        self.assertIn("merge_required", auditor)
+        self.assertIn("does not inspect GitHub", watchdog)
+        self.assertTrue(evaluator.is_file())
+        closure_adapter = (ROOT / "profiles/foundry-auditor/adapters/closure_auditor.py").read_text(encoding="utf-8")
+        self.assertIn("validate_milestone_merge_receipt", closure_adapter)
+        self.assertIn("verify_remote_integration", closure_adapter)
+        self.assertIn("closure_integration_receipt_v1", closure_adapter)
+        self.assertIn("Integration Auditor receipt", closure_adapter)
 
     def test_contract_orchestration_kit_is_self_validating(self):
         result = subprocess.run(

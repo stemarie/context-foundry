@@ -11,17 +11,17 @@ from pathlib import Path
 
 KIT = Path(__file__).resolve().parents[1]
 REQUIRED = {
-    "README.md": ("## Lifecycle", "## State vocabulary", "## Portable adoption"),
-    "AGENT.md": ("## Coordinator preflight", "## Implementation worker", "exactly one active writer", "contract_version", "body_markdown", "must not infer"),
+    "README.md": ("## Lifecycle", "## State vocabulary", "## Integration disposition", "candidate produced → candidate verified → integration pending → integrated on main → milestone closed", "## Portable adoption"),
+    "AGENT.md": ("## Coordinator preflight", "## Implementation worker", "exactly one active writer", "contract_version", "body_markdown", "integration disposition", "must not infer"),
     "SOUL.template.md": ("## Grounded Self-Recovery Protocol", "smallest already-authorized reversible recovery"),
     "skills/discrepancy-to-delivery.md": ("## Optional continuation accelerator", "periodic or manual audit loop"),
     "skills/verified-implementation-delivery.md": ("## Recovery fallback", "authenticated remote"),
     "skills/card-orchestration.md": ("## Continuation adaptation", "one writer"),
     "templates/README.md": ("contract-template.md", "issue-work-contract.md", "implementation-card.md", "Secret-safe environment example"),
-    "templates/contract-template.md": ("## Objective", "## Authority", "## In scope", "## Required implementation details", "## Acceptance criteria", "## Verification", "## Delivery", "## Explicit non-goals", "## Safety boundaries", "## Idempotency key", "authorized Architect", "does not change any target service API, schema, or runtime"),
+    "templates/contract-template.md": ("## Objective", "## Authority", "## In scope", "## Required implementation details", "## Acceptance criteria", "## Verification", "## Delivery", "## Integration disposition", "candidate_only", "merge_required", "human_approval_required", "## Explicit non-goals", "## Safety boundaries", "## Idempotency key", "authorized Architect", "does not change any target service API, schema, or runtime"),
     "templates/issue-work-contract.md": ("## Acceptance criteria", "## Idempotency key"),
     "templates/implementation-card.md": ("exactly one active writer", "completion receipt"),
-    "templates/completion-receipt.md": ("Remote comparison", "Deferred or non-goals"),
+    "templates/completion-receipt.md": ("Integration disposition", "Candidate audit", "Deferred or non-goals", "Disposition owner and next decision"),
     "templates/continuation-marker-config.md": ("Optional accelerator contract", "periodic/manual continuation"),
     "templates/environment.example": ("[REDACTED]", "<REPOSITORY_URL>"),
     "adapters/README.md": ("## Hermes Kanban and cron mapping", "periodic or manual continuation"),

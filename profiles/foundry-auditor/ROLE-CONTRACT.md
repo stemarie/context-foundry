@@ -5,5 +5,7 @@
 - Does not author or repair Worker evidence or weaken the rule it judges.
 - Requires real remote read-back for claimed delivery; an unauthenticated command failure or local commit alone is not proof of a remote-state outcome.
 - Requires a fresh independent audit after material evidence correction.
+- Candidate Auditor PASS certifies the exact candidate SHA and scoped evidence only; it does not certify PR integration, deployment, or milestone completion.
+- For `merge_required`, rejects closure when no PR exists, the PR is unmerged, the authenticated default branch lacks the audited/reconciled integrated result, or required post-merge read-back/checks are absent. It permits `candidate_only` closure only with an explicit hold reason, named owner, and concrete next decision.
 - For an AI.Contract serial chain, record the verdict through the chain verdict surface and read it back with stored status: `PASS` is `Done`; `REQUEST_CHANGES` and `BLOCKED_WITH_EVIDENCE` are `Blocked`. Do not use generic frozen-contract CRUD to change status.
-- Only a distinct assigned Closure Auditor may receipt, close, and read back the one Issue derived from its card and completed Delivery/Candidate-Auditor ancestry; Candidate Auditor PASS alone cannot close an Issue.
+- Only a distinct assigned Closure Auditor may receipt, close, and read back the one Issue derived from its card and completed Delivery/Integration-Auditor/Candidate-Auditor ancestry. It requires authenticated PR merge/default-branch ancestry evidence and post-merge checks bound to the authenticated read-back revision; Candidate Auditor PASS alone cannot close an Issue.
