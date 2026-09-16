@@ -47,8 +47,21 @@ def validate_workspace(card:dict[str,Any], scope:dict[str,Any], git:Callable[...
  if git(ws,'remote','get-url','origin')!=t['origin'] or git(ws,'status','--porcelain') or git(ws,'rev-parse','HEAD')!=t['base_sha']: raise ContractIssueError('workspace origin, cleanliness, or head differs from authorization')
  remote=git(ws,'ls-remote','origin','refs/heads/main').split()
  if len(remote)!=2 or remote[0]!=t['base_sha'] or remote[1]!='refs/heads/main': raise ContractIssueError('remote main differs from authorized base')
+def credential_file() -> Path:
+ return Path(os.environ.get('HERMES_REAL_HOME',str(Path.home()))) / '.hermes/profiles/foundry-architect/.env'
+def github_token() -> str:
+ env=credential_file(); token=next((x.split('=',1)[1].strip().strip('"').strip("'") for x in env.read_text().splitlines() if x.startswith('GITHUB_TOKEN=')), '')
+ if not token: raise ContractIssueError('GitHub credential helper lacks token')
+ return token
 def git_output(ws:str,*args:str)->str:
- r=subprocess.run(['git','-C',ws,*args],capture_output=True,text=True,timeout=30)
+ env=dict(os.environ); askpass=None
+ if args and args[0]=='ls-remote':
+  askpass=tempfile.NamedTemporaryFile(mode='w',encoding='utf-8',delete=False)
+  askpass.write('#!/bin/sh\nprintf "%s\\n" "$GITHUB_TOKEN"\n'); askpass.close(); os.chmod(askpass.name,0o700)
+  env.update({'GITHUB_TOKEN':github_token(),'GIT_ASKPASS':askpass.name,'GIT_TERMINAL_PROMPT':'0'})
+ try: r=subprocess.run(['git','-C',ws,*args],capture_output=True,text=True,timeout=30,env=env)
+ finally:
+  if askpass: Path(askpass.name).unlink(missing_ok=True)
  if r.returncode: raise ContractIssueError('could not read target Git state')
  return r.stdout.strip()
 def service(method:str,path:str,payload:dict[str,Any]|None=None)->Any:
@@ -64,8 +77,7 @@ def service(method:str,path:str,payload:dict[str,Any]|None=None)->Any:
  try:return json.loads(r.stdout)
  except json.JSONDecodeError as e: raise ContractIssueError('AI.Contract returned invalid JSON') from e
 def github(method:str,url:str,payload:dict[str,Any]|None=None)->Any:
- env=Path.home()/'.hermes/profiles/foundry-architect/.env'; token=next((x.split('=',1)[1].strip().strip('"').strip("'") for x in env.read_text().splitlines() if x.startswith('GITHUB_TOKEN=')), '')
- if not token: raise ContractIssueError('GitHub credential helper lacks token')
+ token=github_token()
  req=urllib.request.Request(url,data=None if payload is None else json.dumps(payload).encode(),method=method,headers={'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'})
  try:
   with urllib.request.urlopen(req,timeout=30) as x:return json.load(x)
