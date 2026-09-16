@@ -26,7 +26,7 @@ class ContractIssueV2Tests(unittest.TestCase):
     def service(self, method, path, payload=None):
         self.events.append(("service", method, path))
         if method == "POST" and path == "/api/v1/chains": return {"chain": [{"id": self.contract_id}]}
-        if method == "GET" and path == f"/api/v1/contracts/{self.contract_id}": return {"contract": {"id": self.contract_id, "title": "Phase 0 decision records", "body_markdown": "Bounded contract body.", "status": "In Progress", "version": "Alpha 1.0"}}
+        if method == "GET" and path == f"/api/v1/contracts/{self.contract_id}": return {"contract": {"id": self.contract_id, "title": "Phase 0 decision records", "body_markdown": "Bounded contract body.", "status": "In Progress", "contract_version": "Alpha 1.0"}}
         if method == "POST" and path.endswith("/activate"): return {"frozen_revision": {"revision": 1, "digest": adapter.digest_for(self.contract_id, "Phase 0 decision records", "Bounded contract body.")}}
         if method == "GET" and path.endswith("/frozen"): return {"frozen_revision": {"revision": 1, "digest": adapter.digest_for(self.contract_id, "Phase 0 decision records", "Bounded contract body.")}}
         self.fail((method,path,payload))

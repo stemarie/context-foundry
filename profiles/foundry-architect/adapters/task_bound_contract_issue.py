@@ -86,7 +86,7 @@ def issue_body(card:dict[str,Any],scope:dict[str,Any])->str:
  c=scope['contract']; return f"{marker_for(card)}\nAI.Contract: `{c['id']}` revision 1, digest `{digest_for(c['id'],c['title'],c['body_markdown'])}`.\n\n{scope['target']['issue_body']}"
 def contract_readback(value:Any,scope:dict[str,Any])->None:
  c=scope['contract']; v=value.get('contract',value) if isinstance(value,dict) else {}
- if not isinstance(v,dict) or any(v.get(k)!=c[k] for k in ('id','title','body_markdown')) or v.get('version')!='Alpha 1.0' or v.get('status')!='In Progress': raise ContractIssueError('AI.Contract read-back differs from authorization')
+ if not isinstance(v,dict) or any(v.get(k)!=c[k] for k in ('id','title','body_markdown')) or v.get('contract_version')!='Alpha 1.0' or v.get('status')!='In Progress': raise ContractIssueError('AI.Contract read-back differs from authorization')
 def execute(card:dict[str,Any],service_request:Callable[[str,str,dict[str,Any]|None],Any]=service,github_request:Callable[[str,str,dict[str,Any]|None],Any]=github,git:Callable[...,str]=git_output)->dict[str,Any]:
  scope=authorization(card); validate_workspace(card,scope,git); c=scope['contract']; t=scope['target']; digest=digest_for(c['id'],c['title'],c['body_markdown'])
  service_request('POST','/api/v1/chains',{'role':'architect','idempotency_key':key(card,'precreate'),'contracts':[{'id':c['id'],'title':c['title'],'body_markdown':c['body_markdown'],'status':'New'}]})
