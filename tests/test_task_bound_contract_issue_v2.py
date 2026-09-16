@@ -17,7 +17,7 @@ class ContractIssueV2Tests(unittest.TestCase):
         self.contract_id = "11111111-1111-4111-8111-111111111111"
         scope = {"contract": {"id": self.contract_id, "title": "Phase 0 decision records", "body_markdown": "Bounded contract body."}, "target": {"repository": "stemarie/mentorship-platform", "origin": "https://github.com/stemarie/mentorship-platform.git", "api_target": "https://api.github.com/repos/stemarie/mentorship-platform", "branch": "main", "worktree_path": "/work/mentorship", "base_sha": "a" * 40, "issue_title": "Phase 0 tracker", "issue_body": "Tracking only."}}
         self.card = {"id": "t_deadbeef", "assignee": "foundry-architect", "title": "Architect: execute contract", "workspace_path": "/work/mentorship/.worktrees/t_deadbeef", "body": "<!-- FOUNDRY_ARCHITECT_CONTRACT_ISSUE_AUTHORIZATION_V2\n" + json.dumps(scope, sort_keys=True) + "\n-->"}
-        self.events, self.issues = [], []
+        self.events, self.issues, self.contract_exists = [], [], False
 
     def git(self, workspace, *args):
         self.assertEqual(workspace, "/work/mentorship/.worktrees/t_deadbeef")
@@ -25,8 +25,10 @@ class ContractIssueV2Tests(unittest.TestCase):
 
     def service(self, method, path, payload=None):
         self.events.append(("service", method, path))
-        if method == "POST" and path == "/api/v1/chains": return {"chain": [{"id": self.contract_id}]}
-        if method == "GET" and path == f"/api/v1/contracts/{self.contract_id}": return {"contract": {"id": self.contract_id, "title": "Phase 0 decision records", "body_markdown": "Bounded contract body.", "status": "In Progress", "contract_version": "Alpha 1.0"}}
+        if method == "POST" and path == "/api/v1/chains": self.contract_exists = True; return {"chain": [{"id": self.contract_id}]}
+        if method == "GET" and path == f"/api/v1/contracts/{self.contract_id}":
+            if not self.contract_exists: raise adapter.ContractNotFound("AI.Contract record is absent")
+            return {"contract": {"id": self.contract_id, "title": "Phase 0 decision records", "body_markdown": "Bounded contract body.", "status": "In Progress", "contract_version": "Alpha 1.0"}}
         if method == "POST" and path.endswith("/activate"): return {"frozen_revision": {"revision": 1, "digest": adapter.digest_for(self.contract_id, "Phase 0 decision records", "Bounded contract body.")}}
         if method == "GET" and path.endswith("/frozen"): return {"frozen_revision": {"revision": 1, "digest": adapter.digest_for(self.contract_id, "Phase 0 decision records", "Bounded contract body.")}}
         self.fail((method,path,payload))
@@ -47,6 +49,19 @@ class ContractIssueV2Tests(unittest.TestCase):
         post_issue=next(i for i,e in enumerate(self.events) if e[0]=="github" and e[1]=="POST")
         activate=next(i for i,e in enumerate(self.events) if e[0]=="service" and e[1]=="POST" and e[2].endswith("/activate"))
         self.assertLess(activate,post_issue)
+
+    def test_reuses_matching_active_contract_without_precreate_or_activate(self):
+        def existing_service(method, path, payload=None):
+            self.events.append(("service", method, path))
+            if method == "GET" and path == f"/api/v1/contracts/{self.contract_id}":
+                return {"contract": {"id": self.contract_id, "title": "Phase 0 decision records", "body_markdown": "Bounded contract body.", "status": "In Progress", "contract_version": "Alpha 1.0"}}
+            if method == "GET" and path.endswith("/frozen"):
+                return {"frozen_revision": {"revision": 1, "digest": adapter.digest_for(self.contract_id, "Phase 0 decision records", "Bounded contract body.")}}
+            self.fail((method, path, payload))
+        result = adapter.execute(self.card, existing_service, self.github, self.git)
+        self.assertEqual(result["operation"], "contract-reused-and-tracker-created")
+        self.assertNotIn(("service", "POST", "/api/v1/chains"), self.events)
+        self.assertFalse(any(e[0] == "service" and e[1] == "POST" and e[2].endswith("/activate") for e in self.events))
 
     def test_v1_or_workspace_drift_fails_before_network(self):
         old={**self.card,"body":"<!-- FOUNDRY_ARCHITECT_ISSUE_AUTHORIZATION_V1\n{}\n-->"}

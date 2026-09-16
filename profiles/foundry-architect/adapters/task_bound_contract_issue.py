@@ -10,6 +10,7 @@ AUTH_START="<!-- FOUNDRY_ARCHITECT_CONTRACT_ISSUE_AUTHORIZATION_V2\n"; AUTH_END=
 TASK=re.compile(r"^t_[0-9a-f]{8}$"); UUID=re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"); SHA=re.compile(r"^[0-9a-f]{40}$"); REPO=re.compile(r"^stemarie/[A-Za-z0-9][A-Za-z0-9._-]*$")
 MARKER="FOUNDRY-ARCHITECT-CONTRACT-ISSUE-V2"
 class ContractIssueError(RuntimeError): pass
+class ContractNotFound(ContractIssueError): pass
 
 def digest_for(contract_id:str,title:str,body:str)->str: return hashlib.sha256((contract_id+"\0"+"1\0"+title+"\0"+body).encode()).hexdigest()
 def key(card:dict[str,Any], suffix:str)->str: return f"foundry-contract:{authorization(card)['contract']['id']}:{suffix}"
@@ -73,7 +74,11 @@ def service(method:str,path:str,payload:dict[str,Any]|None=None)->Any:
  try:
   r=subprocess.run([client,'architect',method,path]+([payload_path] if payload is not None else []),capture_output=True,text=True,timeout=45)
  finally: Path(payload_path).unlink(missing_ok=True)
- if r.returncode: raise ContractIssueError('AI.Contract request failed')
+ if r.returncode:
+  try: error=json.loads(r.stdout).get('error',{})
+  except json.JSONDecodeError: error={}
+  if method=='GET' and error.get('code')=='contract_not_found': raise ContractNotFound('AI.Contract record is absent')
+  raise ContractIssueError('AI.Contract request failed')
  try:return json.loads(r.stdout)
  except json.JSONDecodeError as e: raise ContractIssueError('AI.Contract returned invalid JSON') from e
 def github(method:str,url:str,payload:dict[str,Any]|None=None)->Any:
@@ -89,8 +94,13 @@ def contract_readback(value:Any,scope:dict[str,Any])->None:
  if not isinstance(v,dict) or any(v.get(k)!=c[k] for k in ('id','title','body_markdown')) or v.get('contract_version')!='Alpha 1.0' or v.get('status')!='In Progress': raise ContractIssueError('AI.Contract read-back differs from authorization')
 def execute(card:dict[str,Any],service_request:Callable[[str,str,dict[str,Any]|None],Any]=service,github_request:Callable[[str,str,dict[str,Any]|None],Any]=github,git:Callable[...,str]=git_output)->dict[str,Any]:
  scope=authorization(card); validate_workspace(card,scope,git); c=scope['contract']; t=scope['target']; digest=digest_for(c['id'],c['title'],c['body_markdown'])
- service_request('POST','/api/v1/chains',{'role':'architect','idempotency_key':key(card,'precreate'),'contracts':[{'id':c['id'],'title':c['title'],'body_markdown':c['body_markdown'],'status':'New'}]})
- service_request('POST',f"/api/v1/chain-contracts/{c['id']}/activate",{'role':'architect','revision':1,'digest':digest,'idempotency_key':key(card,'activate')})
+ try:
+  contract_readback(service_request('GET',f"/api/v1/contracts/{c['id']}",None),scope)
+  operation_prefix='contract-reused'
+ except ContractNotFound:
+  service_request('POST','/api/v1/chains',{'role':'architect','idempotency_key':key(card,'precreate'),'contracts':[{'id':c['id'],'title':c['title'],'body_markdown':c['body_markdown'],'status':'New'}]})
+  service_request('POST',f"/api/v1/chain-contracts/{c['id']}/activate",{'role':'architect','revision':1,'digest':digest,'idempotency_key':key(card,'activate')})
+  operation_prefix='contract-activated'
  frozen=service_request('GET',f"/api/v1/chain-contracts/{c['id']}/frozen",None).get('frozen_revision',{})
  if frozen.get('revision')!=1 or frozen.get('digest')!=digest: raise ContractIssueError('frozen revision differs from authorization')
  contract_readback(service_request('GET',f"/api/v1/contracts/{c['id']}",None),scope)
@@ -98,8 +108,8 @@ def execute(card:dict[str,Any],service_request:Callable[[str,str,dict[str,Any]|N
  if not isinstance(repo,dict) or repo.get('full_name')!=t['repository'] or repo.get('default_branch')!='main': raise ContractIssueError('GitHub target read-back differs from authorization')
  matches=[x for x in github_request('GET',base+'/issues?state=all&per_page=100',None) if marker_for(card) in str(x.get('body',''))]
  if len(matches)>1: raise ContractIssueError('multiple tracker Issues match contract marker')
- if matches: issue=github_request('GET',base+f"/issues/{matches[0]['number']}",None); operation='contract-activated-and-tracker-read-back'
- else: issue=github_request('POST',base+'/issues',{'title':t['issue_title'],'body':issue_body(card,scope)}); operation='contract-activated-and-tracker-created'
+ if matches: issue=github_request('GET',base+f"/issues/{matches[0]['number']}",None); operation=operation_prefix+'-and-tracker-read-back'
+ else: issue=github_request('POST',base+'/issues',{'title':t['issue_title'],'body':issue_body(card,scope)}); operation=operation_prefix+'-and-tracker-created'
  if issue.get('title')!=t['issue_title'] or issue.get('body')!=issue_body(card,scope) or not isinstance(issue.get('number'),int): raise ContractIssueError('tracker read-back differs from authorization')
  return {'operation':operation,'contract_id':c['id'],'revision':1,'issue':issue['number'],'repository':t['repository']}
 def live_card(task_id:str)->dict[str,Any]:
