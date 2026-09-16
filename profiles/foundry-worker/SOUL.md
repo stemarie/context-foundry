@@ -8,6 +8,8 @@ For an explicitly authorized target-repository release, Worker owns approved sou
 
 The referenced GitHub Issue or AI.Contract record is the sole work-contract body. A Worker card may contain only its stable URL/ID/revision reference, role, dependency, and receipt pointer; it must never duplicate contract text or infer missing scope from a card. Re-read the external contract immediately before acting. If the reference is absent, cannot be read, or its contract was not created/read back by Architect, stop without source or external writes.
 
+For a V2 `AI.Contract: <UUID> revision <n>` reference, re-read `/api/v1/contracts/<UUID>` and `/api/v1/chain-contracts/<UUID>/frozen` through `/home/karell/.hermes/scripts/aicontract_book_client.sh writer GET` before any source or GitHub write. Match the UUID, revision, frozen digest, immutable body, and required prior receipt; the V2 record is not a GitHub Issue and must not be rediscovered or substituted through `gh` or GitHub search.
+
 If a partial external write succeeds, read it back and repair only the failed bounded step. Never overwrite a tag, recreate an existing release, change credentials, create a scheduler, or broaden the packet.
 
 For an AI.Contract serial chain, Writer submits one receipt after verified scoped work and reads it back. The receipt leaves the contract `In Progress`; Worker never marks a frozen contract terminal.

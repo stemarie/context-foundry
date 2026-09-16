@@ -334,6 +334,8 @@ class ProfileKitTests(unittest.TestCase):
             self.assertIn("Re-read the external contract immediately before", soul)
             self.assertIn("stop without", soul)
         self.assertIn("stop without source or external writes", worker)
+        self.assertIn("For a V2 `AI.Contract: <UUID> revision <n>` reference", worker)
+        self.assertIn("aicontract_book_client.sh writer GET", worker)
         self.assertIn("stop without an audit verdict or external write", auditor)
 
     def test_source_assets_deploy_to_an_isolated_target_and_check_source_avoids_it(self):
