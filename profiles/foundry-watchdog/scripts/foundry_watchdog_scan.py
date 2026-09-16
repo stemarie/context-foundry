@@ -188,7 +188,32 @@ def load_tasks(input_path: Path | None) -> object:
     )
     if result.returncode:
         raise RuntimeError("kanban list failed")
-    return json.loads(result.stdout)
+    listed = json.loads(result.stdout)
+    rows = listed.get("tasks", []) if isinstance(listed, dict) else listed
+    if not isinstance(rows, list):
+        raise RuntimeError("kanban list response is malformed")
+    details: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get("id"), str):
+            continue
+        detail = subprocess.run(
+            [hermes, "kanban", "--board", BOARD, "show", row["id"], "--json"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        if detail.returncode:
+            raise RuntimeError("kanban show failed")
+        value = json.loads(detail.stdout)
+        task = value.get("task") if isinstance(value, dict) else None
+        if not isinstance(task, dict) or task.get("id") != row["id"]:
+            raise RuntimeError("kanban show response is malformed")
+        task["events"] = value.get("events", task.get("events", []))
+        task["runs"] = value.get("runs", task.get("runs", []))
+        task["children"] = value.get("children", task.get("children", []))
+        details.append(task)
+    return details
 
 
 def previous_digest(path: Path | None) -> str:

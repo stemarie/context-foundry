@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SYNC_PATH = ROOT / "scripts/sync_foundry_profiles.py"
@@ -218,6 +219,22 @@ class ProfileKitTests(unittest.TestCase):
             resolved = subprocess.run([sys.executable, scanner, "--input", fixture], capture_output=True, text=True)
             self.assertEqual(resolved.returncode, 0, resolved.stderr)
             self.assertEqual(resolved.stdout, "")
+
+    def test_watchdog_live_loader_enriches_list_rows_with_events(self):
+        scanner_path = ROOT / "profiles/foundry-watchdog/scripts/foundry_watchdog_scan.py"
+        spec = importlib.util.spec_from_file_location("foundry_watchdog_scan", scanner_path)
+        assert spec and spec.loader
+        scanner_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(scanner_module)
+        list_row = {"id": "t_v2audit", "status": "done", "title": "Candidate Auditor: V2 audit", "body": "AI.Contract: `3f8a1d07-3b2e-4ce8-b5ac-8363d13bf7c2` revision 1"}
+        detail = {"task": {**list_row, "events": [{"kind": "completed", "created_at": 4, "payload": {"verdict": "PASS"}}], "runs": []}}
+        responses = [
+            subprocess.CompletedProcess([], 0, json.dumps([list_row]), ""),
+            subprocess.CompletedProcess([], 0, json.dumps(detail), ""),
+        ]
+        with patch.object(scanner_module.subprocess, "run", side_effect=responses):
+            tasks = scanner_module.load_tasks(None)
+        self.assertEqual(tasks[0]["events"][0]["payload"]["verdict"], "PASS")
 
     def test_watchdog_wrapper_installer_is_explicit_and_executable(self):
         installer = ROOT / "scripts/install_foundry_watchdog_wrapper.py"
