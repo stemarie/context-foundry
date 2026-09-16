@@ -118,6 +118,22 @@ def validate_packet(packet: str) -> None:
         raise HandoffError("draft authorization has an empty or non-string field")
 
 
+def workspace_for_packet(packet: str) -> str:
+    """Map a target-authorized packet to its deterministic target worktree base."""
+    encoded = packet.split(AUTH_OPEN, 1)[1].split(AUTH_CLOSE, 1)[0]
+    authorization = json.loads(encoded)
+    repository = authorization["repository"]
+    origin = authorization["origin"]
+    if not isinstance(repository, str) or not isinstance(origin, str) or repository.count("/") != 1:
+        raise HandoffError("draft authorization has no target repository binding")
+    owner, name = repository.split("/", 1)
+    if not owner.replace("-", "").replace("_", "").isalnum() or not name.replace("-", "").replace("_", "").replace(".", "").isalnum():
+        raise HandoffError("draft authorization repository is invalid")
+    if origin != f"https://github.com/{repository}.git":
+        raise HandoffError("draft authorization origin does not match repository")
+    return "worktree:" + str(Path.home() / ".hermes/work/targets" / f"{owner}__{name}")
+
+
 def finalize(draft_id: str, allow_legacy: bool = False) -> dict[str, str]:
     draft = show(draft_id)
     task = draft.get("task")
@@ -133,6 +149,7 @@ def finalize(draft_id: str, allow_legacy: bool = False) -> dict[str, str]:
 
     packet = attached_packet(draft)
     authorized_packet(packet)
+    workspace = "scratch" if packet.startswith(f"{DRAFT_MARKER}\n{HANDOFF_KIND}\n") else workspace_for_packet(packet)
     digest = hashlib.sha256(packet.encode("utf-8")).hexdigest()
     created = run([
         "hermes", "kanban", "--board", BOARD, "create",
@@ -140,7 +157,7 @@ def finalize(draft_id: str, allow_legacy: bool = False) -> dict[str, str]:
         "--body", packet,
         "--assignee", "foundry-architect",
         "--parent", draft_id,
-        "--workspace", "scratch",
+        "--workspace", workspace,
         "--created-by", "foundry-watchdog",
         "--completion-contract", "local-only",
         "--idempotency-key", f"foundry-draft-handoff:{draft_id}:{digest}",
