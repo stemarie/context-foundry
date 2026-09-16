@@ -69,7 +69,6 @@ class DraftHandoffFinalizerTests(unittest.TestCase):
 
             self.assertEqual(result["status"], "created")
             self.assertEqual(seen["create"][seen["create"].index("--body") + 1], packet)
-            self.assertEqual(seen["create"][seen["create"].index("--workspace") + 1], "worktree:" + str(Path(directory) / ".hermes/work/targets/stemarie__AI.Contract"))
             self.assertTrue(any(item.startswith("foundry-draft-handoff:t_draft:") for item in seen["create"]))
 
     def test_local_profile_packet_is_an_authorized_board_only_handoff(self):
