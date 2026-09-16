@@ -182,6 +182,30 @@ class ProfileKitTests(unittest.TestCase):
             self.assertEqual(legacy_result.returncode, 0, legacy_result.stderr)
             self.assertEqual(json.loads(legacy_result.stdout)["events"][0]["contract"]["sha256"], "c" * 64)
 
+    def test_watchdog_scanner_detects_completed_draft_without_execution_child(self):
+        scanner = ROOT / "profiles/foundry-watchdog/scripts/foundry_watchdog_scan.py"
+        draft = {
+            "id": "t_draft",
+            "status": "done",
+            "title": "Architect: draft executable contract",
+            "body": "FOUNDRY_DRAFT_HANDOFF_V1\nHandoff kind: contract_execution",
+            "events": [{"kind": "completed", "created_at": 3, "payload": {"artifacts": ["packet.md"]}}],
+            "children": [],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = Path(directory) / "tasks.json"
+            fixture.write_text(json.dumps({"tasks": [draft]}), encoding="utf-8")
+            result = subprocess.run([sys.executable, scanner, "--input", fixture], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual(payload["events"], [{"id": "t_draft", "kind": "draft_handoff_missing"}])
+
+            draft["children"] = [{"id": "t_execution", "title": "Architect: execute contract", "status": "ready"}]
+            fixture.write_text(json.dumps({"tasks": [draft]}), encoding="utf-8")
+            resolved = subprocess.run([sys.executable, scanner, "--input", fixture], capture_output=True, text=True)
+            self.assertEqual(resolved.returncode, 0, resolved.stderr)
+            self.assertEqual(resolved.stdout, "")
+
     def test_watchdog_wrapper_installer_is_explicit_and_executable(self):
         installer = ROOT / "scripts/install_foundry_watchdog_wrapper.py"
         source = ROOT / "profiles/foundry-watchdog/scripts/foundry_watchdog_scan.sh"
@@ -228,8 +252,12 @@ class ProfileKitTests(unittest.TestCase):
 
     def test_scope_configuration_preserves_inactive_recovery_only(self):
         config = (ROOT / "config" / "foundry.yaml").read_text(encoding="utf-8")
-        self.assertIn("status: inactive_not_scheduled", config)
-        self.assertIn("activation: explicit_project_scoped_authorization_required", config)
+        self.assertIn("status: active_scheduled_exact_handoff_recovery", config)
+        self.assertIn("activation: explicit_project_scoped_authorization_granted", config)
+        self.assertIn("exact_draft_handoff_finalization", config)
+        self.assertIn("exact_draft_handoff_scheduler", config)
+        self.assertNotIn("dependency_automation", config)
+        self.assertIn("goal_loop_runtime", config)
         self.assertNotIn("loop:\n", config)
         self.assertNotIn("recovery_fallback:", config)
         self.assertNotIn("goal-loop", config)

@@ -30,6 +30,7 @@ Never join cards by title alone. Never invent a contract URL, marker, candidate 
 
 | Live fact | One permitted Watchdog action |
 |---|---|
+| A completed opted-in `FOUNDRY_DRAFT_HANDOFF_V1` Architect draft has no live `Architect: execute` child | Re-show the draft; run the exact handoff finalizer only when its sole attached packet validates, then read back the one byte-identical execution child. |
 | Candidate Auditor has explicit `REQUEST_CHANGES`, with no equivalent live Architect repair-selection card | Create one idempotent fixed-template Architect repair-selection card citing the verdict/card/contract. |
 | Candidate Auditor has explicit `PASS`, with no equivalent live Architect delivery-reconciliation card | Create one idempotent fixed-template Architect delivery-reconciliation card citing the verdict/candidate/contract. |
 | A role card lacks a passing task-bound capability preflight | Create one idempotent Architect capability-reconciliation card citing the card, role, preflight failure, and contract reference; do not redispatch it. |

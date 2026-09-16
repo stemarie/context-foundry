@@ -2,12 +2,12 @@ version: 3
 product: context-foundry
 repository: https://github.com/stemarie/context-foundry
 scope:
-  owns: [profiles, role_local_skills, non_secret_profile_templates, synchronization, validation, documentation]
-  excludes: [goal_loop_runtime, kanban_dispatch, dependency_automation, heartbeats, checkpoints, cron, monitors, gateway_activation, api_server_activation, credentials, external_automation, service_integrations]
+  owns: [profiles, role_local_skills, non_secret_profile_templates, synchronization, validation, documentation, exact_draft_handoff_finalization, exact_draft_handoff_scheduler]
+  excludes: [goal_loop_runtime, kanban_dispatch, heartbeats, checkpoints, monitors, gateway_activation, api_server_activation, credentials, external_automation, service_integrations]
 recovery_policy:
-  status: inactive_not_scheduled
+  status: active_scheduled_exact_handoff_recovery
   owner_roles: [foundry-architect, foundry-worker, foundry-auditor, foundry-watchdog]
-  activation: explicit_project_scoped_authorization_required
+  activation: explicit_project_scoped_authorization_granted
   guidance: role_local_recovery_and_evidence_skills
 release_coordination:
   target_binding: [repository_slug, checkout_origin_remote, github_rest_target]

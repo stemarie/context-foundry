@@ -29,7 +29,7 @@ def assets(profile: str) -> list[Path]:
     source = ROOT / "profiles" / profile
     found = list(BASE_ASSETS)
     for pattern in DISCOVERED_ASSET_GLOBS:
-        found.extend(sorted(path.relative_to(source) for path in source.glob(pattern)))
+        found.extend(sorted(path.relative_to(source) for path in source.glob(pattern) if path.is_file()))
     return found
 
 
