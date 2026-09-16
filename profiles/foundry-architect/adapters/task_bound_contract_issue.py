@@ -12,7 +12,7 @@ MARKER="FOUNDRY-ARCHITECT-CONTRACT-ISSUE-V2"
 class ContractIssueError(RuntimeError): pass
 
 def digest_for(contract_id:str,title:str,body:str)->str: return hashlib.sha256((contract_id+"\0"+"1\0"+title+"\0"+body).encode()).hexdigest()
-def key(card:dict[str,Any], suffix:str)->str: return f"foundry:{card['id']}:{authorization(card)['contract']['id']}:{suffix}"
+def key(card:dict[str,Any], suffix:str)->str: return f"foundry-contract:{authorization(card)['contract']['id']}:{suffix}"
 def marker_for(card:dict[str,Any])->str: return f"<!-- {MARKER}:{card['id']}:{authorization(card)['contract']['id']} -->"
 def exact(value:Any, keys:set[str], label:str)->dict[str,Any]:
  if not isinstance(value,dict) or set(value)!=keys: raise ContractIssueError(label+" has unsupported or missing fields")
