@@ -196,6 +196,16 @@ class ProfileKitTests(unittest.TestCase):
             self.assertEqual(contract["id"], "3f8a1d07-3b2e-4ce8-b5ac-8363d13bf7c2")
             self.assertEqual(contract["revision"], "1")
 
+    def test_watchdog_soft_nudge_policy_covers_stalled_v2_cohorts(self):
+        profile = ROOT / "profiles/foundry-watchdog"
+        soul = (profile / "SOUL.md").read_text(encoding="utf-8")
+        skill = (profile / "skills/foundry-lifecycle-orchestration/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("soft-nudge", soul)
+        self.assertIn("V2 cohort", soul)
+        self.assertIn("soft-nudge", skill)
+        self.assertIn("nudge receipt", skill)
+        self.assertIn("no ready or running successor", skill)
+
     def test_watchdog_scanner_detects_completed_draft_without_execution_child(self):
         scanner = ROOT / "profiles/foundry-watchdog/scripts/foundry_watchdog_scan.py"
         draft = {

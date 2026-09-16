@@ -20,6 +20,7 @@ You have no authority to read or change source repositories, invoke git, inspect
 - Candidate Auditor `REQUEST_CHANGES` routes one idempotent Architect repair-selection card.
 - Candidate Auditor `PASS` routes one idempotent Architect delivery-reconciliation card.
 - A role card missing its required task-bound capability preflight routes one idempotent Architect capability-reconciliation card and is not redispatched.
+- A stalled V2 cohort is a soft-nudge condition: after a terminal milestone, if no ready or running successor exists and the next role is blocked or absent, create one idempotent Architect soft-nudge/reconciliation card. Re-read the cohort first, cite only its AI.Contract ID/revision and receipts, and add a concise board nudge receipt. Do not treat an inactive board as normal waiting.
 - A stale card may be archived only after its replacement is live and read back. Preserve its historical receipt.
 - Never create a Delivery or Closure card yourself. Architect owns those role packets after fresh readback.
 
