@@ -15,7 +15,23 @@ spec.loader.exec_module(adapter)
 class ContractIssueV2Tests(unittest.TestCase):
     def setUp(self):
         self.contract_id = "11111111-1111-4111-8111-111111111111"
-        scope = {"contract": {"id": self.contract_id, "title": "Phase 0 decision records", "body_markdown": "Bounded contract body."}, "target": {"repository": "stemarie/mentorship-platform", "origin": "https://github.com/stemarie/mentorship-platform.git", "api_target": "https://api.github.com/repos/stemarie/mentorship-platform", "branch": "main", "worktree_path": "/work/mentorship", "base_sha": "a" * 40, "issue_title": "Phase 0 tracker", "issue_body": "Tracking only."}}
+        contract = {"id": self.contract_id, "title": "Phase 0 decision records", "body_markdown": "Bounded contract body."}
+        target = {"repository": "stemarie/mentorship-platform", "origin": "https://github.com/stemarie/mentorship-platform.git", "api_target": "https://api.github.com/repos/stemarie/mentorship-platform", "branch": "main", "worktree_path": "/work/mentorship", "base_sha": "a" * 40, "issue_title": "Phase 0 tracker", "issue_body": "Tracking only."}
+        def role(name, assignee, title, parents, skills):
+            return {"role": name, "assignee": assignee, "title": title, "parent_roles": parents, "skills": skills, "role_read_receipt": "PASS", "body": f"AI.Contract: `{self.contract_id}` revision 1\nRole: {name}\nReceipt pointer: preflight"}
+        preflight = {
+            "contract": {"id": self.contract_id, "revision": 1},
+            "required_sources": [{"id": "approved-spec", "read_receipt": "PASS"}],
+            "target": {**{key: target[key] for key in ("repository", "origin", "api_target", "branch", "base_sha")}, "workspace_clean": True},
+            "kanban_show_envelope": {"task": {"id": "t_deadbeef"}, "parents": [], "runs": [{"metadata": {"receipt": "PASS"}}]},
+            "roles": [
+                role("Architect", "foundry-architect", "Architect: execute contract", [], ["context-foundry-architect"]),
+                role("Worker", "foundry-worker", "Worker: execute evidence", ["Architect"], ["context-foundry-worker"]),
+                role("Candidate Auditor", "foundry-auditor", "Candidate Auditor: verify evidence", ["Worker"], ["context-foundry-auditor"]),
+            ],
+            "continuation": {"on_pass": "release", "on_request_changes": "repair", "on_blocked": "recover"},
+        }
+        scope = {"contract": contract, "target": target, "preflight": preflight}
         self.card = {"id": "t_deadbeef", "assignee": "foundry-architect", "title": "Architect: execute contract", "workspace_path": "/work/mentorship/.worktrees/t_deadbeef", "body": "<!-- FOUNDRY_ARCHITECT_CONTRACT_ISSUE_AUTHORIZATION_V2\n" + json.dumps(scope, sort_keys=True) + "\n-->"}
         self.events, self.issues, self.contract_exists = [], [], False
 
@@ -63,10 +79,14 @@ class ContractIssueV2Tests(unittest.TestCase):
         self.assertNotIn(("service", "POST", "/api/v1/chains"), self.events)
         self.assertFalse(any(e[0] == "service" and e[1] == "POST" and e[2].endswith("/activate") for e in self.events))
 
-    def test_v1_or_workspace_drift_fails_before_network(self):
+    def test_v1_workspace_or_preflight_drift_fails_before_network(self):
         old={**self.card,"body":"<!-- FOUNDRY_ARCHITECT_ISSUE_AUTHORIZATION_V1\n{}\n-->"}
         with self.assertRaises(adapter.ContractIssueError): adapter.execute(old,self.service,self.github,self.git)
         with self.assertRaises(adapter.ContractIssueError): adapter.execute({**self.card,"workspace_path":"/wrong"},self.service,self.github,self.git)
+        scope = json.loads(self.card["body"].split("\n", 1)[1].rsplit("\n-->", 1)[0])
+        scope["preflight"]["required_sources"][0]["read_receipt"] = "MISSING"
+        blocked = {**self.card, "body": "<!-- FOUNDRY_ARCHITECT_CONTRACT_ISSUE_AUTHORIZATION_V2\n" + json.dumps(scope, sort_keys=True) + "\n-->"}
+        with self.assertRaises(adapter.ContractIssueError): adapter.execute(blocked,self.service,self.github,self.git)
         self.assertEqual(self.events,[])
 
 if __name__=='__main__': unittest.main()

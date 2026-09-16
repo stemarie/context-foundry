@@ -1,0 +1,28 @@
+{
+  "task": {
+    "id": "t_deadbeef",
+    "assignee": "foundry-architect",
+    "status": "running",
+    "title": "Architect: full-chain preflight"
+  },
+  "parents": [
+    {
+      "id": "t_c0ffee00",
+      "status": "done",
+      "title": "Architect: contract packet"
+    }
+  ],
+  "runs": [
+    {
+      "id": 42,
+      "status": "done",
+      "summary": "preflight PASS",
+      "metadata": {
+        "full_chain_preflight_v1": {
+          "verdict": "PASS",
+          "contract_revision": 1
+        }
+      }
+    }
+  ]
+}

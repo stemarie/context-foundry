@@ -348,6 +348,7 @@ class ProfileKitTests(unittest.TestCase):
             self.assertEqual(sync_foundry_profiles.sync("foundry-architect", True, target), [])
             self.assertEqual(sync_foundry_profiles.sync("foundry-brainiac", True, target), [])
             self.assertTrue((target / "foundry-auditor/adapters/closure_auditor.py").is_file())
+            self.assertTrue((target / "foundry-architect/adapters/full_chain_preflight.py").is_file())
             self.assertTrue((target / "foundry-auditor/schemas/closure_auditor_packet.schema.json").is_file())
             self.assertTrue((target / "foundry-architect/adapters/task_bound_contract_issue.py").is_file())
             self.assertTrue((target / "foundry-auditor/ROLE-CONTRACT.md").is_file())
@@ -361,6 +362,13 @@ class ProfileKitTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("mode=check-source", result.stdout)
+
+    def test_contract_activation_adapter_requires_a_local_full_chain_preflight_pass(self):
+        adapter = (ROOT / "profiles/foundry-architect/adapters/task_bound_contract_issue.py").read_text(encoding="utf-8")
+        preflight = ROOT / "profiles/foundry-architect/adapters/full_chain_preflight.py"
+        self.assertTrue(preflight.is_file())
+        self.assertIn("validate_manifest(preflight)", adapter)
+        self.assertIn("full-chain preflight did not PASS", adapter)
 
     def test_closure_continuation_policy_is_role_bound_and_target_neutral(self):
         auditor = (ROOT / "profiles/foundry-auditor/skills/context-foundry-auditor/SKILL.md").read_text(encoding="utf-8")

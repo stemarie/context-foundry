@@ -4,6 +4,8 @@ from __future__ import annotations
 import hashlib, json, os, re, subprocess, sys, tempfile, urllib.error, urllib.request
 from pathlib import Path
 from typing import Any, Callable
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from full_chain_preflight import validate_manifest
 
 PROFILE="foundry-architect"; BOARD="context-foundry"
 AUTH_START="<!-- FOUNDRY_ARCHITECT_CONTRACT_ISSUE_AUTHORIZATION_V2\n"; AUTH_END="\n-->"
@@ -26,7 +28,7 @@ def authorization(card:dict[str,Any])->dict[str,Any]:
  if not isinstance(body,str) or body.count(AUTH_START)!=1 or body.count(AUTH_END)!=1: raise ContractIssueError('card requires exactly one V2 contract authorization block')
  try: scope=json.loads(body.split(AUTH_START,1)[1].split(AUTH_END,1)[0])
  except json.JSONDecodeError as e: raise ContractIssueError('V2 authorization is invalid JSON') from e
- scope=exact(scope,{'contract','target'},'V2 authorization')
+ scope=exact(scope,{'contract','target','preflight'},'V2 authorization')
  c=exact(scope['contract'],{'id','title','body_markdown'},'contract')
  t=exact(scope['target'],{'repository','origin','api_target','branch','worktree_path','base_sha','issue_title','issue_body'},'target')
  if not isinstance(c['id'],str) or not UUID.fullmatch(c['id']): raise ContractIssueError('contract ID is not a canonical UUID')
@@ -37,6 +39,13 @@ def authorization(card:dict[str,Any])->dict[str,Any]:
  if not isinstance(t['worktree_path'],str) or not t['worktree_path'].startswith('/') or not isinstance(t['base_sha'],str) or not SHA.fullmatch(t['base_sha']): raise ContractIssueError('target worktree or base SHA is invalid')
  for k in ('issue_title','issue_body'):
   if not isinstance(t[k],str) or not t[k].strip() or len(t[k])>60000: raise ContractIssueError('tracker content is invalid')
+ preflight=scope['preflight']
+ receipt=validate_manifest(preflight)
+ if receipt.get('verdict')!='PASS': raise ContractIssueError('full-chain preflight did not PASS')
+ preflight_contract=preflight.get('contract') if isinstance(preflight,dict) else None
+ preflight_target=preflight.get('target') if isinstance(preflight,dict) else None
+ if not isinstance(preflight_contract,dict) or preflight_contract.get('id')!=c['id'] or preflight_contract.get('revision')!=1: raise ContractIssueError('preflight contract binding differs from authorization')
+ if not isinstance(preflight_target,dict) or any(preflight_target.get(key)!=t[key] for key in ('repository','origin','api_target','branch','base_sha')): raise ContractIssueError('preflight target binding differs from authorization')
  return scope
 
 def validate_workspace(card:dict[str,Any], scope:dict[str,Any], git:Callable[...,str])->None:

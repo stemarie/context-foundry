@@ -18,6 +18,10 @@ INSTALLED_ROOT = Path.home() / ".hermes" / "profiles"
 BASE_ASSETS = (Path("profile.yaml"), Path("config.yaml"), Path("SOUL.md"), Path("ROLE-CONTRACT.md"))
 DISCOVERED_ASSET_GLOBS = ("skills/*/SKILL.md", "adapters/*.py", "schemas/*.json", "scripts/*")
 REQUIRED_PROFILE_ASSETS = {
+    "foundry-architect": (
+        Path("adapters/full_chain_preflight.py"),
+        Path("adapters/task_bound_contract_issue.py"),
+    ),
     "foundry-auditor": (
         Path("adapters/closure_auditor.py"),
         Path("schemas/closure_auditor_packet.schema.json"),
