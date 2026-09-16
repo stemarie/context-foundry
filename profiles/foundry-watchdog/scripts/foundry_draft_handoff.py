@@ -124,7 +124,10 @@ def finalize(draft_id: str, allow_legacy: bool = False) -> dict[str, str]:
     execution = show(execution_id)
     execution_task = execution.get("task")
     parents = execution.get("parents")
-    parent_ids = {str(parent.get("id", "")) for parent in parents if isinstance(parent, dict)} if isinstance(parents, list) else set()
+    parent_ids = {
+        str(parent.get("id", "")) if isinstance(parent, dict) else str(parent)
+        for parent in parents
+    } if isinstance(parents, list) else set()
     if not isinstance(execution_task, dict) or execution_task.get("body") != packet or draft_id not in parent_ids:
         raise HandoffError("execution card read-back did not preserve the exact packet and parent")
     return {"status": "created", "draft_id": draft_id, "execution_id": execution_id, "packet_sha256": digest}

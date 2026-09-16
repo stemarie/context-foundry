@@ -59,7 +59,7 @@ class DraftHandoffFinalizerTests(unittest.TestCase):
                     body = command[command.index("--body") + 1] if "--body" in command else ""
                     execution = {
                         "task": {"id": "t_execution", "body": seen["create"][seen["create"].index("--body") + 1]},
-                        "parents": [{"id": "t_draft"}],
+                        "parents": ["t_draft"],
                     }
                     return subprocess.CompletedProcess(command, 0, json.dumps(execution), "")
                 raise AssertionError(command)
