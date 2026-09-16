@@ -40,7 +40,9 @@ def authorization(card:dict[str,Any])->dict[str,Any]:
 
 def validate_workspace(card:dict[str,Any], scope:dict[str,Any], git:Callable[...,str])->None:
  t=scope['target']; ws=card.get('workspace_path')
- if not isinstance(ws,str) or os.path.realpath(ws)!=os.path.realpath(t['worktree_path']): raise ContractIssueError('card workspace differs from authorized target worktree')
+ base=os.path.realpath(t['worktree_path'])
+ expected=os.path.join(base,'.worktrees',card['id'])
+ if not isinstance(ws,str) or os.path.realpath(ws)!=expected: raise ContractIssueError('card workspace is not the authorized task worktree')
  if os.path.realpath(git(ws,'rev-parse','--show-toplevel'))!=os.path.realpath(ws): raise ContractIssueError('workspace is not its authorized Git root')
  if git(ws,'remote','get-url','origin')!=t['origin'] or git(ws,'status','--porcelain') or git(ws,'rev-parse','HEAD')!=t['base_sha']: raise ContractIssueError('workspace origin, cleanliness, or head differs from authorization')
  remote=git(ws,'ls-remote','origin','refs/heads/main').split()

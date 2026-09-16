@@ -16,12 +16,12 @@ class ContractIssueV2Tests(unittest.TestCase):
     def setUp(self):
         self.contract_id = "11111111-1111-4111-8111-111111111111"
         scope = {"contract": {"id": self.contract_id, "title": "Phase 0 decision records", "body_markdown": "Bounded contract body."}, "target": {"repository": "stemarie/mentorship-platform", "origin": "https://github.com/stemarie/mentorship-platform.git", "api_target": "https://api.github.com/repos/stemarie/mentorship-platform", "branch": "main", "worktree_path": "/work/mentorship", "base_sha": "a" * 40, "issue_title": "Phase 0 tracker", "issue_body": "Tracking only."}}
-        self.card = {"id": "t_deadbeef", "assignee": "foundry-architect", "title": "Architect: execute contract", "workspace_path": "/work/mentorship", "body": "<!-- FOUNDRY_ARCHITECT_CONTRACT_ISSUE_AUTHORIZATION_V2\n" + json.dumps(scope, sort_keys=True) + "\n-->"}
+        self.card = {"id": "t_deadbeef", "assignee": "foundry-architect", "title": "Architect: execute contract", "workspace_path": "/work/mentorship/.worktrees/t_deadbeef", "body": "<!-- FOUNDRY_ARCHITECT_CONTRACT_ISSUE_AUTHORIZATION_V2\n" + json.dumps(scope, sort_keys=True) + "\n-->"}
         self.events, self.issues = [], []
 
     def git(self, workspace, *args):
-        self.assertEqual(workspace, "/work/mentorship")
-        return {("rev-parse", "--show-toplevel"): "/work/mentorship", ("remote", "get-url", "origin"): "https://github.com/stemarie/mentorship-platform.git", ("status", "--porcelain"): "", ("rev-parse", "HEAD"): "a" * 40, ("ls-remote", "origin", "refs/heads/main"): "a" * 40 + "\trefs/heads/main"}[args]
+        self.assertEqual(workspace, "/work/mentorship/.worktrees/t_deadbeef")
+        return {("rev-parse", "--show-toplevel"): "/work/mentorship/.worktrees/t_deadbeef", ("remote", "get-url", "origin"): "https://github.com/stemarie/mentorship-platform.git", ("status", "--porcelain"): "", ("rev-parse", "HEAD"): "a" * 40, ("ls-remote", "origin", "refs/heads/main"): "a" * 40 + "\trefs/heads/main"}[args]
 
     def service(self, method, path, payload=None):
         self.events.append(("service", method, path))
