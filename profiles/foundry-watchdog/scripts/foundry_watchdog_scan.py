@@ -29,6 +29,10 @@ LEGACY_REVISION_RE = re.compile(
     r"^Contract identity/revision: Issue #(\d+); `([^`]+)`; body SHA-256 `([0-9a-f]{64})`\.$",
     re.MULTILINE,
 )
+AI_CONTRACT_V2_RE = re.compile(
+    r"^AI\.Contract: `([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})` revision ([1-9][0-9]*)$",
+    re.MULTILINE,
+)
 RELEVANT_STATUSES = {"ready", "running", "blocked", "review", "done"}
 DRAFT_HANDOFF_MARKER = "FOUNDRY_DRAFT_HANDOFF_V1"
 DRAFT_HANDOFF_KIND = "Handoff kind: contract_execution"
@@ -36,6 +40,18 @@ DRAFT_HANDOFF_KIND = "Handoff kind: contract_execution"
 
 def identity(body: object) -> dict[str, str]:
     text = str(body or "")
+    v2 = AI_CONTRACT_V2_RE.search(text)
+    if v2:
+        contract_id, revision = v2.groups()
+        return {
+            "protocol": "ai_contract_v2",
+            "id": contract_id,
+            "revision": revision,
+            "url": f"ai-contract://contracts/{contract_id}",
+            "issue": contract_id,
+            "marker": f"revision-{revision}",
+            "sha256": "",
+        }
     contract = CURRENT_CONTRACT_RE.search(text) or LEGACY_CONTRACT_RE.search(text)
     revision = CURRENT_REVISION_RE.search(text) or LEGACY_REVISION_RE.search(text)
     if not contract or not revision:
@@ -122,7 +138,7 @@ def relevant_tasks(tasks: object) -> tuple[list[dict[str, Any]], list[dict[str, 
         if not ROLE_RE.match(str(task.get("title", ""))):
             continue
         body = str(task.get("body") or "")
-        scoped = "external contract:" in body.lower()
+        scoped = "external contract:" in body.lower() or AI_CONTRACT_V2_RE.search(body) is not None
         if not scoped:
             continue
         try:

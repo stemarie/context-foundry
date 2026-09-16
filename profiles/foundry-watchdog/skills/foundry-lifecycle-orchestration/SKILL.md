@@ -19,6 +19,11 @@ A Foundry cohort is identified by the exact current pair:
 - `Canonical external contract: <URL>`
 - `Contract ID/revision: Issue #<number> / <marker> / <body SHA-256>`
 
+V2 AI.Contract cohorts are identified by the exact pair:
+
+- `AI.Contract: <UUID> revision <n>`
+- the card's required `Role`, `Dependency`, and `Receipt pointer` lines.
+
 The canonical five-line Closure Auditor form may omit the body SHA-256 after
 the marker. The scanner also accepts the legacy compatibility pair
 `External contract: <URL>` and `Contract identity/revision: <marker and

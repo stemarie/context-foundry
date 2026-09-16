@@ -182,6 +182,19 @@ class ProfileKitTests(unittest.TestCase):
             self.assertEqual(legacy_result.returncode, 0, legacy_result.stderr)
             self.assertEqual(json.loads(legacy_result.stdout)["events"][0]["contract"]["sha256"], "c" * 64)
 
+            v2 = "AI.Contract: `3f8a1d07-3b2e-4ce8-b5ac-8363d13bf7c2` revision 1\nRole: Candidate Auditor"
+            v2_task = {
+                "id": "t_v2audit", "status": "done", "title": "Candidate Auditor: V2 audit", "body": v2,
+                "events": [{"kind": "completed", "created_at": 4, "payload": {"verdict": "PASS"}}],
+            }
+            fixture.write_text(json.dumps({"tasks": [v2_task]}), encoding="utf-8")
+            v2_result = subprocess.run([sys.executable, scanner, "--input", fixture], capture_output=True, text=True)
+            self.assertEqual(v2_result.returncode, 0, v2_result.stderr)
+            contract = json.loads(v2_result.stdout)["events"][0]["contract"]
+            self.assertEqual(contract["protocol"], "ai_contract_v2")
+            self.assertEqual(contract["id"], "3f8a1d07-3b2e-4ce8-b5ac-8363d13bf7c2")
+            self.assertEqual(contract["revision"], "1")
+
     def test_watchdog_scanner_detects_completed_draft_without_execution_child(self):
         scanner = ROOT / "profiles/foundry-watchdog/scripts/foundry_watchdog_scan.py"
         draft = {
