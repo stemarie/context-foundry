@@ -135,9 +135,12 @@ class BrainiacLearningTests(unittest.TestCase):
         self.assertEqual(calls[0][0], brainiac.BRAINIAC_COMMAND)
         self.assertEqual(calls[0][0][1], "-p")
         self.assertEqual(calls[0][0][2], "foundry-brainiac")
+        self.assertIn("Deterministic bridge", calls[0][1]["evidence_origin"])
         self.assertIn("openai-codex", calls[0][0])
-        self.assertIn("gpt-6-astra", calls[0][0])
-        self.assertEqual(calls[0][0][-2:], ("--toolsets", "bot_room"))
+        self.assertIn("gpt-5.6-terra", calls[0][0])
+        self.assertIn("--quiet", calls[0][0])
+        self.assertIn("--toolsets", calls[0][0])
+        self.assertIn("bot_room", calls[0][0])
         self.assertNotIn("kanban", calls[0][0])
         with brainiac.connect(self.state) as db:
             route, proposal = db.execute("SELECT route, proposal_json FROM architect_outbox").fetchone()
@@ -167,6 +170,10 @@ class BrainiacLearningTests(unittest.TestCase):
         self.assertEqual(result["outcome"], "failed")
         self.assertEqual(retry["decision"], "execution_duplicate_noop")
         self.assertEqual(len(calls), 1)
+
+    def test_fenced_json_proposal_is_normalized_before_validation(self):
+        output = "```json\n" + self.proposal() + "\n```"
+        self.assertEqual(brainiac.validate_proposal(output)["proposal"], "Bound retries.")
 
     def test_sensitive_proposal_is_not_routed_or_persisted_as_a_receipt(self):
         sensitive = json.dumps({"proposal": "Bound retries.", "invariant": "One invocation per key.", "regression_test": "Replay.", "metric": "Repeat incidents.", "accessToken": "never-store"})

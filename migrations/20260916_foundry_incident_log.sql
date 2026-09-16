@@ -1,0 +1,32 @@
+-- Durable source of truth for Foundry operational incidents and soft nudges.
+-- Evidence fields are append-only; bridge receipt fields are mutable processing state.
+CREATE TABLE IF NOT EXISTS foundry_incident_log (
+  incident_id CHAR(64) NOT NULL,
+  occurrence_key VARCHAR(512) NOT NULL,
+  occurred_at DATETIME(6) NOT NULL,
+  severity VARCHAR(16) NOT NULL,
+  detection_source VARCHAR(32) NOT NULL,
+  category VARCHAR(80) NOT NULL,
+  summary VARCHAR(1000) NOT NULL,
+  board_id VARCHAR(80) NOT NULL,
+  trigger_card_id VARCHAR(80) NOT NULL,
+  contract_id VARCHAR(128) NOT NULL,
+  contract_revision VARCHAR(32) NOT NULL,
+  affected_role VARCHAR(80) NOT NULL,
+  action_taken VARCHAR(32) NOT NULL,
+  replacement_card_id VARCHAR(80) NULL,
+  evidence_revision VARCHAR(128) NOT NULL,
+  evidence_json LONGTEXT NOT NULL,
+  evidence_sha256 CHAR(64) NOT NULL,
+  brainiac_state ENUM('pending','processing','processed','failed') NOT NULL DEFAULT 'pending',
+  brainiac_attempted_at DATETIME(6) NULL,
+  brainiac_processed_at DATETIME(6) NULL,
+  brainiac_receipt_json LONGTEXT NULL,
+  brainiac_receipt_sha256 CHAR(64) NULL,
+  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (incident_id),
+  UNIQUE KEY foundry_incident_log_occurrence_key (occurrence_key),
+  KEY foundry_incident_log_pending (brainiac_state, occurred_at),
+  KEY foundry_incident_log_recurrence (category, severity, occurred_at),
+  KEY foundry_incident_log_contract (contract_id, contract_revision, occurred_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

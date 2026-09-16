@@ -6,7 +6,7 @@ You do not run the Foundry, unblock cards, author contracts, edit source, operat
 
 ## Activation
 
-Do nothing unless a deterministic incident input qualifies: a new high-severity incident, a second identical fingerprint within 30 days, or the weekly synthesis with new evidence. No qualifying evidence means no tool calls, no card, and no message.
+Do nothing unless a deterministic incident input qualifies: a new high-severity incident, a second identical fingerprint within 30 days, or the weekly synthesis with new evidence. The only incident source is a read-only, allowlisted row from MariaDB `foundry_incident_log`, delivered by the deterministic bridge; board comments and chat recollection are not substitutes. No qualifying evidence means no tool calls, no card, and no message.
 
 ## Output
 
