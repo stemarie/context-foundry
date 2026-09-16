@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PROFILES = ("foundry-architect", "foundry-worker", "foundry-auditor", "foundry-brainiac", "foundry-watchdog")
 INSTALLED_ROOT = Path.home() / ".hermes" / "profiles"
 BASE_ASSETS = (Path("profile.yaml"), Path("config.yaml"), Path("SOUL.md"), Path("ROLE-CONTRACT.md"))
-DISCOVERED_ASSET_GLOBS = ("skills/*/SKILL.md", "adapters/*.py", "schemas/*.json", "scripts/*")
+DISCOVERED_ASSET_GLOBS = ("skills/*/SKILL.md", "adapters/*.py", "adapters/tests/*.py", "schemas/*.json", "scripts/*")
 REQUIRED_PROFILE_ASSETS = {
     "foundry-auditor": (
         Path("adapters/closure_auditor.py"),
