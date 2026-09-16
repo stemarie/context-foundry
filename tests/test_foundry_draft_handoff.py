@@ -71,6 +71,19 @@ class DraftHandoffFinalizerTests(unittest.TestCase):
             self.assertEqual(seen["create"][seen["create"].index("--body") + 1], packet)
             self.assertTrue(any(item.startswith("foundry-draft-handoff:t_draft:") for item in seen["create"]))
 
+    def test_local_profile_packet_is_an_authorized_board_only_handoff(self):
+        finalizer = load_finalizer()
+        packet = (
+            "FOUNDRY_DRAFT_HANDOFF_V1\n"
+            "Handoff kind: contract_execution\n\n"
+            "## Bounded source change\n"
+            "profiles/foundry-architect/adapters/example.py\n\n"
+            "Do not modify any target-repository checkout, the AI.Contract or target tracker, cards, credentials.\n\n"
+            "## Deterministic test contract\n"
+            "## Explicit non-goals\n"
+        )
+        self.assertEqual(finalizer.authorized_packet(packet), packet)
+
     def test_existing_execution_child_is_a_noop(self):
         finalizer = load_finalizer()
         draft = {
