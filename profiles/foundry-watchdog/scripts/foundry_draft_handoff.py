@@ -49,6 +49,19 @@ def is_execution_child(child: object) -> bool:
     )
 
 
+def has_live_execution_child(children: object) -> bool:
+    if not isinstance(children, list):
+        return False
+    for child in children:
+        if is_execution_child(child):
+            return True
+        if isinstance(child, str):
+            candidate = show(child).get("task")
+            if is_execution_child(candidate):
+                return True
+    return False
+
+
 def attached_packet(draft: dict[str, Any]) -> str:
     task = draft.get("task")
     if not isinstance(task, dict):
@@ -100,7 +113,7 @@ def finalize(draft_id: str, allow_legacy: bool = False) -> dict[str, str]:
     body = str(task.get("body") or "")
     if (DRAFT_MARKER not in body or HANDOFF_KIND not in body) and not allow_legacy:
         raise HandoffError("task is not an opted-in draft handoff")
-    if any(is_execution_child(child) for child in draft.get("children", [])):
+    if has_live_execution_child(draft.get("children")):
         return {"status": "already_routed", "draft_id": draft_id}
 
     packet = attached_packet(draft)

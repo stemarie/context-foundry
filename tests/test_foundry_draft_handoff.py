@@ -80,12 +80,16 @@ class DraftHandoffFinalizerTests(unittest.TestCase):
                 "title": "Architect: draft executable contract",
                 "body": "FOUNDRY_DRAFT_HANDOFF_V1\nHandoff kind: contract_execution",
             },
-            "children": [{"id": "t_execution", "title": "Architect: execute contract", "status": "ready"}],
+            "children": ["t_execution"],
             "events": [],
         }
 
         def run(command, **kwargs):
-            return subprocess.CompletedProcess(command, 0, json.dumps(draft), "")
+            if command[-3:] == ["show", "t_draft", "--json"]:
+                return subprocess.CompletedProcess(command, 0, json.dumps(draft), "")
+            if command[-3:] == ["show", "t_execution", "--json"]:
+                return subprocess.CompletedProcess(command, 0, json.dumps({"task": {"title": "Architect: execute contract", "status": "ready"}}), "")
+            raise AssertionError(command)
 
         with patch.object(finalizer.subprocess, "run", side_effect=run):
             self.assertEqual(finalizer.finalize("t_draft"), {"status": "already_routed", "draft_id": "t_draft"})
