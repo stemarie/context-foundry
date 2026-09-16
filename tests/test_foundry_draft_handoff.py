@@ -84,6 +84,11 @@ class DraftHandoffFinalizerTests(unittest.TestCase):
         )
         self.assertEqual(finalizer.authorized_packet(packet), packet)
 
+    def test_v2_packet_uses_its_explicit_target_worktree(self):
+        finalizer = load_finalizer()
+        packet = "<!-- FOUNDRY_ARCHITECT_CONTRACT_ISSUE_AUTHORIZATION_V2\n" + json.dumps({"contract":{"id":"11111111-1111-4111-8111-111111111111","title":"x","body_markdown":"y"},"target":{"repository":"stemarie/mentorship-platform","origin":"https://github.com/stemarie/mentorship-platform.git","api_target":"https://api.github.com/repos/stemarie/mentorship-platform","branch":"main","worktree_path":"/safe/target","base_sha":"a"*40,"issue_title":"i","issue_body":"b"}}, separators=(",", ":")) + "\n-->"
+        self.assertEqual(finalizer.workspace_for_packet(packet), "worktree:/safe/target")
+
     def test_existing_execution_child_is_a_noop(self):
         finalizer = load_finalizer()
         draft = {

@@ -19,6 +19,7 @@ BOARD = "context-foundry"
 DRAFT_MARKER = "FOUNDRY_DRAFT_HANDOFF_V1"
 HANDOFF_KIND = "Handoff kind: contract_execution"
 AUTH_OPEN = "<!-- FOUNDRY_ARCHITECT_ISSUE_AUTHORIZATION_V1\n"
+AUTH_V2_OPEN = "<!-- FOUNDRY_ARCHITECT_CONTRACT_ISSUE_AUTHORIZATION_V2\n"
 AUTH_CLOSE = "\n-->"
 AUTH_KEYS = {"repository", "origin", "api_target", "branch", "issue_title", "issue_body"}
 
@@ -73,6 +74,9 @@ def authorized_packet(packet: str) -> str:
     )
     if packet.startswith(local_header) and all(required in packet for required in local_requirements):
         return packet
+    if packet.count(AUTH_V2_OPEN) == 1:
+        workspace_for_packet(packet)
+        return packet
     validate_packet(packet)
     return packet
 
@@ -118,6 +122,21 @@ def validate_packet(packet: str) -> None:
         raise HandoffError("draft authorization has an empty or non-string field")
 
 
+def workspace_for_packet(packet: str) -> str:
+    """V2 execution cards receive their exact authorized target Git worktree."""
+    if packet.count(AUTH_V2_OPEN) != 1 or packet.count(AUTH_CLOSE) != 1:
+        raise HandoffError("draft packet has no unique V2 authorization block")
+    try:
+        value = json.loads(packet.split(AUTH_V2_OPEN, 1)[1].split(AUTH_CLOSE, 1)[0])
+        target = value["target"]
+    except (json.JSONDecodeError, KeyError, TypeError) as exc:
+        raise HandoffError("draft V2 authorization is malformed") from exc
+    expected = {"repository", "origin", "api_target", "branch", "worktree_path", "base_sha", "issue_title", "issue_body"}
+    if not isinstance(target, dict) or set(target) != expected or not isinstance(target["worktree_path"], str) or not target["worktree_path"].startswith("/"):
+        raise HandoffError("draft V2 target worktree is invalid")
+    return "worktree:" + target["worktree_path"]
+
+
 def finalize(draft_id: str, allow_legacy: bool = False) -> dict[str, str]:
     draft = show(draft_id)
     task = draft.get("task")
@@ -133,6 +152,7 @@ def finalize(draft_id: str, allow_legacy: bool = False) -> dict[str, str]:
 
     packet = attached_packet(draft)
     authorized_packet(packet)
+    workspace = workspace_for_packet(packet) if packet.count(AUTH_V2_OPEN) == 1 else "scratch"
     digest = hashlib.sha256(packet.encode("utf-8")).hexdigest()
     created = run([
         "hermes", "kanban", "--board", BOARD, "create",
@@ -140,7 +160,7 @@ def finalize(draft_id: str, allow_legacy: bool = False) -> dict[str, str]:
         "--body", packet,
         "--assignee", "foundry-architect",
         "--parent", draft_id,
-        "--workspace", "scratch",
+        "--workspace", workspace,
         "--created-by", "foundry-watchdog",
         "--completion-contract", "local-only",
         "--idempotency-key", f"foundry-draft-handoff:{draft_id}:{digest}",
