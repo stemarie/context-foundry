@@ -295,6 +295,8 @@ class ProfileKitTests(unittest.TestCase):
         self.assertIn("role, dependency, and receipt pointer", architect)
         self.assertIn("it never copies the contract body, scope, goals, acceptance criteria, verification, or non-goals", architect)
         self.assertIn("stop and create no execution cards", architect)
+        self.assertIn("FOUNDRY_DRAFT_HANDOFF_V1", architect)
+        self.assertIn("Handoff kind: contract_execution", architect)
 
         for soul in (worker, auditor):
             self.assertIn("The referenced GitHub Issue or AI.Contract record is the sole work-contract body.", soul)
