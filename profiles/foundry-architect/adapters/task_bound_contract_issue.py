@@ -102,3 +102,18 @@ def execute(card:dict[str,Any],service_request:Callable[[str,str,dict[str,Any]|N
  else: issue=github_request('POST',base+'/issues',{'title':t['issue_title'],'body':issue_body(card,scope)}); operation='contract-activated-and-tracker-created'
  if issue.get('title')!=t['issue_title'] or issue.get('body')!=issue_body(card,scope) or not isinstance(issue.get('number'),int): raise ContractIssueError('tracker read-back differs from authorization')
  return {'operation':operation,'contract_id':c['id'],'revision':1,'issue':issue['number'],'repository':t['repository']}
+def live_card(task_id:str)->dict[str,Any]:
+ r=subprocess.run(['hermes','kanban','--board',BOARD,'show',task_id,'--json'],capture_output=True,text=True,timeout=30)
+ if r.returncode: raise ContractIssueError('could not read assigned Architect card')
+ try: value=json.loads(r.stdout)
+ except json.JSONDecodeError as e: raise ContractIssueError('assigned Architect card read-back is invalid') from e
+ if not isinstance(value,dict) or not isinstance(value.get('task'),dict) or value['task'].get('id')!=task_id: raise ContractIssueError('assigned Architect card read-back is malformed')
+ return value['task']
+def main()->None:
+ task_id=os.environ.get('HERMES_KANBAN_TASK')
+ if not isinstance(task_id,str) or not TASK.fullmatch(task_id): raise ContractIssueError('adapter requires its assigned canonical HERMES_KANBAN_TASK')
+ print(json.dumps(execute(live_card(task_id)),sort_keys=True))
+if __name__=='__main__':
+ try: main()
+ except ContractIssueError as error:
+  print(str(error),file=sys.stderr); raise SystemExit(2)
