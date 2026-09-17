@@ -266,6 +266,11 @@ def marker_receipts(comments: list[dict[str, Any]], marker: str) -> list[dict[st
 
 def execute(closure: dict[str, Any], lookup: Callable[[str], dict[str, Any]], request: Callable[[str, str, dict[str, Any] | None], Any] = api) -> dict[str, Any]:
     scope = derive_scope(closure, lookup)
+    # This adapter's receipt schema is intentionally PR-bound.  Foundry now
+    # delivers audited commits directly to the default branch; do not let an
+    # old card silently preserve the retired PR workflow.  A direct-main
+    # receipt adapter must replace it before an automated closure is allowed.
+    raise ClosureError("PR-based Closure Auditor adapter is retired; require a direct-main receipt adapter")
     validate_workspace(closure, scope)
     base, branch, issue_number, marker = scope["api_target"], scope["branch"], scope["issue"], scope["receipt_marker"]
     repo = request("GET", base, None)

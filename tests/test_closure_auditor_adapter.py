@@ -170,12 +170,10 @@ class ClosureAdapterTests(unittest.TestCase):
             self.execute(lookup, closure, api)
         self.assertEqual(api.writes, [])
 
-    def test_lawful_integration_closes_then_idempotently_reads_back(self):
+    def test_retired_pr_adapter_cannot_close_even_with_complete_legacy_evidence(self):
         lookup, closure = cards()
         api = Api(scope())
-        self.assertEqual(self.execute(lookup, closure, api)["operation"], "closed")
-        self.assertEqual(self.execute(lookup, closure, api)["operation"], "idempotent-readback")
-        self.assertEqual(api.writes, ["POST", "PATCH"])
+        self.reject_without_writes(lookup, closure, api)
 
     def test_scope_is_dynamic_and_captured_runtime_envelope_is_normalized(self):
         lookup, closure = cards(issue=42, marker="FOUNDRY-ALTERNATE-CONTRACT-V1", sha="e" * 40)
@@ -308,9 +306,7 @@ class ClosureAdapterTests(unittest.TestCase):
         expected = closure_auditor.receipt_body(CLOSURE_ID, closure_auditor.derive_scope(closure, lookup.__getitem__))
         api.closed = True
         api.comments.append({"body": expected})
-        result = self.execute(lookup, closure, api)
-        self.assertEqual(result["operation"], "idempotent-readback")
-        self.assertEqual(api.writes, [])
+        self.reject_without_writes(lookup, closure, api)
 
     def test_malformed_completed_evidence_and_remote_identity_are_write_free(self):
         lookup, closure = cards()
