@@ -12,19 +12,19 @@ It is documentation and local validation material. It does not install a schedul
 2. **One bounded work contract.** Deduplicate comparable open work before creating one observable contract with scope, acceptance criteria, non-goals, safety boundaries, verification, and delivery authority.
 3. **Serialized implementation.** Assign exactly one active writer for a shared checkout. The coordinator records an idempotency key and does not create competing implementation work.
 4. **Real verification.** Run the contract's required checks and any real disposable runtime probe. Record commands, outcomes, changed paths, and cleanup evidence. A skipped check is not a passing check.
-5. **Authenticated remote delivery and receipt.** Every source-changing contract declares one integration disposition: `candidate_only`, `merge_required`, or `human_approval_required`. The default is `merge_required`. Candidate PASS and a pushed branch are not delivery. For merge-required work, independently audit the exact PR head, merge non-force under the repository's normal rules, read back the authenticated default branch, and run required post-merge checks before closure.
+5. **Authenticated remote delivery and receipt.** Every source-changing contract declares one integration disposition: `candidate_only`, `direct_main_required`, or `human_approval_required`. The default is `direct_main_required`. Candidate PASS and a pushed branch are not delivery. For direct-main work, non-force fast-forward the exact audited candidate to the bound default branch, independently audit that read-back, and run required post-delivery checks before closure. Pull requests are forbidden.
 6. **Contract invalidation or fresh continuation.** If live evidence proves the work order false, contradictory, out of scope, or superseded, record one fingerprinted receipt, cancel it as `not_planned`, archive its execution card, and return to the source/specification audit. Do not keep retrying it, silently expand its scope, or presume a replacement. Otherwise re-read current state after verified completion and use the periodic/manual audit loop as the reliable continuation fallback.
 
 ## State vocabulary
 
 `candidate produced → candidate verified → integration pending → integrated on main → milestone closed`
 
-- **Candidate produced**: scoped source changes and the named candidate SHA/branch exist. This says nothing about audit, PR integration, deployment, or milestone closure.
-- **Candidate verified**: an independent audit passed for the exact candidate SHA. Candidate PASS does not certify PR integration, deployment, or milestone completion.
-- **Integration pending**: a `merge_required` candidate lacks an independently audited PR, non-force merge, authenticated default-branch read-back, or required post-merge evidence.
-- **Integrated on main**: the approved/reconciled PR has merged and the authenticated bound default branch contains the integrated result. This is distinct from deployment.
+- **Candidate produced**: scoped source changes and the named candidate SHA/branch exist. This says nothing about audit, direct-main integration, deployment, or milestone closure.
+- **Candidate verified**: an independent audit passed for the exact candidate SHA. Candidate PASS does not certify direct-main integration, deployment, or milestone completion.
+- **Integration pending**: a `direct_main_required` candidate lacks independently audited default-branch evidence, non-force direct delivery, or required post-delivery evidence.
+- **Integrated on main**: the exact audited candidate was non-force fast-forwarded to the authenticated bound default branch and independently verified. This is distinct from deployment.
 - **Milestone closed**: the contract's selected endpoint and all required receipts are satisfied. A candidate-only tranche may close only as an explicit owned hold; it never proves a product milestone complete.
-- **Held for approval**: a merge-ready PR awaits the exact named approval and approver required by `human_approval_required`; it does not auto-merge.
+- **Held for approval**: direct main delivery awaits the exact named approval and approver required by `human_approval_required`; it does not auto-push.
 - **Superseded**: a successor or decision explicitly replaces the work with preserved evidence and a named owner.
 - **Deployed**: an explicitly authorized release reached its intended runtime and was probed there. A pushed commit is not deployment.
 - **Blocked**: a concrete decision, missing authority, irreversible action, or externally proven access barrier prevents the next authorized step. It is not a generic review queue or a synonym for unfinished work.

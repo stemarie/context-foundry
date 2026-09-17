@@ -323,7 +323,8 @@ class ProfileKitTests(unittest.TestCase):
         self.assertIn("closure auditor may use its card-derived closure adapter", auditor)
         self.assertIn("authentication: packet_supplied_nonsecret_helper", config)
         self.assertIn("auditor_gates: [candidate, integration, closure]", config)
-        self.assertIn("closure: closure_auditor_after_merged_integration_audit_and_delivery", config)
+        self.assertIn("non_force_direct_main_push", config)
+        self.assertIn("closure: closure_auditor_after_independently_audited_direct_main_delivery", config)
 
     def test_external_contract_references_are_role_bound_and_card_body_is_limited(self):
         architect = (ROOT / "profiles/foundry-architect/SOUL.md").read_text(encoding="utf-8")
@@ -419,16 +420,19 @@ class ProfileKitTests(unittest.TestCase):
         watchdog = (ROOT / "profiles/foundry-watchdog/ROLE-CONTRACT.md").read_text(encoding="utf-8")
         evaluator = ROOT / "profiles/foundry-auditor/adapters/integration_lifecycle.py"
 
-        for token in ("candidate_only", "merge_required", "human_approval_required", "candidate_sha", "candidate_branch", "disposition_owner", "next_decision"):
+        for token in ("candidate_only", "direct_main_required", "human_approval_required", "candidate_sha", "candidate_branch", "disposition_owner", "next_decision"):
             self.assertIn(token, contract_template)
         self.assertIn("Integration disposition", receipt_template)
         self.assertIn("candidate produced → candidate verified → integration pending → integrated on main → milestone closed", kit_readme)
         self.assertIn("candidate-only", kit_readme)
         self.assertIn("Held for approval", kit_readme)
-        self.assertIn("remote `main`, candidate branches, open pull requests", architect)
+        self.assertIn("remote `main`, candidate branches, and relevant trackers", architect)
         self.assertIn("candidate produced", worker)
-        self.assertIn("does not certify PR integration, deployment, or milestone completion", auditor)
-        self.assertIn("merge_required", auditor)
+        self.assertIn("does not certify direct-main delivery, deployment, or milestone completion", auditor)
+        self.assertIn("direct_main_required", auditor)
+        self.assertIn("never creates, updates, reviews, or merges a pull request", worker.lower())
+        self.assertIn("never creates or routes a pull request", architect.lower())
+        self.assertIn("never creates, merges, or reviews a pull request", auditor.lower())
         self.assertIn("does not inspect GitHub", watchdog)
         self.assertTrue(evaluator.is_file())
         closure_adapter = (ROOT / "profiles/foundry-auditor/adapters/closure_auditor.py").read_text(encoding="utf-8")

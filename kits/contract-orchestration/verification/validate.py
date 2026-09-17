@@ -18,7 +18,7 @@ REQUIRED = {
     "skills/verified-implementation-delivery.md": ("## Recovery fallback", "authenticated remote"),
     "skills/card-orchestration.md": ("## Continuation adaptation", "one writer"),
     "templates/README.md": ("contract-template.md", "issue-work-contract.md", "implementation-card.md", "Secret-safe environment example"),
-    "templates/contract-template.md": ("## Objective", "## Authority", "## In scope", "## Required implementation details", "## Acceptance criteria", "## Verification", "## Delivery", "## Integration disposition", "candidate_only", "merge_required", "human_approval_required", "## Explicit non-goals", "## Safety boundaries", "## Idempotency key", "authorized Architect", "does not change any target service API, schema, or runtime"),
+    "templates/contract-template.md": ("## Objective", "## Authority", "## In scope", "## Required implementation details", "## Acceptance criteria", "## Verification", "## Delivery", "## Integration disposition", "candidate_only", "direct_main_required", "human_approval_required", "Pull requests are forbidden", "## Explicit non-goals", "## Safety boundaries", "## Idempotency key", "authorized Architect", "does not change any target service API, schema, or runtime"),
     "templates/issue-work-contract.md": ("## Acceptance criteria", "## Idempotency key"),
     "templates/implementation-card.md": ("exactly one active writer", "completion receipt"),
     "templates/completion-receipt.md": ("Integration disposition", "Candidate audit", "Deferred or non-goals", "Disposition owner and next decision"),

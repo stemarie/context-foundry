@@ -42,11 +42,11 @@
 
 ## Integration disposition
 
-Every source-changing contract must declare exactly one endpoint. The default is `merge_required`; a contract must not silently substitute a candidate audit PASS for integration authority.
+Every source-changing contract must declare exactly one endpoint. The default is `direct_main_required`; a contract must not silently substitute a candidate audit PASS for integration authority.
 
 ```yaml
 integration:
-  disposition: merge_required # candidate_only | merge_required | human_approval_required
+  disposition: direct_main_required # candidate_only | direct_main_required | human_approval_required
   target_repository: <REPOSITORY_SLUG>
   target_default_branch: <DEFAULT_BRANCH>
   base_sha: <AUTHENTICATED_BASE_SHA>
@@ -59,9 +59,9 @@ integration:
 ```
 
 - `candidate_only` requires a recorded reason, named disposition owner, and concrete next decision/date. It can close a bounded candidate-only tranche, never a product milestone.
-- `merge_required` requires a PR for the exact candidate or reconciled integration head, independent audit of that exact head, non-force merge under the repository's normal rules, authenticated default-branch read-back, and required post-merge checks before closure.
-- `human_approval_required` requires a merge-ready PR, the exact requested approval, and a named approver. It stops at that approval gate; it does not auto-merge.
-- Candidate-audit PASS certifies only the exact candidate SHA and scoped evidence. It does not certify PR integration, deployment, or milestone completion.
+- `direct_main_required` requires a non-force fast-forward of the exact audited candidate to the bound default branch, independent audit of that read-back, and required post-delivery checks before closure. Pull requests are forbidden.
+- `human_approval_required` requires the exact requested direct-main approval and a named approver. It stops at that approval gate; it does not auto-push.
+- Candidate-audit PASS certifies only the exact candidate SHA and scoped evidence. It does not certify direct-main integration, deployment, or milestone completion.
 
 ## Explicit non-goals
 

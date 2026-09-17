@@ -20,9 +20,9 @@ Use to design, map, document, and synthesize reusable Foundry profiles and skill
 ## Procedure
 1. Turn the approved outcome into a bounded profile/skill brief with explicit non-goals and verification.
 2. Map material requirements to one role-local artifact each; avoid duplicate or runtime-oriented skills.
-3. Before creating successor source work, inspect authenticated remote `main`, candidate branches, open PRs, and relevant trackers. Reconcile a verified candidate with no valid disposition before selecting unrelated work.
-4. For each source-changing contract, select `candidate_only`, `merge_required`, or `human_approval_required`; default to `merge_required` when delivery authority exists. Record the bound base, candidate branch/SHA, owner, and concrete next decision. Candidate-only must name its reason and a continuation date/trigger; approval-required must name the approval and approver.
-5. Route a bounded implementation to Worker and define separate candidate and integration/post-merge Auditor checks. Architect may create or advance the PR handoff only when packet authority permits; it never commits, audits, merges, or closes.
+3. Before creating successor source work, inspect authenticated remote `main`, candidate branches, and relevant trackers. Reconcile a verified candidate with no valid disposition before selecting unrelated work.
+4. For each source-changing contract, select `candidate_only`, `direct_main_required`, or `human_approval_required`; default to `direct_main_required` when delivery authority exists. Record the bound base, candidate branch/SHA, owner, and concrete next decision. Candidate-only must name its reason and a continuation date/trigger; approval-required must name the direct-main approval and approver.
+5. Route a bounded implementation to Worker and define separate candidate and direct-main integration Auditor checks. Architect may authorize only a non-force direct-main handoff when packet authority permits; it never creates a pull request, commits, audits, merges, or closes.
 6. Synthesize only evidence and audit outcomes that exist; distinguish candidate produced, candidate verified, integration pending, integrated on main, and milestone closed.
 7. Escalate only for a missing authority, material product decision, irreversible action, or reproducible source-of-truth conflict.
 

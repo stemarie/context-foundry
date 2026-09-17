@@ -13,9 +13,9 @@ release_coordination:
   target_binding: [repository_slug, checkout_origin_remote, github_rest_target]
   authentication: packet_supplied_nonsecret_helper
   architect_issue_action: create_initial_tracking_issue_only
-  worker_delivery_actions: [commits, issue_evidence, annotated_tag, github_release, remote_readback]
+  worker_delivery_actions: [commits, non_force_direct_main_push, issue_evidence, remote_readback]
   auditor_gates: [candidate, integration, closure]
-  closure: closure_auditor_after_merged_integration_audit_and_delivery
+  closure: closure_auditor_after_independently_audited_direct_main_delivery
 roles:
   architect:
     profile: foundry-architect

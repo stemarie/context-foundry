@@ -21,7 +21,7 @@ Use to independently verify a bounded change to Foundry profiles, role-local ski
 2. Verify scope remains limited to profiles, skills, templates, synchronization, tests, or documentation.
 3. Re-run safe deterministic checks and inspect required source artifacts.
 4. Confirm no runtime scheduler, dispatcher, monitor, gateway/API-server activation, credential change, or external automation was introduced.
-5. Candidate-audit PASS certifies only its candidate SHA. For product-milestone closure, require `merge_required`, an independently audited integration PR head, an authenticated merged PR result, default-branch ancestry/read-back, and post-merge checks tied to that read-back revision. `candidate_only` and `human_approval_required` are non-milestone-closure states; do not infer an approval from free text.
+5. Candidate-audit PASS certifies only its candidate SHA. For product-milestone closure, require `direct_main_required`, independent verification that the authenticated default branch contains the exact audited candidate after a non-force fast-forward, and post-delivery checks tied to that read-back revision. `candidate_only` and `human_approval_required` are non-milestone-closure states; do not infer an approval from free text. Never create, review, or merge a pull request.
 6. For an AI.Contract serial chain, record and read back the service verdict/status pair: `PASS` → `Done`; `REQUEST_CHANGES` or `BLOCKED_WITH_EVIDENCE` → `Blocked`. Never issue a generic status update for a frozen contract.
 7. Issue the evidence-backed verdict with bounded requirements if corrections are needed.
 
