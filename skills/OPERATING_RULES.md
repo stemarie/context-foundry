@@ -2,6 +2,8 @@
 
 Read these rules, [WORK_CONTRACT.md](../WORK_CONTRACT.md), [WORKFLOW.md](../docs/WORKFLOW.md), applicable target repository instructions, and current human-defined scope before applying a role skill.
 
+Also read the [AI.Contract interface mapping](AI_CONTRACT_INTERFACE.md). Verify the deployed interface before using its operations; the mapping identifies a tested source candidate, not an installed service.
+
 ## Source and capability checks
 
 1. Resolve AI.Contract project identity, its one repository binding, target branch, scope, current executable revision, resolved delivery policy, and actor authorization from authoritative sources.
