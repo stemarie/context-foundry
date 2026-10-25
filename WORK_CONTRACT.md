@@ -1,12 +1,14 @@
 # Foundry work contract
 
-Version: 0.1 — initial convention
+Version: 0.2 — agreed workflow; service extensions not yet implemented.
 
-This is the shared handoff between Architect, Worker, and Auditor / QA skills. Roles describe responsibilities for an assignment; they do not require persistent agent profiles. Use one GitHub issue per work order and link its implementation and receipts there.
+Architect, Coordinator, Worker, and Auditor / QA are separate runtime-neutral skills, not persistent profiles. AI.Contract is the authoritative record for projects, contracts, queue state, claims, revisions, and execution evidence. GitHub issues are historical records created only after delivery or cancellation.
 
-Adapted from the [archived contract template](https://github.com/stemarie/context-foundry/blob/archive/pre-reset-2026-10-25/kits/contract-orchestration/templates/contract-template.md).
+See [workflow decisions](docs/WORKFLOW.md) and [AI.Contract change proposal](docs/AI_CONTRACT_CHANGES.md). These describe the target behavior, not current service capabilities.
 
-## Work order template
+Adapted from the [archived template](https://github.com/stemarie/context-foundry/blob/archive/pre-reset-2026-10-25/kits/contract-orchestration/templates/contract-template.md).
+
+## Contract template
 
 ### Objective
 
@@ -14,91 +16,101 @@ Adapted from the [archived contract template](https://github.com/stemarie/contex
 
 ### Sources and authority
 
-- Target repository: <owner/repository>
+- AI.Contract project and contract identifiers: <assigned service identifiers>
+- Human-defined project goal and scope: <reference and relevant requirements>
+- Target repository: <project repository>
 - Target branch and inspected baseline SHA: <branch, SHA>
-- Requirements and applicable repository instructions: <references and necessary context>
-- Allowed delivery actions and approval requirements: <explicit authority>
+- Specification and repository instructions: <references and necessary context>
+- Executable revision and digest: <service-owned immutable identity when activated>
 
-The baseline records inspected evidence. Preserve intervening work. The order does not override user instructions or repository policy, or grant merge, deployment, credential, or destructive-action permission by itself.
+The baseline records evidence, not permission to overwrite newer work. Contracts cannot override user instructions or repository policy. Human-defined scope authorizes the Architect to create ready contracts within it; stop for decisions outside that scope.
 
 ### Scope
 
-<Included behavior, affected components, required constraints, compatibility requirements, and explicit non-goals. Distinguish requirements from implementation suggestions.>
+<Included behavior, affected components, constraints, compatibility, and non-goals. Separate requirements from suggestions. Workers may make routine implementation choices within scope; material requirement or architecture changes return to the Architect.>
 
 ### Dependencies and concurrency
 
-- Prerequisites: <issue links, or none; each must be Done before this order starts>
-- Concurrent work: <known related orders and shared interfaces or resources>
-- Conflict boundaries: <components or resources requiring coordination, or none known>
+- Prerequisites: <contract IDs, or none; all must be Done before execution>
+- Concurrent work and shared interfaces: <related contracts or none known>
+- Conflict boundaries: <shared components/resources that must not be used concurrently>
 
-The Architect assesses behavioral dependencies as well as overlapping files. Different files alone do not establish independence. Declare strict file boundaries only when needed.
+Multiple prerequisites are allowed; dependency cycles must be rejected. Different files do not prove behavioral independence. Strict file boundaries are optional where justified.
 
 ### Acceptance criteria
 
-- [ ] <Independently assessable behavior>
-- [ ] <Relevant failure or regression case>
+- [ ] <Independently assessable observable behavior>
+- [ ] <Relevant negative or regression case>
 
 ### Verification
 
-<Repository-grounded commands and expected outcomes, plus any runtime or manual checks needed. Mark proposed checks as proposed. Define disposable fixtures and cleanup where relevant. Never count skipped checks as passes.>
+<Repository-grounded commands, expected results, required runtime/manual checks, disposable fixtures, and cleanup. Identify proposed checks. Skipped checks are never passes.>
 
 ### Delivery
 
-<Required implementation artifact, target branch, integration method, authorized integrator, and any approval gate. Follow the target repository's workflow. Define checks required after integration. No force push unless separately authorized.>
+- Project delivery policy: <policy reference/version>
+- Explicit contract exception: <exception and authority, or none>
+- Target branch, integration method, and required approvals: <resolved policy>
+- Required post-integration checks: <commands or observable checks>
 
-## Readiness and ownership
+The Coordinator integrates under the resolved policy. A contract does not independently grant deployment, credential, destructive-action, or merge authority. No force push unless separately authorized.
 
-An order is Ready when its outcome, scope, acceptance criteria, verification, delivery rule, and dependencies are clear; prerequisites are Done; and no blocking decision remains. Otherwise it remains Draft or is Blocked with a specific reason.
+## Readiness and dispatch
 
-Before dispatch, check for duplicate or overlapping work. One coordinator assigns one Worker to an order and records the assignment before launching it. A comment alone is not an atomic claim: Workers must not independently race to claim orders. Automated claiming will require a mechanism that guarantees exclusive assignment.
+The Architect maintains a small queue toward a configurable target within the approved scope. A contract is Ready when its outcome, boundaries, dependencies, acceptance criteria, verification, and delivery policy are defined and no blocking decision remains. Prerequisite completion and conflict availability determine dispatch eligibility separately.
 
-Each Worker uses an isolated branch and worktree. Record the Worker, branch, worktree, and starting SHA in the issue. Never let two agents write the same checkout. Shared external resources also require isolation or explicit serialization.
+The Coordinator selects FIFO among eligible ready contracts: all prerequisites are Done, no declared conflicts are active, and an assigned Worker is available. It atomically reserves the contract in AI.Contract before launching the Worker. Workers discover their assigned work through AI.Contract; GitHub issues do not assign or unlock work. Runtime bootstrap and actor identity details remain deferred.
+
+Each project has a defined Worker pool. When all Workers are busy the Coordinator waits. The Worker stays assigned through QA and corrections until acceptance or explicit reassignment.
+
+Use an isolated branch and worktree per execution attempt. Record assignment, attempt identity, branch, starting SHA, and non-secret workspace reference in AI.Contract. Never share a writable checkout. Coordinate shared external resources too.
+
+Expired reservations do not automatically release work to a second Writer. The Coordinator confirms the old execution has stopped or stops it before reassignment. Stale attempts cannot submit accepted results or perform authorized integration.
 
 ## Lifecycle
 
 Draft → Ready → Implementing → QA → QA accepted → Integrating → Done
 
-- QA returns actionable corrections to the assigned Worker; the order returns to Implementing.
-- Blocked records the concrete unmet dependency, authority, access, or decision and the stage to resume.
-- Cancelled records why the order is no longer valid. Do not report it as completed.
-- QA accepted means the exact candidate passed its acceptance checks.
-- Done means the accepted change is integrated into the target branch and required post-integration checks passed.
+- Dependency and conflict checks govern eligibility, not a new source of authority.
+- QA corrections return the order to its assigned Worker.
+- Blocked identifies an unmet dependency, authority, access, or decision and the stage to resume.
+- Cancelled preserves the reason and evidence; it is not completion.
+- QA accepted binds the contract revision and exact candidate SHA.
+- Done requires integration into the target branch and successful required post-integration checks.
 
-These are workflow conventions, not an implemented dispatcher or locking system.
+These are proposed Foundry/service semantics. Current AI.Contract serial-chain PASS-to-Done behavior must be changed before using it for this workflow.
 
-## Worker handoff
+## Worker receipt
 
-Append a receipt containing:
+Append evidence in AI.Contract identifying:
 
-- Order reference and revision used; branch, base SHA, and exact candidate SHA.
-- Changed behavior and paths.
-- Evidence for each acceptance criterion.
-- Checks actually run, results, failures, skipped checks, and limitations.
-- Cleanup performed and integration considerations.
+- Contract revision/digest, execution attempt, Worker, branch, base SHA, and candidate SHA.
+- Changed behavior and paths; evidence for every acceptance criterion.
+- Exact checks actually run, outcomes, failures, skips, and limitations.
+- Required cleanup and integration considerations.
 
-Re-read the current order and repository instructions before acting. Recover routine failures within scope. If evidence invalidates the objective or requires a material scope change, return it to the Architect with the conflicting evidence; do not silently rewrite the order.
+Read the current authorized revision and repository instructions before acting. Recover routine failures within scope. Return material discrepancies to the Architect rather than silently broadening the contract.
 
 ## Independent QA
 
-An agent other than the implementer reviews the exact candidate against the current order, inspects the diff, and exercises relevant checks. Evaluate demonstrated behavior, not only the Worker's narrative.
+A separate QA pool is assigned by the Coordinator. Initial reviews are FIFO by candidate submission. Retain the reviewer for corrections when available; correction priority and fallback timing remain implementation details to specify.
 
-Append a receipt with:
+QA inspects the exact candidate and diff, assesses every criterion, and independently runs relevant verification. Append revision, attempt, candidate SHA, checks, acceptance evidence, and an Accepted / Changes requested / Blocked verdict with reproducible findings.
 
-- Order revision, candidate SHA, and reviewed scope.
-- Acceptance evidence and checks actually run.
-- Verdict: Accepted, Changes requested, or Blocked.
-- Specific defects and expected corrections, or the exact blocker.
+QA decides when reassessment by the Architect is needed; there is no fixed correction-round limit. A changed candidate needs fresh acceptance. Material contract changes create a new immutable revision, preserve prior attempts/evidence, and require reassessment before execution resumes. Prior acceptance does not transfer.
 
-A changed candidate invalidates acceptance of the previous SHA. A material order amendment requires renewed readiness assessment and QA against the amended order. Preserve earlier receipts.
+## Integration, completion, and history
 
-## Integration and completion
+The Coordinator serializes integration into each target branch, verifies acceptance still applies, checks target drift and approvals, and performs the required post-integration checks. Rebases, conflict resolutions, or other candidate changes require QA of the resulting candidate.
 
-Serialize integration into each target branch. Before integration, confirm the candidate and order still match QA acceptance, inspect target-branch drift, and satisfy the delivery rule and approval requirements.
+Record the accepted candidate, integration commit or PR, target revision, verification, and limitations in AI.Contract. Only then mark Done. Deployment is separate unless included and authorized.
 
-Rebasing, resolving conflicts, or changing the candidate requires QA of the resulting candidate. Combining accepted work also requires the relevant post-integration checks.
+After delivery or cancellation create a historical GitHub issue linking the contract identity/revision, outcome, relevant commits, and evidence. Issues never coordinate live work. If publication is unavailable, retain actual delivery/cancellation evidence and the outstanding historical publication; do not duplicate an issue after an uncertain response.
 
-Append a completion receipt linking the accepted candidate, integration commit or PR, target branch revision, actual post-integration checks, and remaining limitations. Mark Done only when this evidence demonstrates delivery. Deployment is separate unless explicitly included and authorized.
+## GitHub outage behavior
 
-## Initial limits
+Use the shared connection-scoped circuit breaker defined in [WORKFLOW.md](docs/WORKFLOW.md). Pause GitHub-dependent steps while open; local implementation and QA can continue where possible. A paused integration cannot count as Done.
 
-This document defines the contract and handoffs only. Agent launching, durable status transitions, exclusive claiming, retry budgets, and scheduling need implementation before unattended parallel execution. Start by demonstrating the full delivery loop, then two independent orders running concurrently.
+## Limits
+
+This is a contract convention. Skills, dispatching, service extensions, runtime adapters, and unattended execution are not yet implemented. Prove one complete delivery, then two independent contracts concurrently.
