@@ -113,4 +113,4 @@ Use the shared connection-scoped circuit breaker defined in [WORKFLOW.md](docs/W
 
 ## Limits
 
-This is a contract convention. Skills, dispatching, service extensions, runtime adapters, and unattended execution are not yet implemented. Prove one complete delivery, then two independent contracts concurrently.
+This is a contract convention. [Version 0.1 skill instructions](skills/README.md) are available. Dispatching, service extensions, runtime adapters, and unattended execution are not yet implemented. Prove one complete delivery, then two independent contracts concurrently.

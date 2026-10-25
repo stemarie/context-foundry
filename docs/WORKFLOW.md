@@ -1,6 +1,6 @@
 # Agreed Foundry workflow
 
-Status: design decisions agreed with the project owner; implementation pending.
+Status: design decisions agreed with the project owner; [version 0.1 skill instructions](../skills/README.md) are available. Service/runtime implementation and operational demonstrations remain pending.
 
 ## Ownership and boundaries
 
@@ -73,6 +73,6 @@ These do not change the agreed workflow. Specify them in bounded implementation 
 
 1. Define AI.Contract extensions and verify existing compatibility requirements.
 2. Implement the required service foundations in bounded increments.
-3. Implement the four skills against the real service interface.
+3. Validate and adapt the version 0.1 skills against the real extended service interface.
 4. Demonstrate one order from scope to integrated, verified delivery and historical issue.
 5. Demonstrate two independent orders concurrently, plus conflict exclusion, failure recovery, and serialized integration.
