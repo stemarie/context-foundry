@@ -1,6 +1,6 @@
 # AI.Contract extension proposal
 
-Status: requirements and implementation sequence proposed from the agreed Foundry workflow. No AI.Contract code or deployment is changed by this document.
+Status: historical design proposal and inspected baseline. Native service support has since been implemented; use the [current API mapping](../skills/AI_CONTRACT_INTERFACE.md) and [Hermes handoff](HERMES_HANDOFF.md) for implementation/setup. This document remains evidence of the original gap analysis, not a claim about the current deployment.
 
 ## Inspected baseline
 

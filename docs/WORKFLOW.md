@@ -1,6 +1,6 @@
 # Agreed Foundry workflow
 
-Status: design decisions agreed with the project owner; [version 0.1 skill instructions](../skills/README.md) are available. Service/runtime implementation and operational demonstrations remain pending.
+Status: agreed design; the [version 0.2 skill pack](../skills/README.md) and native AI.Contract service implementation are available. Hermes runtime implementation, deployment, and real-agent demonstrations remain pending; follow the [Hermes handoff](HERMES_HANDOFF.md).
 
 ## Ownership and boundaries
 
@@ -8,7 +8,7 @@ A human defines project goal and scope. Within it the Architect can create ready
 
 Each AI.Contract project binds one target repository and has its own queue. AI.Contract owns contracts, queue state, execution claims, revisions, and evidence. Foundry owns runtime-neutral skills and coordination behavior. GitHub hosts source and final historical issues; it is not the work queue or authority for execution state.
 
-Runtime selection is deferred. Do not restore the archived Hermes profiles, Kanban control plane, or a competing contract store.
+Skills remain runtime-neutral; Hermes is the target of the current setup handoff. Verify the installed backend and implement its adapter. Do not restore the archived Hermes profiles, Kanban control plane, or a competing contract store.
 
 ## Four skills
 

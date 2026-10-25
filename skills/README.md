@@ -9,6 +9,8 @@ Version 0.2: runtime-neutral instructions. Source files exist; they are not auto
 
 Every skill first reads the [AI.Contract interface mapping](AI_CONTRACT_INTERFACE.md), [shared operating rules](OPERATING_RULES.md), the [work contract](../WORK_CONTRACT.md), and [agreed workflow](../docs/WORKFLOW.md). Package these referenced files together when installing or copying the skills. Relative paths refer to this repository, not the target project.
 
+For Hermes installation, actor isolation, runtime implementation, and real-agent proof, follow the [Hermes handoff](../docs/HERMES_HANDOFF.md).
+
 ## Invocation and capability boundary
 
 Provide the AI.Contract connection reference, project identifier or verified project lookup, target repository context, and authenticated actor identity. Coordinator invocation additionally needs configured Worker/QA pools and launch/stop/health and integration adapters. Workers and QA discover their assignment in the service using their runtime-bound identity. Exact identity/bootstrap mechanisms are deliberately deferred.
