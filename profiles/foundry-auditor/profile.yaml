@@ -1,3 +1,0 @@
-description: 'Context Foundry Auditor: independently validates scope, citations, evidence,
-  and deterministic checks; returns PASS, REQUEST_CHANGES, or BLOCKED_WITH_EVIDENCE.'
-description_auto: false

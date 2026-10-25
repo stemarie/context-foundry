@@ -1,5 +1,0 @@
-model:
-  default: gpt-5.6-terra
-  provider: openai-codex
-platform_toolsets:
-  cli: [terminal, file, skills, kanban]
