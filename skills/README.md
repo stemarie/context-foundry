@@ -1,6 +1,6 @@
 # Foundry skills
 
-Version 0.2: runtime-neutral instructions. Source files exist; they are not automatically installed into this chat or any runtime. The native service interface has a [tested implementation PR](https://github.com/stemarie/AI.Contract/pull/53); deployment and a runtime adapter are still required for live coordinated execution.
+Version 0.2: runtime-neutral instructions. Source files exist; they are not automatically installed into this chat or any runtime. The [native service interface](https://github.com/stemarie/AI.Contract/blob/main/docs/native-workflow.md) is merged and tested; deployment and a runtime adapter are still required for live coordinated execution.
 
 - [Architect](foundry-architect/SKILL.md): author and reassess bounded contracts.
 - [Coordinator](foundry-coordinator/SKILL.md): reserve, dispatch, recover, integrate, and record history.

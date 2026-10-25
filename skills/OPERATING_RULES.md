@@ -16,6 +16,8 @@ Also read the [AI.Contract interface mapping](AI_CONTRACT_INTERFACE.md). Verify 
 
 AI.Contract alone owns live contracts, dependencies, claims, assignments, and evidence. GitHub issues are final historical references. Service-owned Markdown projections must not be edited directly.
 
+For authorized work in AI.Contract and Context Foundry, the owner requires direct commits to main and no pull requests. Follow the repository's AGENTS.md delivery instructions and record history after delivery. This overrides earlier PR-based handoff examples.
+
 Human scope bounds Architect authorship. Worker discretion covers routine implementation choices within scope. Coordinator integrates according to resolved delivery authority. QA independently verifies. None may bypass explicit approval requirements. QA accepted is not Done; Done requires integration and required successful post-integration checks.
 
 Executable revision/digest and execution attempt are distinct from the service's contract-format version. Verify current assignment and revision before writes and evidence submission. Material changes require a new immutable revision and reassessment, preserving history. Reject stale authority; do not silently retarget an attempt.

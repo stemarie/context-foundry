@@ -1,6 +1,6 @@
 # AI.Contract interface for Foundry skills
 
-Interface source: [AI.Contract PR #53](https://github.com/stemarie/AI.Contract/pull/53), candidate `8d25067867e44acdb2a9b075c74c15ac9dbbda76`. Projects and milestones are merged via PR #51. Native workflow operations are implemented and tested on the PR #53 branch; deployment and runtime connectivity are not established.
+Interface source: merged [AI.Contract PR #53](https://github.com/stemarie/AI.Contract/pull/53), candidate `8d25067867e44acdb2a9b075c74c15ac9dbbda76`. Projects and milestones are merged via PR #51. Native workflow operations are implemented, tested, and merged into AI.Contract main; deployment and runtime connectivity are not established.
 
 This mapping does not grant capabilities. Before live use inspect the connected service's MCP tools and verify the required behavior/permissions. A source implementation, successful mock client, or merged PR is not proof of a running deployment.
 
