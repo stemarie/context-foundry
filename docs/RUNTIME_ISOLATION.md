@@ -32,12 +32,13 @@ binding when starting `Launcher.ensure`.
 
 ## Verify or recover safely
 
-Use `Launcher.inspect(key)` to determine whether a recorded launch is
-`running`, `stopped`, or `unknown`. An `unknown` result is deliberately not
-proof that the process did not start (for example, the journal has an intent
-but no acknowledged PID); do not start a replacement or signal an inferred
-process. Investigate the durable launch identity first. `Launcher.stop(key)`
-only reports success after the owned process group is confirmed stopped.
+`Journal.inspect` (used by `Launcher.inspect`) returns `running`, `stopped`,
+or `unknown` for a recorded launch. An `unknown` result is deliberately not
+proof that the process did not start: for example, an intent may exist before
+an acknowledged PID, or a PID may no longer identify the recorded process. Do
+not start a replacement or signal an inferred process. Investigate the durable
+launch identity first. `Launcher.stop(key)` only reports success after the
+owned process group is confirmed stopped; otherwise recovery remains blocked.
 
 For the local control suite, run:
 
