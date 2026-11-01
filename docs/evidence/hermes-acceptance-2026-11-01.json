@@ -9896,14 +9896,2004 @@
         }
       },
       "immutable_candidates": {}
+    },
+    {
+      "status": "recovery_passed",
+      "ai_contract_revision": "d7748418a23e6ae8747bb0bed0730fc6c06f1fbf",
+      "foundry_bootstrap": "8e15773b48a8802e208b18dded6f1af4595b5fae",
+      "hermes_revision": "bf0203a794a07aac3ff764972ab9087baa4e4f4e",
+      "backend": "installed Hermes AIAgent; macOS sandbox-exec checks; local SQLite AI.Contract",
+      "contracts": [
+        {
+          "job": {
+            "contract_id": "68779dd7-d2da-4551-93e9-aae30c9f383f",
+            "project_id": "1182674d-f53f-4e09-a798-caad21d874ca",
+            "milestone_id": "073eea86-dde9-48b7-b084-77f2389c10a8",
+            "revision": {
+              "digest_ref": "84c21785a35182d8d4016c3bcdb8271c53bc8b38ac46876864eb1f933ae34503"
+            },
+            "stage": "Cancelled",
+            "queue_sequence": 12,
+            "attempt": {
+              "id": "db8f502e-3c5d-4d0d-8091-f06c74159424",
+              "worker": "acceptance-worker-one",
+              "expires_at": "2026-11-01T15:35:06.356297Z"
+            }
+          },
+          "launch": "97c573c01d75aec8fead4b1554ef9517f2adf23996623be0cc29d3d1aab4eb53",
+          "unknown_launch": "fe9e6fbd873b4d3b25c9114ed6d4373039ff008540eed0120bad556fd36c4629"
+        }
+      ],
+      "delivery": [],
+      "limits": [],
+      "origin": "http://127.0.0.1:54112",
+      "project_id": "1182674d-f53f-4e09-a798-caad21d874ca",
+      "milestone_id": "073eea86-dde9-48b7-b084-77f2389c10a8",
+      "actual_launcher_process_exit_reconciled": {
+        "predecessor_pid": 83147,
+        "successor_pid": 83111,
+        "native_pid": 83148,
+        "launch": "97c573c01d75aec8fead4b1554ef9517f2adf23996623be0cc29d3d1aab4eb53",
+        "no_replacement_spawned": true
+      },
+      "material_revision_requires_renewed_readiness": true,
+      "expiry_while_real_hermes_alive": true,
+      "cleanup": {
+        "owned_processes_stopped": true,
+        "native_homes_removed": true,
+        "database_removed_after_history_export": true,
+        "owned_worktrees_removed": true
+      },
+      "evidence_source": "recovery-report4.json",
+      "all_history": [
+        {
+          "events": [
+            {
+              "id": 5,
+              "operation": "define",
+              "actor": "mock-architect",
+              "at": "2026-11-01T15:30:03.110201Z",
+              "job": {
+                "contract_id": "68779dd7-d2da-4551-93e9-aae30c9f383f",
+                "project_id": "1182674d-f53f-4e09-a798-caad21d874ca",
+                "milestone_id": "073eea86-dde9-48b7-b084-77f2389c10a8",
+                "revision": {
+                  "digest_ref": "707ae249150e5eb65381f1352efe07392253ce553677ef9c937edeb769a52a93"
+                },
+                "stage": "Draft",
+                "queue_sequence": 0
+              }
+            },
+            {
+              "id": 6,
+              "operation": "ready",
+              "actor": "mock-architect",
+              "at": "2026-11-01T15:30:03.111042Z",
+              "job": {
+                "contract_id": "68779dd7-d2da-4551-93e9-aae30c9f383f",
+                "project_id": "1182674d-f53f-4e09-a798-caad21d874ca",
+                "milestone_id": "073eea86-dde9-48b7-b084-77f2389c10a8",
+                "revision": {
+                  "digest_ref": "707ae249150e5eb65381f1352efe07392253ce553677ef9c937edeb769a52a93"
+                },
+                "stage": "Ready",
+                "queue_sequence": 6
+              }
+            },
+            {
+              "id": 7,
+              "operation": "reserve",
+              "actor": "acceptance-coordinator",
+              "at": "2026-11-01T15:30:03.111778Z",
+              "job": {
+                "contract_id": "68779dd7-d2da-4551-93e9-aae30c9f383f",
+                "project_id": "1182674d-f53f-4e09-a798-caad21d874ca",
+                "milestone_id": "073eea86-dde9-48b7-b084-77f2389c10a8",
+                "revision": {
+                  "digest_ref": "707ae249150e5eb65381f1352efe07392253ce553677ef9c937edeb769a52a93"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "757fc7a6-13aa-4e52-8fe2-fdaf564b7a9b",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:35:03.111778Z"
+                }
+              }
+            },
+            {
+              "id": 8,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:30:05.065979Z",
+              "job": {
+                "contract_id": "68779dd7-d2da-4551-93e9-aae30c9f383f",
+                "project_id": "1182674d-f53f-4e09-a798-caad21d874ca",
+                "milestone_id": "073eea86-dde9-48b7-b084-77f2389c10a8",
+                "revision": {
+                  "digest_ref": "707ae249150e5eb65381f1352efe07392253ce553677ef9c937edeb769a52a93"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "757fc7a6-13aa-4e52-8fe2-fdaf564b7a9b",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:30:06.065979Z"
+                }
+              }
+            },
+            {
+              "id": 10,
+              "operation": "recover",
+              "actor": "acceptance-coordinator",
+              "at": "2026-11-01T15:30:06.350132Z",
+              "evidence": "Actual adapter-owned Hermes process group stopped and absence confirmed.",
+              "job": {
+                "contract_id": "68779dd7-d2da-4551-93e9-aae30c9f383f",
+                "project_id": "1182674d-f53f-4e09-a798-caad21d874ca",
+                "milestone_id": "073eea86-dde9-48b7-b084-77f2389c10a8",
+                "revision": {
+                  "digest_ref": "707ae249150e5eb65381f1352efe07392253ce553677ef9c937edeb769a52a93"
+                },
+                "stage": "Ready",
+                "queue_sequence": 6
+              }
+            },
+            {
+              "id": 11,
+              "operation": "define",
+              "actor": "mock-architect",
+              "at": "2026-11-01T15:30:06.352421Z",
+              "job": {
+                "contract_id": "68779dd7-d2da-4551-93e9-aae30c9f383f",
+                "project_id": "1182674d-f53f-4e09-a798-caad21d874ca",
+                "milestone_id": "073eea86-dde9-48b7-b084-77f2389c10a8",
+                "revision": {
+                  "digest_ref": "84c21785a35182d8d4016c3bcdb8271c53bc8b38ac46876864eb1f933ae34503"
+                },
+                "stage": "Draft",
+                "queue_sequence": 0
+              }
+            },
+            {
+              "id": 12,
+              "operation": "ready",
+              "actor": "mock-architect",
+              "at": "2026-11-01T15:30:06.354571Z",
+              "job": {
+                "contract_id": "68779dd7-d2da-4551-93e9-aae30c9f383f",
+                "project_id": "1182674d-f53f-4e09-a798-caad21d874ca",
+                "milestone_id": "073eea86-dde9-48b7-b084-77f2389c10a8",
+                "revision": {
+                  "digest_ref": "84c21785a35182d8d4016c3bcdb8271c53bc8b38ac46876864eb1f933ae34503"
+                },
+                "stage": "Ready",
+                "queue_sequence": 12
+              }
+            },
+            {
+              "id": 13,
+              "operation": "reserve",
+              "actor": "acceptance-coordinator",
+              "at": "2026-11-01T15:30:06.356297Z",
+              "job": {
+                "contract_id": "68779dd7-d2da-4551-93e9-aae30c9f383f",
+                "project_id": "1182674d-f53f-4e09-a798-caad21d874ca",
+                "milestone_id": "073eea86-dde9-48b7-b084-77f2389c10a8",
+                "revision": {
+                  "digest_ref": "84c21785a35182d8d4016c3bcdb8271c53bc8b38ac46876864eb1f933ae34503"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 12,
+                "attempt": {
+                  "id": "db8f502e-3c5d-4d0d-8091-f06c74159424",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:35:06.356297Z"
+                }
+              }
+            },
+            {
+              "id": 14,
+              "operation": "cancel",
+              "actor": "acceptance-coordinator",
+              "at": "2026-11-01T15:30:06.365247Z",
+              "evidence": "Renewed attempt was never launched; prior real Worker stopped. Disposable recovery proof complete.",
+              "job": {
+                "contract_id": "68779dd7-d2da-4551-93e9-aae30c9f383f",
+                "project_id": "1182674d-f53f-4e09-a798-caad21d874ca",
+                "milestone_id": "073eea86-dde9-48b7-b084-77f2389c10a8",
+                "revision": {
+                  "digest_ref": "84c21785a35182d8d4016c3bcdb8271c53bc8b38ac46876864eb1f933ae34503"
+                },
+                "stage": "Cancelled",
+                "queue_sequence": 12,
+                "attempt": {
+                  "id": "db8f502e-3c5d-4d0d-8091-f06c74159424",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:35:06.356297Z"
+                }
+              }
+            }
+          ],
+          "revisions": [
+            {
+              "number": 1,
+              "digest": "707ae249150e5eb65381f1352efe07392253ce553677ef9c937edeb769a52a93",
+              "title": "Disposable recovery probe",
+              "body_markdown": "# Objective\nCreate `docs/NOT_DELIVERED_PROBE.md` as a concise operator guide for Disposable recovery probe in the bounded local Hermes adapter.\n# Authority\nRead AGENTS.md, docs/LOCAL_RUNTIME.md, foundry_runtime/core.py, runtime.py, worker.py and remote.py.\nThe operator has prepared the initial runtime prerequisites. Review and preserve their safety properties.\n# Scope and non-goals\nWorker changes only `docs/NOT_DELIVERED_PROBE.md`. Do not change code, tests, profiles, secrets or AI.Contract. Do not deploy.\nThe delivered candidate intentionally includes the operator-authored runtime prerequisites, tests, preflight and LOCAL_RUNTIME.md since the remote baseline. These are authorized prerequisite changes; QA must review those files as well as this guide. Worker writes only the guide.\n# Dependencies and conflicts\nNo prerequisites. Independent documentation file; no shared mutable code or target integration ownership.\n# Acceptance criteria\nThe guide accurately explains these concepts: lease, unknown. Include one practical recovery or verification example grounded in source. Avoid unverified acceptance claims.\nWorker runs the supplied checks and submits an actual commit. Independent QA inspects the exact candidate and relevant runtime safety controls, independently runs checks and records evidence. QA acceptance is not Done.\n# Verification and delivery\nUse the check capability. Coordinator integrates serially, verifies expected-head non-force main delivery and postchecks, then records native Done and historical issue. No deployment.\n",
+              "delivery_policy": "Direct main after independent exact-candidate QA, expected-head non-force delivery and postchecks. No deployment.",
+              "dependencies": null,
+              "conflicts": null
+            },
+            {
+              "number": 2,
+              "digest": "84c21785a35182d8d4016c3bcdb8271c53bc8b38ac46876864eb1f933ae34503",
+              "title": "Disposable recovery probe",
+              "body_markdown": "# Objective\nCreate `docs/NOT_DELIVERED_PROBE.md` as a concise operator guide for Disposable recovery probe in the bounded local Hermes adapter.\n# Authority\nRead AGENTS.md, docs/LOCAL_RUNTIME.md, foundry_runtime/core.py, runtime.py, worker.py and remote.py.\nThe operator has prepared the initial runtime prerequisites. Review and preserve their safety properties.\n# Scope and non-goals\nWorker changes only `docs/NOT_DELIVERED_PROBE.md`. Do not change code, tests, profiles, secrets or AI.Contract. Do not deploy.\nThe delivered candidate intentionally includes the operator-authored runtime prerequisites, tests, preflight and LOCAL_RUNTIME.md since the remote baseline. These are authorized prerequisite changes; QA must review those files as well as this guide. Worker writes only the guide.\n# Dependencies and conflicts\nNo prerequisites. Independent documentation file; no shared mutable code or target integration ownership.\n# Acceptance criteria\nThe guide accurately explains these concepts: lease, unknown. Include one practical recovery or verification example grounded in source. Avoid unverified acceptance claims.\nWorker runs the supplied checks and submits an actual commit. Independent QA inspects the exact candidate and relevant runtime safety controls, independently runs checks and records evidence. QA acceptance is not Done.\n# Verification and delivery\nUse the check capability. Coordinator integrates serially, verifies expected-head non-force main delivery and postchecks, then records native Done and historical issue. No deployment.\n\nMaterial clarification: this is an execution recovery probe only; no document or Git delivery is required.",
+              "delivery_policy": "Direct main after independent exact-candidate QA, expected-head non-force delivery and postchecks. No deployment.",
+              "dependencies": null,
+              "conflicts": null
+            }
+          ]
+        }
+      ],
+      "runtime_events": [
+        {
+          "home": "home-f83f4884de9f43c2b99c4d168b6b4527",
+          "events": [
+            {
+              "time": 1793547004.997626,
+              "event": "capability_probe",
+              "exposed": [
+                "foundry_action"
+              ],
+              "registry": [
+                "foundry_action"
+              ]
+            },
+            {
+              "time": 1793547004.997727,
+              "event": "capabilities",
+              "tools": [
+                "foundry_action"
+              ],
+              "actor": "acceptance-worker-one",
+              "role": "worker"
+            }
+          ]
+        }
+      ],
+      "immutable_revisions": {
+        "707ae249150e5eb65381f1352efe07392253ce553677ef9c937edeb769a52a93": {
+          "number": 1,
+          "digest": "707ae249150e5eb65381f1352efe07392253ce553677ef9c937edeb769a52a93",
+          "title": "Disposable recovery probe",
+          "body_markdown": "# Objective\nCreate `docs/NOT_DELIVERED_PROBE.md` as a concise operator guide for Disposable recovery probe in the bounded local Hermes adapter.\n# Authority\nRead AGENTS.md, docs/LOCAL_RUNTIME.md, foundry_runtime/core.py, runtime.py, worker.py and remote.py.\nThe operator has prepared the initial runtime prerequisites. Review and preserve their safety properties.\n# Scope and non-goals\nWorker changes only `docs/NOT_DELIVERED_PROBE.md`. Do not change code, tests, profiles, secrets or AI.Contract. Do not deploy.\nThe delivered candidate intentionally includes the operator-authored runtime prerequisites, tests, preflight and LOCAL_RUNTIME.md since the remote baseline. These are authorized prerequisite changes; QA must review those files as well as this guide. Worker writes only the guide.\n# Dependencies and conflicts\nNo prerequisites. Independent documentation file; no shared mutable code or target integration ownership.\n# Acceptance criteria\nThe guide accurately explains these concepts: lease, unknown. Include one practical recovery or verification example grounded in source. Avoid unverified acceptance claims.\nWorker runs the supplied checks and submits an actual commit. Independent QA inspects the exact candidate and relevant runtime safety controls, independently runs checks and records evidence. QA acceptance is not Done.\n# Verification and delivery\nUse the check capability. Coordinator integrates serially, verifies expected-head non-force main delivery and postchecks, then records native Done and historical issue. No deployment.\n",
+          "delivery_policy": "Direct main after independent exact-candidate QA, expected-head non-force delivery and postchecks. No deployment.",
+          "dependencies": null,
+          "conflicts": null
+        },
+        "84c21785a35182d8d4016c3bcdb8271c53bc8b38ac46876864eb1f933ae34503": {
+          "number": 2,
+          "digest": "84c21785a35182d8d4016c3bcdb8271c53bc8b38ac46876864eb1f933ae34503",
+          "title": "Disposable recovery probe",
+          "body_markdown": "# Objective\nCreate `docs/NOT_DELIVERED_PROBE.md` as a concise operator guide for Disposable recovery probe in the bounded local Hermes adapter.\n# Authority\nRead AGENTS.md, docs/LOCAL_RUNTIME.md, foundry_runtime/core.py, runtime.py, worker.py and remote.py.\nThe operator has prepared the initial runtime prerequisites. Review and preserve their safety properties.\n# Scope and non-goals\nWorker changes only `docs/NOT_DELIVERED_PROBE.md`. Do not change code, tests, profiles, secrets or AI.Contract. Do not deploy.\nThe delivered candidate intentionally includes the operator-authored runtime prerequisites, tests, preflight and LOCAL_RUNTIME.md since the remote baseline. These are authorized prerequisite changes; QA must review those files as well as this guide. Worker writes only the guide.\n# Dependencies and conflicts\nNo prerequisites. Independent documentation file; no shared mutable code or target integration ownership.\n# Acceptance criteria\nThe guide accurately explains these concepts: lease, unknown. Include one practical recovery or verification example grounded in source. Avoid unverified acceptance claims.\nWorker runs the supplied checks and submits an actual commit. Independent QA inspects the exact candidate and relevant runtime safety controls, independently runs checks and records evidence. QA acceptance is not Done.\n# Verification and delivery\nUse the check capability. Coordinator integrates serially, verifies expected-head non-force main delivery and postchecks, then records native Done and historical issue. No deployment.\n\nMaterial clarification: this is an execution recovery probe only; no document or Git delivery is required.",
+          "delivery_policy": "Direct main after independent exact-candidate QA, expected-head non-force delivery and postchecks. No deployment.",
+          "dependencies": null,
+          "conflicts": null
+        }
+      },
+      "immutable_candidates": {}
+    },
+    {
+      "status": "blocked",
+      "ai_contract_revision": "d7748418a23e6ae8747bb0bed0730fc6c06f1fbf",
+      "foundry_bootstrap": "d404db126c092cf82a181d1344bda24a2435dceb",
+      "hermes_revision": "bf0203a794a07aac3ff764972ab9087baa4e4f4e",
+      "backend": "installed Hermes AIAgent; macOS sandbox-exec checks; local SQLite AI.Contract",
+      "contracts": [],
+      "delivery": [],
+      "limits": [],
+      "origin": "http://127.0.0.1:54474",
+      "project_id": "f856759a-00a8-42cc-9c4b-30f96925e1ef",
+      "milestone_id": "b59ea81e-fab5-40d3-bfc8-3a164f0b4677",
+      "failure_category": "Barrier",
+      "cleanup": {
+        "owned_processes_stopped": true,
+        "native_homes_removed": true,
+        "database_removed_after_history_export": true,
+        "owned_worktrees_removed": true
+      },
+      "evidence_source": "final-single-report.json",
+      "all_history": [
+        {
+          "events": [
+            {
+              "id": 5,
+              "operation": "define",
+              "actor": "mock-architect",
+              "at": "2026-11-01T15:33:28.09565Z",
+              "job": {
+                "contract_id": "8673a120-05d6-4abe-9a7e-c6f6c8ed2162",
+                "project_id": "f856759a-00a8-42cc-9c4b-30f96925e1ef",
+                "milestone_id": "b59ea81e-fab5-40d3-bfc8-3a164f0b4677",
+                "revision": {
+                  "digest_ref": "e61cf4ace8e47c90c9ba1ad22f84420e55a91dd8d6de2ece1e21f4742a717451"
+                },
+                "stage": "Draft",
+                "queue_sequence": 0
+              }
+            },
+            {
+              "id": 6,
+              "operation": "ready",
+              "actor": "mock-architect",
+              "at": "2026-11-01T15:33:28.097091Z",
+              "job": {
+                "contract_id": "8673a120-05d6-4abe-9a7e-c6f6c8ed2162",
+                "project_id": "f856759a-00a8-42cc-9c4b-30f96925e1ef",
+                "milestone_id": "b59ea81e-fab5-40d3-bfc8-3a164f0b4677",
+                "revision": {
+                  "digest_ref": "e61cf4ace8e47c90c9ba1ad22f84420e55a91dd8d6de2ece1e21f4742a717451"
+                },
+                "stage": "Ready",
+                "queue_sequence": 6
+              }
+            },
+            {
+              "id": 7,
+              "operation": "reserve",
+              "actor": "acceptance-coordinator",
+              "at": "2026-11-01T15:33:28.09896Z",
+              "job": {
+                "contract_id": "8673a120-05d6-4abe-9a7e-c6f6c8ed2162",
+                "project_id": "f856759a-00a8-42cc-9c4b-30f96925e1ef",
+                "milestone_id": "b59ea81e-fab5-40d3-bfc8-3a164f0b4677",
+                "revision": {
+                  "digest_ref": "e61cf4ace8e47c90c9ba1ad22f84420e55a91dd8d6de2ece1e21f4742a717451"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "80133e75-2055-4d22-8c87-ffb7ee72ddd3",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:38:28.09896Z"
+                }
+              }
+            },
+            {
+              "id": 8,
+              "operation": "record",
+              "actor": "acceptance-coordinator",
+              "at": "2026-11-01T15:33:29.04044Z",
+              "evidence": "{\"runtime_launch\": \"ce0705fe2ab0267d43dbaf8fc0155a84c2e8161d06514bfbb5f81862316018d3\", \"pid\": 84338, \"role\": \"worker\", \"actor\": \"acceptance-worker-one\", \"workspace\": \"/private/tmp/cf-real-agent-a2g8prax/worker-first\", \"branch\": \"codex/acceptance-worker-first-a24933\", \"base_sha\": \"8e15773b48a8802e208b18dded6f1af4595b5fae\", \"reconciled_running\": true}",
+              "job": {
+                "contract_id": "8673a120-05d6-4abe-9a7e-c6f6c8ed2162",
+                "project_id": "f856759a-00a8-42cc-9c4b-30f96925e1ef",
+                "milestone_id": "b59ea81e-fab5-40d3-bfc8-3a164f0b4677",
+                "revision": {
+                  "digest_ref": "e61cf4ace8e47c90c9ba1ad22f84420e55a91dd8d6de2ece1e21f4742a717451"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "80133e75-2055-4d22-8c87-ffb7ee72ddd3",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:38:28.09896Z"
+                }
+              }
+            },
+            {
+              "id": 9,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:33:34.020572Z",
+              "job": {
+                "contract_id": "8673a120-05d6-4abe-9a7e-c6f6c8ed2162",
+                "project_id": "f856759a-00a8-42cc-9c4b-30f96925e1ef",
+                "milestone_id": "b59ea81e-fab5-40d3-bfc8-3a164f0b4677",
+                "revision": {
+                  "digest_ref": "e61cf4ace8e47c90c9ba1ad22f84420e55a91dd8d6de2ece1e21f4742a717451"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "80133e75-2055-4d22-8c87-ffb7ee72ddd3",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:38:34.020572Z"
+                }
+              }
+            },
+            {
+              "id": 10,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:33:39.029353Z",
+              "job": {
+                "contract_id": "8673a120-05d6-4abe-9a7e-c6f6c8ed2162",
+                "project_id": "f856759a-00a8-42cc-9c4b-30f96925e1ef",
+                "milestone_id": "b59ea81e-fab5-40d3-bfc8-3a164f0b4677",
+                "revision": {
+                  "digest_ref": "e61cf4ace8e47c90c9ba1ad22f84420e55a91dd8d6de2ece1e21f4742a717451"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "80133e75-2055-4d22-8c87-ffb7ee72ddd3",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:38:39.029353Z"
+                }
+              }
+            },
+            {
+              "id": 11,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:33:44.032857Z",
+              "job": {
+                "contract_id": "8673a120-05d6-4abe-9a7e-c6f6c8ed2162",
+                "project_id": "f856759a-00a8-42cc-9c4b-30f96925e1ef",
+                "milestone_id": "b59ea81e-fab5-40d3-bfc8-3a164f0b4677",
+                "revision": {
+                  "digest_ref": "e61cf4ace8e47c90c9ba1ad22f84420e55a91dd8d6de2ece1e21f4742a717451"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "80133e75-2055-4d22-8c87-ffb7ee72ddd3",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:38:44.032857Z"
+                }
+              }
+            }
+          ],
+          "revisions": [
+            {
+              "number": 1,
+              "digest": "e61cf4ace8e47c90c9ba1ad22f84420e55a91dd8d6de2ece1e21f4742a717451",
+              "title": "Local runtime quickstart",
+              "body_markdown": "# Objective\nCreate `docs/RUNTIME_QUICKSTART.md` as a concise operator guide for Local runtime quickstart in the bounded local Hermes adapter.\n# Authority\nRead AGENTS.md, docs/LOCAL_RUNTIME.md, foundry_runtime/core.py, runtime.py, worker.py and remote.py.\nThe operator has prepared the initial runtime prerequisites. Review and preserve their safety properties.\n# Scope and non-goals\nWorker changes only `docs/RUNTIME_QUICKSTART.md`. Do not change code, tests, profiles, secrets or AI.Contract. Do not deploy.\nThe delivered candidate intentionally includes the operator-authored runtime prerequisites, tests, preflight and LOCAL_RUNTIME.md since the remote baseline. These are authorized prerequisite changes; QA must review those files as well as this guide. Worker writes only the guide.\n# Dependencies and conflicts\nNo prerequisites. Independent documentation file; no shared mutable code or target integration ownership.\n# Acceptance criteria\nThe guide accurately explains these concepts: AI.Contract, unknown, independent QA, no deployment. Include one practical recovery or verification example grounded in source. Avoid unverified acceptance claims.\nWorker runs the supplied checks and submits an actual commit. Independent QA inspects the exact candidate and relevant runtime safety controls, independently runs checks and records evidence. QA acceptance is not Done.\n# Verification and delivery\nUse the check capability. Coordinator integrates serially, verifies expected-head non-force main delivery and postchecks, then records native Done and historical issue. No deployment.\n",
+              "delivery_policy": "Direct main after independent exact-candidate QA, expected-head non-force delivery and postchecks. No deployment.",
+              "dependencies": null,
+              "conflicts": null
+            }
+          ]
+        }
+      ],
+      "runtime_events": [
+        {
+          "home": "home-d2014bb3c04a4cffa641d7032934d292",
+          "events": [
+            {
+              "time": 1793547210.079303,
+              "event": "capability_probe",
+              "exposed": [
+                "foundry_action"
+              ],
+              "registry": [
+                "foundry_action"
+              ]
+            },
+            {
+              "time": 1793547210.079396,
+              "event": "capabilities",
+              "tools": [
+                "foundry_action"
+              ],
+              "actor": "acceptance-worker-one",
+              "role": "worker"
+            },
+            {
+              "time": 1793547210.081459,
+              "event": "model_started"
+            },
+            {
+              "time": 1793547213.453355,
+              "event": "tool",
+              "operation": "assignment"
+            },
+            {
+              "time": 1793547217.8474162,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547217.860178,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547217.86565,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547217.8706791,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547217.876702,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547217.884126,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547217.890365,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547224.775584,
+              "event": "tool",
+              "operation": "diff"
+            },
+            {
+              "time": 1793547224.8126678,
+              "event": "tool",
+              "operation": "check"
+            },
+            {
+              "time": 1793547229.039032,
+              "event": "authority_unavailable"
+            },
+            {
+              "time": 1793547250.94089,
+              "event": "model_finished",
+              "completed": true,
+              "api_calls": 5
+            },
+            {
+              "time": 1793547250.943718,
+              "event": "blocked",
+              "category": "Barrier"
+            }
+          ]
+        }
+      ],
+      "immutable_revisions": {
+        "e61cf4ace8e47c90c9ba1ad22f84420e55a91dd8d6de2ece1e21f4742a717451": {
+          "number": 1,
+          "digest": "e61cf4ace8e47c90c9ba1ad22f84420e55a91dd8d6de2ece1e21f4742a717451",
+          "title": "Local runtime quickstart",
+          "body_markdown": "# Objective\nCreate `docs/RUNTIME_QUICKSTART.md` as a concise operator guide for Local runtime quickstart in the bounded local Hermes adapter.\n# Authority\nRead AGENTS.md, docs/LOCAL_RUNTIME.md, foundry_runtime/core.py, runtime.py, worker.py and remote.py.\nThe operator has prepared the initial runtime prerequisites. Review and preserve their safety properties.\n# Scope and non-goals\nWorker changes only `docs/RUNTIME_QUICKSTART.md`. Do not change code, tests, profiles, secrets or AI.Contract. Do not deploy.\nThe delivered candidate intentionally includes the operator-authored runtime prerequisites, tests, preflight and LOCAL_RUNTIME.md since the remote baseline. These are authorized prerequisite changes; QA must review those files as well as this guide. Worker writes only the guide.\n# Dependencies and conflicts\nNo prerequisites. Independent documentation file; no shared mutable code or target integration ownership.\n# Acceptance criteria\nThe guide accurately explains these concepts: AI.Contract, unknown, independent QA, no deployment. Include one practical recovery or verification example grounded in source. Avoid unverified acceptance claims.\nWorker runs the supplied checks and submits an actual commit. Independent QA inspects the exact candidate and relevant runtime safety controls, independently runs checks and records evidence. QA acceptance is not Done.\n# Verification and delivery\nUse the check capability. Coordinator integrates serially, verifies expected-head non-force main delivery and postchecks, then records native Done and historical issue. No deployment.\n",
+          "delivery_policy": "Direct main after independent exact-candidate QA, expected-head non-force delivery and postchecks. No deployment.",
+          "dependencies": null,
+          "conflicts": null
+        }
+      },
+      "immutable_candidates": {}
+    },
+    {
+      "status": "blocked",
+      "ai_contract_revision": "d7748418a23e6ae8747bb0bed0730fc6c06f1fbf",
+      "foundry_bootstrap": "b26b305285e197a8d65b1482ef77c71069267e48",
+      "hermes_revision": "bf0203a794a07aac3ff764972ab9087baa4e4f4e",
+      "backend": "installed Hermes AIAgent; macOS sandbox-exec checks; local SQLite AI.Contract",
+      "contracts": [],
+      "delivery": [],
+      "limits": [],
+      "origin": "http://127.0.0.1:54861",
+      "project_id": "c387023b-9298-431b-9f30-8572d3a2e1e7",
+      "milestone_id": "15009824-9364-4f09-ba43-12046b15ae59",
+      "failure_category": "Barrier",
+      "cleanup": {
+        "owned_processes_stopped": true,
+        "native_homes_removed": true,
+        "database_removed_after_history_export": true,
+        "owned_worktrees_removed": true
+      },
+      "evidence_source": "final-single-report2.json",
+      "all_history": [
+        {
+          "events": [
+            {
+              "id": 5,
+              "operation": "define",
+              "actor": "mock-architect",
+              "at": "2026-11-01T15:38:48.954002Z",
+              "job": {
+                "contract_id": "710118c2-1a6b-4c30-9426-ba53eb21f782",
+                "project_id": "c387023b-9298-431b-9f30-8572d3a2e1e7",
+                "milestone_id": "15009824-9364-4f09-ba43-12046b15ae59",
+                "revision": {
+                  "digest_ref": "02b9206f20bbdb528afa54579d35abad1796f6f2c6a8a374bd2c16105c78db15"
+                },
+                "stage": "Draft",
+                "queue_sequence": 0
+              }
+            },
+            {
+              "id": 6,
+              "operation": "ready",
+              "actor": "mock-architect",
+              "at": "2026-11-01T15:38:48.955748Z",
+              "job": {
+                "contract_id": "710118c2-1a6b-4c30-9426-ba53eb21f782",
+                "project_id": "c387023b-9298-431b-9f30-8572d3a2e1e7",
+                "milestone_id": "15009824-9364-4f09-ba43-12046b15ae59",
+                "revision": {
+                  "digest_ref": "02b9206f20bbdb528afa54579d35abad1796f6f2c6a8a374bd2c16105c78db15"
+                },
+                "stage": "Ready",
+                "queue_sequence": 6
+              }
+            },
+            {
+              "id": 7,
+              "operation": "reserve",
+              "actor": "acceptance-coordinator",
+              "at": "2026-11-01T15:38:48.956644Z",
+              "job": {
+                "contract_id": "710118c2-1a6b-4c30-9426-ba53eb21f782",
+                "project_id": "c387023b-9298-431b-9f30-8572d3a2e1e7",
+                "milestone_id": "15009824-9364-4f09-ba43-12046b15ae59",
+                "revision": {
+                  "digest_ref": "02b9206f20bbdb528afa54579d35abad1796f6f2c6a8a374bd2c16105c78db15"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "cd5b2c96-a49a-4a89-b2bf-68cdee14266e",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:43:48.956644Z"
+                }
+              }
+            },
+            {
+              "id": 8,
+              "operation": "record",
+              "actor": "acceptance-coordinator",
+              "at": "2026-11-01T15:38:49.756779Z",
+              "evidence": "{\"runtime_launch\": \"541654f66b1249e665b8bd8dccbfcfae91fa236e2d8676bd633badd81ffa0832\", \"pid\": 86187, \"role\": \"worker\", \"actor\": \"acceptance-worker-one\", \"workspace\": \"/private/tmp/cf-real-agent-mk5f5xb1/worker-first\", \"branch\": \"codex/acceptance-worker-first-a6cd95\", \"base_sha\": \"8e15773b48a8802e208b18dded6f1af4595b5fae\", \"reconciled_running\": true}",
+              "job": {
+                "contract_id": "710118c2-1a6b-4c30-9426-ba53eb21f782",
+                "project_id": "c387023b-9298-431b-9f30-8572d3a2e1e7",
+                "milestone_id": "15009824-9364-4f09-ba43-12046b15ae59",
+                "revision": {
+                  "digest_ref": "02b9206f20bbdb528afa54579d35abad1796f6f2c6a8a374bd2c16105c78db15"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "cd5b2c96-a49a-4a89-b2bf-68cdee14266e",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:43:48.956644Z"
+                }
+              }
+            },
+            {
+              "id": 9,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:38:54.730907Z",
+              "job": {
+                "contract_id": "710118c2-1a6b-4c30-9426-ba53eb21f782",
+                "project_id": "c387023b-9298-431b-9f30-8572d3a2e1e7",
+                "milestone_id": "15009824-9364-4f09-ba43-12046b15ae59",
+                "revision": {
+                  "digest_ref": "02b9206f20bbdb528afa54579d35abad1796f6f2c6a8a374bd2c16105c78db15"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "cd5b2c96-a49a-4a89-b2bf-68cdee14266e",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:43:54.730907Z"
+                }
+              }
+            },
+            {
+              "id": 10,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:38:59.734095Z",
+              "job": {
+                "contract_id": "710118c2-1a6b-4c30-9426-ba53eb21f782",
+                "project_id": "c387023b-9298-431b-9f30-8572d3a2e1e7",
+                "milestone_id": "15009824-9364-4f09-ba43-12046b15ae59",
+                "revision": {
+                  "digest_ref": "02b9206f20bbdb528afa54579d35abad1796f6f2c6a8a374bd2c16105c78db15"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "cd5b2c96-a49a-4a89-b2bf-68cdee14266e",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:43:59.734095Z"
+                }
+              }
+            },
+            {
+              "id": 11,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:39:04.741191Z",
+              "job": {
+                "contract_id": "710118c2-1a6b-4c30-9426-ba53eb21f782",
+                "project_id": "c387023b-9298-431b-9f30-8572d3a2e1e7",
+                "milestone_id": "15009824-9364-4f09-ba43-12046b15ae59",
+                "revision": {
+                  "digest_ref": "02b9206f20bbdb528afa54579d35abad1796f6f2c6a8a374bd2c16105c78db15"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "cd5b2c96-a49a-4a89-b2bf-68cdee14266e",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:44:04.741191Z"
+                }
+              }
+            },
+            {
+              "id": 12,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:39:09.989093Z",
+              "job": {
+                "contract_id": "710118c2-1a6b-4c30-9426-ba53eb21f782",
+                "project_id": "c387023b-9298-431b-9f30-8572d3a2e1e7",
+                "milestone_id": "15009824-9364-4f09-ba43-12046b15ae59",
+                "revision": {
+                  "digest_ref": "02b9206f20bbdb528afa54579d35abad1796f6f2c6a8a374bd2c16105c78db15"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "cd5b2c96-a49a-4a89-b2bf-68cdee14266e",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:44:09.989093Z"
+                }
+              }
+            },
+            {
+              "id": 13,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:39:14.995319Z",
+              "job": {
+                "contract_id": "710118c2-1a6b-4c30-9426-ba53eb21f782",
+                "project_id": "c387023b-9298-431b-9f30-8572d3a2e1e7",
+                "milestone_id": "15009824-9364-4f09-ba43-12046b15ae59",
+                "revision": {
+                  "digest_ref": "02b9206f20bbdb528afa54579d35abad1796f6f2c6a8a374bd2c16105c78db15"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "cd5b2c96-a49a-4a89-b2bf-68cdee14266e",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:44:14.995319Z"
+                }
+              }
+            },
+            {
+              "id": 14,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:39:19.998189Z",
+              "job": {
+                "contract_id": "710118c2-1a6b-4c30-9426-ba53eb21f782",
+                "project_id": "c387023b-9298-431b-9f30-8572d3a2e1e7",
+                "milestone_id": "15009824-9364-4f09-ba43-12046b15ae59",
+                "revision": {
+                  "digest_ref": "02b9206f20bbdb528afa54579d35abad1796f6f2c6a8a374bd2c16105c78db15"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "cd5b2c96-a49a-4a89-b2bf-68cdee14266e",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:44:19.998189Z"
+                }
+              }
+            },
+            {
+              "id": 15,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:39:25.002531Z",
+              "job": {
+                "contract_id": "710118c2-1a6b-4c30-9426-ba53eb21f782",
+                "project_id": "c387023b-9298-431b-9f30-8572d3a2e1e7",
+                "milestone_id": "15009824-9364-4f09-ba43-12046b15ae59",
+                "revision": {
+                  "digest_ref": "02b9206f20bbdb528afa54579d35abad1796f6f2c6a8a374bd2c16105c78db15"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "cd5b2c96-a49a-4a89-b2bf-68cdee14266e",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:44:25.002531Z"
+                }
+              }
+            },
+            {
+              "id": 16,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:39:30.008439Z",
+              "job": {
+                "contract_id": "710118c2-1a6b-4c30-9426-ba53eb21f782",
+                "project_id": "c387023b-9298-431b-9f30-8572d3a2e1e7",
+                "milestone_id": "15009824-9364-4f09-ba43-12046b15ae59",
+                "revision": {
+                  "digest_ref": "02b9206f20bbdb528afa54579d35abad1796f6f2c6a8a374bd2c16105c78db15"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "cd5b2c96-a49a-4a89-b2bf-68cdee14266e",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:44:30.008439Z"
+                }
+              }
+            },
+            {
+              "id": 17,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:39:35.020179Z",
+              "job": {
+                "contract_id": "710118c2-1a6b-4c30-9426-ba53eb21f782",
+                "project_id": "c387023b-9298-431b-9f30-8572d3a2e1e7",
+                "milestone_id": "15009824-9364-4f09-ba43-12046b15ae59",
+                "revision": {
+                  "digest_ref": "02b9206f20bbdb528afa54579d35abad1796f6f2c6a8a374bd2c16105c78db15"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "cd5b2c96-a49a-4a89-b2bf-68cdee14266e",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:44:35.020179Z"
+                }
+              }
+            },
+            {
+              "id": 18,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:39:40.029526Z",
+              "job": {
+                "contract_id": "710118c2-1a6b-4c30-9426-ba53eb21f782",
+                "project_id": "c387023b-9298-431b-9f30-8572d3a2e1e7",
+                "milestone_id": "15009824-9364-4f09-ba43-12046b15ae59",
+                "revision": {
+                  "digest_ref": "02b9206f20bbdb528afa54579d35abad1796f6f2c6a8a374bd2c16105c78db15"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "cd5b2c96-a49a-4a89-b2bf-68cdee14266e",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:44:40.029526Z"
+                }
+              }
+            },
+            {
+              "id": 19,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:39:45.039996Z",
+              "job": {
+                "contract_id": "710118c2-1a6b-4c30-9426-ba53eb21f782",
+                "project_id": "c387023b-9298-431b-9f30-8572d3a2e1e7",
+                "milestone_id": "15009824-9364-4f09-ba43-12046b15ae59",
+                "revision": {
+                  "digest_ref": "02b9206f20bbdb528afa54579d35abad1796f6f2c6a8a374bd2c16105c78db15"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "cd5b2c96-a49a-4a89-b2bf-68cdee14266e",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:44:45.039996Z"
+                }
+              }
+            }
+          ],
+          "revisions": [
+            {
+              "number": 1,
+              "digest": "02b9206f20bbdb528afa54579d35abad1796f6f2c6a8a374bd2c16105c78db15",
+              "title": "Local runtime quickstart",
+              "body_markdown": "# Objective\nCreate `docs/RUNTIME_QUICKSTART.md` as a concise operator guide for Local runtime quickstart in the bounded local Hermes adapter.\n# Authority\nRead AGENTS.md, docs/LOCAL_RUNTIME.md, foundry_runtime/core.py, runtime.py, worker.py and remote.py.\nThe operator has prepared the initial runtime prerequisites. Review and preserve their safety properties.\n# Scope and non-goals\nWorker changes only `docs/RUNTIME_QUICKSTART.md`. Do not change code, tests, profiles, secrets or AI.Contract. Do not deploy.\nThe delivered candidate intentionally includes the operator-authored runtime prerequisites, tests, preflight and LOCAL_RUNTIME.md since the remote baseline. These are authorized prerequisite changes; QA must review those files as well as this guide. Worker writes only the guide.\n# Dependencies and conflicts\nNo prerequisites. Independent documentation file; no shared mutable code or target integration ownership.\n# Acceptance criteria\nThe guide accurately explains these concepts: AI.Contract, unknown, independent QA, no deployment, HERMES_DISABLE_LAZY_INSTALLS, runtime_launch. Include one practical recovery or verification example grounded in source. Avoid unverified acceptance claims.\nWorker runs the supplied checks and submits an actual commit. Independent QA inspects the exact candidate and relevant runtime safety controls, independently runs checks and records evidence. QA acceptance is not Done.\n# Verification and delivery\nUse the check capability. Coordinator integrates serially, verifies expected-head non-force main delivery and postchecks, then records native Done and historical issue. No deployment.\n",
+              "delivery_policy": "Direct main after independent exact-candidate QA, expected-head non-force delivery and postchecks. No deployment.",
+              "dependencies": null,
+              "conflicts": null
+            }
+          ]
+        }
+      ],
+      "runtime_events": [
+        {
+          "home": "home-25ed05f37dc24ce2b0e6832ebac6339e",
+          "events": [
+            {
+              "time": 1793547530.697814,
+              "event": "capability_probe",
+              "exposed": [
+                "foundry_action"
+              ],
+              "registry": [
+                "foundry_action"
+              ]
+            },
+            {
+              "time": 1793547530.697899,
+              "event": "capabilities",
+              "tools": [
+                "foundry_action"
+              ],
+              "actor": "acceptance-worker-one",
+              "role": "worker"
+            },
+            {
+              "time": 1793547530.6998699,
+              "event": "model_started"
+            },
+            {
+              "time": 1793547533.5645802,
+              "event": "tool",
+              "operation": "assignment"
+            },
+            {
+              "time": 1793547539.705639,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547539.713152,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547539.716144,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547539.720166,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547539.722143,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547539.723857,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547539.7257779,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547544.7951639,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547544.7981498,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547544.800735,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547551.852381,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547554.788558,
+              "event": "tool",
+              "operation": "assignment"
+            },
+            {
+              "time": 1793547566.741361,
+              "event": "tool",
+              "operation": "write"
+            },
+            {
+              "time": 1793547569.808645,
+              "event": "tool",
+              "operation": "diff"
+            },
+            {
+              "time": 1793547569.8617978,
+              "event": "tool",
+              "operation": "check"
+            },
+            {
+              "time": 1793547585.863852,
+              "event": "model_finished",
+              "completed": true,
+              "api_calls": 8
+            },
+            {
+              "time": 1793547585.867588,
+              "event": "blocked",
+              "category": "Barrier"
+            }
+          ]
+        }
+      ],
+      "immutable_revisions": {
+        "02b9206f20bbdb528afa54579d35abad1796f6f2c6a8a374bd2c16105c78db15": {
+          "number": 1,
+          "digest": "02b9206f20bbdb528afa54579d35abad1796f6f2c6a8a374bd2c16105c78db15",
+          "title": "Local runtime quickstart",
+          "body_markdown": "# Objective\nCreate `docs/RUNTIME_QUICKSTART.md` as a concise operator guide for Local runtime quickstart in the bounded local Hermes adapter.\n# Authority\nRead AGENTS.md, docs/LOCAL_RUNTIME.md, foundry_runtime/core.py, runtime.py, worker.py and remote.py.\nThe operator has prepared the initial runtime prerequisites. Review and preserve their safety properties.\n# Scope and non-goals\nWorker changes only `docs/RUNTIME_QUICKSTART.md`. Do not change code, tests, profiles, secrets or AI.Contract. Do not deploy.\nThe delivered candidate intentionally includes the operator-authored runtime prerequisites, tests, preflight and LOCAL_RUNTIME.md since the remote baseline. These are authorized prerequisite changes; QA must review those files as well as this guide. Worker writes only the guide.\n# Dependencies and conflicts\nNo prerequisites. Independent documentation file; no shared mutable code or target integration ownership.\n# Acceptance criteria\nThe guide accurately explains these concepts: AI.Contract, unknown, independent QA, no deployment, HERMES_DISABLE_LAZY_INSTALLS, runtime_launch. Include one practical recovery or verification example grounded in source. Avoid unverified acceptance claims.\nWorker runs the supplied checks and submits an actual commit. Independent QA inspects the exact candidate and relevant runtime safety controls, independently runs checks and records evidence. QA acceptance is not Done.\n# Verification and delivery\nUse the check capability. Coordinator integrates serially, verifies expected-head non-force main delivery and postchecks, then records native Done and historical issue. No deployment.\n",
+          "delivery_policy": "Direct main after independent exact-candidate QA, expected-head non-force delivery and postchecks. No deployment.",
+          "dependencies": null,
+          "conflicts": null
+        }
+      },
+      "immutable_candidates": {}
+    },
+    {
+      "status": "single_passed",
+      "ai_contract_revision": "d7748418a23e6ae8747bb0bed0730fc6c06f1fbf",
+      "foundry_bootstrap": "2268491c204a5ebdc969c82803bcf6992d63a5e8",
+      "hermes_revision": "bf0203a794a07aac3ff764972ab9087baa4e4f4e",
+      "backend": "installed Hermes AIAgent; macOS sandbox-exec checks; local SQLite AI.Contract",
+      "contracts": [
+        {
+          "job": {
+            "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+            "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+            "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+            "revision": {
+              "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+            },
+            "stage": "Done",
+            "queue_sequence": 6,
+            "attempt": {
+              "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+              "worker": "acceptance-worker-one",
+              "expires_at": "2026-11-01T15:47:51.265207Z"
+            },
+            "candidate": {
+              "id_ref": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db"
+            },
+            "last_reviewer": "acceptance-qa",
+            "accepted_candidate_id": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db",
+            "integration_reference": "https://github.com/stemarie/context-foundry/commit/2fdca761dd7a7f255d2641c564405c456d26e985",
+            "target_sha": "2fdca761dd7a7f255d2641c564405c456d26e985",
+            "completion_evidence": "Actual non-force expected-head delivery and remote SHA read-back; host control suite passed before and after delivery.",
+            "history_reference": "https://github.com/stemarie/context-foundry/issues/35"
+          },
+          "launch": "de8f10974fb022999b4069efdb6474f8a3fc67ebabac2ad8b54af743c8f18076"
+        }
+      ],
+      "delivery": [
+        {
+          "sha": "2fdca761dd7a7f255d2641c564405c456d26e985",
+          "expected": "8e15773b48a8802e208b18dded6f1af4595b5fae",
+          "non_force": true,
+          "history": "https://github.com/stemarie/context-foundry/issues/35"
+        }
+      ],
+      "limits": [],
+      "origin": "http://127.0.0.1:55212",
+      "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+      "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+      "self_qa_and_stale_bindings_rejected": true,
+      "failed_postcheck_kept_unresolved": true,
+      "cleanup": {
+        "owned_processes_stopped": true,
+        "native_homes_removed": true,
+        "database_removed_after_history_export": true,
+        "owned_worktrees_removed": true
+      },
+      "evidence_source": "final-single-report3.json",
+      "all_history": [
+        {
+          "events": [
+            {
+              "id": 5,
+              "operation": "define",
+              "actor": "mock-architect",
+              "at": "2026-11-01T15:41:35.256389Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "Draft",
+                "queue_sequence": 0
+              }
+            },
+            {
+              "id": 6,
+              "operation": "ready",
+              "actor": "mock-architect",
+              "at": "2026-11-01T15:41:35.26343Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "Ready",
+                "queue_sequence": 6
+              }
+            },
+            {
+              "id": 7,
+              "operation": "reserve",
+              "actor": "acceptance-coordinator",
+              "at": "2026-11-01T15:41:35.264542Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:46:35.264542Z"
+                }
+              }
+            },
+            {
+              "id": 8,
+              "operation": "record",
+              "actor": "acceptance-coordinator",
+              "at": "2026-11-01T15:41:36.218808Z",
+              "evidence": "{\"runtime_launch\": \"de8f10974fb022999b4069efdb6474f8a3fc67ebabac2ad8b54af743c8f18076\", \"pid\": 87452, \"role\": \"worker\", \"actor\": \"acceptance-worker-one\", \"workspace\": \"/private/tmp/cf-real-agent-l4qoo0xp/worker-first\", \"branch\": \"codex/acceptance-worker-first-6ccb27\", \"base_sha\": \"8e15773b48a8802e208b18dded6f1af4595b5fae\", \"reconciled_running\": true}",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:46:35.264542Z"
+                }
+              }
+            },
+            {
+              "id": 9,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:41:41.197866Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:46:41.197866Z"
+                }
+              }
+            },
+            {
+              "id": 10,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:41:46.200848Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:46:46.200848Z"
+                }
+              }
+            },
+            {
+              "id": 11,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:41:51.202612Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:46:51.202612Z"
+                }
+              }
+            },
+            {
+              "id": 12,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:41:56.206904Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:46:56.206904Z"
+                }
+              }
+            },
+            {
+              "id": 13,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:42:01.214174Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:01.214174Z"
+                }
+              }
+            },
+            {
+              "id": 14,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:42:06.21928Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:06.21928Z"
+                }
+              }
+            },
+            {
+              "id": 15,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:42:11.221191Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:11.221191Z"
+                }
+              }
+            },
+            {
+              "id": 16,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:42:16.227542Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:16.227542Z"
+                }
+              }
+            },
+            {
+              "id": 17,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:42:21.232962Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "Implementing",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:21.232962Z"
+                }
+              }
+            },
+            {
+              "id": 18,
+              "operation": "submit",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:42:24.280919Z",
+              "evidence": "{\"actor\": \"acceptance-worker-one\", \"checks\": {\"passed\": true, \"exit_code\": 0, \"output\": \"...........\\n----------------------------------------------------------------------\\nRan 11 tests in 0.042s\\n\\nOK\\n\"}, \"workspace\": \"/private/tmp/cf-real-agent-l4qoo0xp/worker-first\", \"branch\": \"codex/acceptance-worker-first-6ccb27\", \"base_sha\": \"8e15773b48a8802e208b18dded6f1af4595b5fae\", \"candidate_sha\": \"2fdca761dd7a7f255d2641c564405c456d26e985\", \"summary\": \"Document bounded local runtime quickstart\"}",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "QA",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:21.232962Z"
+                },
+                "candidate": {
+                  "id_ref": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db"
+                }
+              }
+            },
+            {
+              "id": 19,
+              "operation": "assign_qa",
+              "actor": "acceptance-coordinator",
+              "at": "2026-11-01T15:42:24.665221Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "QA",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:21.232962Z"
+                },
+                "candidate": {
+                  "id_ref": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db"
+                },
+                "reviewer": "acceptance-qa"
+              }
+            },
+            {
+              "id": 20,
+              "operation": "record",
+              "actor": "acceptance-coordinator",
+              "at": "2026-11-01T15:42:25.623799Z",
+              "evidence": "{\"runtime_launch\": \"efe43fbad1a9f96ace61c83ce7bdd37f39b1814ba9efe3fd30d7cb2f3565ebdd\", \"pid\": 87833, \"role\": \"qa\", \"actor\": \"acceptance-qa\", \"workspace\": \"/private/tmp/cf-real-agent-l4qoo0xp/qa-99cdf5\", \"branch\": \"codex/acceptance-qa-99cdf5-1071a1\", \"base_sha\": \"8e15773b48a8802e208b18dded6f1af4595b5fae\", \"reconciled_running\": true}",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "QA",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:21.232962Z"
+                },
+                "candidate": {
+                  "id_ref": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db"
+                },
+                "reviewer": "acceptance-qa"
+              }
+            },
+            {
+              "id": 21,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:42:26.238355Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "QA",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:26.238355Z"
+                },
+                "candidate": {
+                  "id_ref": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db"
+                },
+                "reviewer": "acceptance-qa"
+              }
+            },
+            {
+              "id": 22,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:42:31.241561Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "QA",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:31.241561Z"
+                },
+                "candidate": {
+                  "id_ref": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db"
+                },
+                "reviewer": "acceptance-qa"
+              }
+            },
+            {
+              "id": 23,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:42:36.246025Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "QA",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:36.246025Z"
+                },
+                "candidate": {
+                  "id_ref": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db"
+                },
+                "reviewer": "acceptance-qa"
+              }
+            },
+            {
+              "id": 24,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:42:41.255566Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "QA",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:41.255566Z"
+                },
+                "candidate": {
+                  "id_ref": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db"
+                },
+                "reviewer": "acceptance-qa"
+              }
+            },
+            {
+              "id": 25,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:42:46.25961Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "QA",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:46.25961Z"
+                },
+                "candidate": {
+                  "id_ref": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db"
+                },
+                "reviewer": "acceptance-qa"
+              }
+            },
+            {
+              "id": 26,
+              "operation": "heartbeat",
+              "actor": "acceptance-worker-one",
+              "at": "2026-11-01T15:42:51.265207Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "QA",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:51.265207Z"
+                },
+                "candidate": {
+                  "id_ref": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db"
+                },
+                "reviewer": "acceptance-qa"
+              }
+            },
+            {
+              "id": 27,
+              "operation": "verdict",
+              "actor": "acceptance-qa",
+              "at": "2026-11-01T15:42:52.16965Z",
+              "evidence": "{\"actor\": \"acceptance-qa\", \"candidate_sha\": \"2fdca761dd7a7f255d2641c564405c456d26e985\", \"checks\": {\"passed\": true, \"exit_code\": 0, \"output\": \"...........\\n----------------------------------------------------------------------\\nRan 11 tests in 0.039s\\n\\nOK\\n\"}, \"summary\": \"Accepted exact candidate 2fdca761dd7a7f255d2641c564405c456d26e985 for revision 1/c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454, attempt f99d5dc4-67ba-4a4a-a956-bd1604de7370. Independent review confirmed docs/RUNTIME_QUICKSTART.md accurately identifies AI.Contract authority; prepared-venv HERMES_DISABLE_LAZY_INSTALLS=1 fail-closed behavior; Launcher.ensure and runtime_launch evidence limits; running/stopped/unknown handling; unknown recovery blocks duplicate launch and stop-by-inference; separate exact-candidate QA; and no deployment/QA acceptance is not Done. These statements match docs/LOCAL_RUNTIME.md and foundry_runtime/core.py/runtime.py/worker.py/remote.py. Diff reviewed against declared base 8e15773b48a8802e208b18dded6f1af4595b5fae: worker guide edit plus contract-authorized prerequisite/runtime safety changes; no unauthorized deployment or product-code change identified. Independent exact-candidate check passed: PYTHONDONTWRITEBYTECODE=1 TMPDIR=/private/tmp python3 -m unittest discover -s tests -v -> 11 tests, OK, exit 0. Worker receipt is present and bound to this candidate. Acceptance is QA-only; Coordinator must perform expected-head non-force integration and postchecks before Done.\"}",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "QA accepted",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:51.265207Z"
+                },
+                "candidate": {
+                  "id_ref": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db"
+                },
+                "last_reviewer": "acceptance-qa",
+                "accepted_candidate_id": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db"
+              }
+            },
+            {
+              "id": 28,
+              "operation": "integrate",
+              "actor": "acceptance-coordinator",
+              "at": "2026-11-01T15:42:52.612644Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "Integrating",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:51.265207Z"
+                },
+                "candidate": {
+                  "id_ref": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db"
+                },
+                "last_reviewer": "acceptance-qa",
+                "accepted_candidate_id": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db"
+              }
+            },
+            {
+              "id": 29,
+              "operation": "record",
+              "actor": "acceptance-coordinator",
+              "at": "2026-11-01T15:42:55.507016Z",
+              "evidence": "Deliberate local postcheck probe exited 1; delivery is not completion.",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "Integrating",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:51.265207Z"
+                },
+                "candidate": {
+                  "id_ref": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db"
+                },
+                "last_reviewer": "acceptance-qa",
+                "accepted_candidate_id": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db"
+              }
+            },
+            {
+              "id": 30,
+              "operation": "complete",
+              "actor": "acceptance-coordinator",
+              "at": "2026-11-01T15:42:55.698445Z",
+              "evidence": "Actual non-force expected-head delivery and remote SHA read-back; host control suite passed before and after delivery.",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "Done",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:51.265207Z"
+                },
+                "candidate": {
+                  "id_ref": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db"
+                },
+                "last_reviewer": "acceptance-qa",
+                "accepted_candidate_id": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db",
+                "integration_reference": "https://github.com/stemarie/context-foundry/commit/2fdca761dd7a7f255d2641c564405c456d26e985",
+                "target_sha": "2fdca761dd7a7f255d2641c564405c456d26e985",
+                "completion_evidence": "Actual non-force expected-head delivery and remote SHA read-back; host control suite passed before and after delivery."
+              }
+            },
+            {
+              "id": 31,
+              "operation": "publish_history",
+              "actor": "acceptance-coordinator",
+              "at": "2026-11-01T15:42:59.971133Z",
+              "job": {
+                "contract_id": "57e123fc-c558-434c-8813-2c251dfb8f88",
+                "project_id": "e1608b8b-3b49-48b7-a939-3b5c8cbbcd2a",
+                "milestone_id": "2b0f19cf-73a0-4ebe-9aa1-5f131a811336",
+                "revision": {
+                  "digest_ref": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454"
+                },
+                "stage": "Done",
+                "queue_sequence": 6,
+                "attempt": {
+                  "id": "f99d5dc4-67ba-4a4a-a956-bd1604de7370",
+                  "worker": "acceptance-worker-one",
+                  "expires_at": "2026-11-01T15:47:51.265207Z"
+                },
+                "candidate": {
+                  "id_ref": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db"
+                },
+                "last_reviewer": "acceptance-qa",
+                "accepted_candidate_id": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db",
+                "integration_reference": "https://github.com/stemarie/context-foundry/commit/2fdca761dd7a7f255d2641c564405c456d26e985",
+                "target_sha": "2fdca761dd7a7f255d2641c564405c456d26e985",
+                "completion_evidence": "Actual non-force expected-head delivery and remote SHA read-back; host control suite passed before and after delivery.",
+                "history_reference": "https://github.com/stemarie/context-foundry/issues/35"
+              }
+            }
+          ],
+          "revisions": [
+            {
+              "number": 1,
+              "digest": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454",
+              "title": "Local runtime quickstart",
+              "body_markdown": "# Objective\nCreate `docs/RUNTIME_QUICKSTART.md` as a concise operator guide for Local runtime quickstart in the bounded local Hermes adapter.\n# Authority\nRead AGENTS.md, docs/LOCAL_RUNTIME.md, foundry_runtime/core.py, runtime.py, worker.py and remote.py.\nThe operator has prepared the initial runtime prerequisites. Review and preserve their safety properties.\n# Scope and non-goals\nWorker changes only `docs/RUNTIME_QUICKSTART.md`. Do not change code, tests, profiles, secrets or AI.Contract. Do not deploy.\nThe delivered candidate intentionally includes the operator-authored runtime prerequisites, tests, preflight and LOCAL_RUNTIME.md since the remote baseline. These are authorized prerequisite changes; QA must review those files as well as this guide. Worker writes only the guide.\n# Dependencies and conflicts\nNo prerequisites. Independent documentation file; no shared mutable code or target integration ownership.\n# Acceptance criteria\nThe guide accurately explains these concepts: AI.Contract, unknown, independent QA, no deployment, HERMES_DISABLE_LAZY_INSTALLS, runtime_launch. Include one practical recovery or verification example grounded in source. Avoid unverified acceptance claims.\nWorker runs the supplied checks and submits an actual commit. Independent QA inspects the exact candidate and relevant runtime safety controls, independently runs checks and records evidence. QA acceptance is not Done.\n# Verification and delivery\nUse the check capability. Coordinator integrates serially, verifies expected-head non-force main delivery and postchecks, then records native Done and historical issue. No deployment.\n",
+              "delivery_policy": "Direct main after independent exact-candidate QA, expected-head non-force delivery and postchecks. No deployment.",
+              "dependencies": null,
+              "conflicts": null
+            }
+          ]
+        }
+      ],
+      "runtime_events": [
+        {
+          "home": "home-0059dda3097a4fd29313221ca507bd1a",
+          "events": [
+            {
+              "time": 1793547746.3715358,
+              "event": "capability_probe",
+              "exposed": [
+                "foundry_action"
+              ],
+              "registry": [
+                "foundry_action"
+              ]
+            },
+            {
+              "time": 1793547746.37167,
+              "event": "capabilities",
+              "tools": [
+                "foundry_action"
+              ],
+              "actor": "acceptance-qa",
+              "role": "qa"
+            },
+            {
+              "time": 1793547746.374796,
+              "event": "model_started"
+            },
+            {
+              "time": 1793547749.4617789,
+              "event": "tool",
+              "operation": "assignment"
+            },
+            {
+              "time": 1793547755.982662,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547755.985945,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547755.988436,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547755.991376,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547755.993561,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547755.996096,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547755.997927,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547756.0008829,
+              "event": "tool",
+              "operation": "diff"
+            },
+            {
+              "time": 1793547760.694161,
+              "event": "tool",
+              "operation": "check"
+            },
+            {
+              "time": 1793547763.92625,
+              "event": "tool",
+              "operation": "assignment"
+            },
+            {
+              "time": 1793547772.128512,
+              "event": "tool",
+              "operation": "verdict"
+            }
+          ]
+        },
+        {
+          "home": "home-b2e61023eae7434984d35b61cf24530f",
+          "events": [
+            {
+              "time": 1793547697.064797,
+              "event": "capability_probe",
+              "exposed": [
+                "foundry_action"
+              ],
+              "registry": [
+                "foundry_action"
+              ]
+            },
+            {
+              "time": 1793547697.064982,
+              "event": "capabilities",
+              "tools": [
+                "foundry_action"
+              ],
+              "actor": "acceptance-worker-one",
+              "role": "worker"
+            },
+            {
+              "time": 1793547697.0693219,
+              "event": "model_started"
+            },
+            {
+              "time": 1793547700.263669,
+              "event": "tool",
+              "operation": "assignment"
+            },
+            {
+              "time": 1793547704.74331,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547704.7487848,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547704.752987,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547704.756335,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547704.760013,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547704.763593,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547704.766997,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547714.028193,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547714.0322711,
+              "event": "tool",
+              "operation": "read"
+            },
+            {
+              "time": 1793547714.034749,
+              "event": "tool",
+              "operation": "diff"
+            },
+            {
+              "time": 1793547729.5278878,
+              "event": "tool",
+              "operation": "write"
+            },
+            {
+              "time": 1793547732.1922822,
+              "event": "tool",
+              "operation": "assignment"
+            },
+            {
+              "time": 1793547734.741898,
+              "event": "tool",
+              "operation": "check"
+            },
+            {
+              "time": 1793547737.3388622,
+              "event": "tool",
+              "operation": "diff"
+            },
+            {
+              "time": 1793547742.223428,
+              "event": "tool",
+              "operation": "assignment"
+            },
+            {
+              "time": 1793547744.186361,
+              "event": "tool",
+              "operation": "submit"
+            },
+            {
+              "time": 1793547746.934593,
+              "event": "tool",
+              "operation": "assignment"
+            },
+            {
+              "time": 1793547756.388312,
+              "event": "model_finished",
+              "completed": true,
+              "api_calls": 11
+            },
+            {
+              "time": 1793547772.229829,
+              "event": "retired"
+            }
+          ]
+        }
+      ],
+      "immutable_revisions": {
+        "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454": {
+          "number": 1,
+          "digest": "c81751b2ccb3f9c40bf50a9f60efe9922b1c5087b583088c7793ba63daee8454",
+          "title": "Local runtime quickstart",
+          "body_markdown": "# Objective\nCreate `docs/RUNTIME_QUICKSTART.md` as a concise operator guide for Local runtime quickstart in the bounded local Hermes adapter.\n# Authority\nRead AGENTS.md, docs/LOCAL_RUNTIME.md, foundry_runtime/core.py, runtime.py, worker.py and remote.py.\nThe operator has prepared the initial runtime prerequisites. Review and preserve their safety properties.\n# Scope and non-goals\nWorker changes only `docs/RUNTIME_QUICKSTART.md`. Do not change code, tests, profiles, secrets or AI.Contract. Do not deploy.\nThe delivered candidate intentionally includes the operator-authored runtime prerequisites, tests, preflight and LOCAL_RUNTIME.md since the remote baseline. These are authorized prerequisite changes; QA must review those files as well as this guide. Worker writes only the guide.\n# Dependencies and conflicts\nNo prerequisites. Independent documentation file; no shared mutable code or target integration ownership.\n# Acceptance criteria\nThe guide accurately explains these concepts: AI.Contract, unknown, independent QA, no deployment, HERMES_DISABLE_LAZY_INSTALLS, runtime_launch. Include one practical recovery or verification example grounded in source. Avoid unverified acceptance claims.\nWorker runs the supplied checks and submits an actual commit. Independent QA inspects the exact candidate and relevant runtime safety controls, independently runs checks and records evidence. QA acceptance is not Done.\n# Verification and delivery\nUse the check capability. Coordinator integrates serially, verifies expected-head non-force main delivery and postchecks, then records native Done and historical issue. No deployment.\n",
+          "delivery_policy": "Direct main after independent exact-candidate QA, expected-head non-force delivery and postchecks. No deployment.",
+          "dependencies": null,
+          "conflicts": null
+        }
+      },
+      "immutable_candidates": {
+        "53cd96e5-243f-4ff8-b0b4-1f8bd87488db": {
+          "id": "53cd96e5-243f-4ff8-b0b4-1f8bd87488db",
+          "sha": "2fdca761dd7a7f255d2641c564405c456d26e985",
+          "evidence": "{\"actor\": \"acceptance-worker-one\", \"checks\": {\"passed\": true, \"exit_code\": 0, \"output\": \"...........\\n----------------------------------------------------------------------\\nRan 11 tests in 0.042s\\n\\nOK\\n\"}, \"workspace\": \"/private/tmp/cf-real-agent-l4qoo0xp/worker-first\", \"branch\": \"codex/acceptance-worker-first-6ccb27\", \"base_sha\": \"8e15773b48a8802e208b18dded6f1af4595b5fae\", \"candidate_sha\": \"2fdca761dd7a7f255d2641c564405c456d26e985\", \"summary\": \"Document bounded local runtime quickstart\"}",
+          "submitted_at": "2026-11-01T15:42:24.280919Z",
+          "sequence": 18
+        }
+      }
     }
   ],
   "encoding": "Lossless immutable revision/candidate dictionaries per run. Expand job.revision.digest_ref and job.candidate.id_ref to reconstruct each canonical history event. Redundant contract history copies omitted after event-ID verification.",
   "runtime_sha256_at_final_audit": {
     "foundry_runtime/__init__.py": "2dc11d40432d1dc267e0b082abff8ad38205bb3be2bfc47f4df183257e07f759",
     "foundry_runtime/core.py": "ebff3c56159acabc0754f2d0c8755ce1aa0d8d85574f32bfb28f72cbfeec3a6e",
-    "foundry_runtime/remote.py": "3104168a8c9532859a6971b214c66d196592ed042764a9904f21d1dc180a182a",
+    "foundry_runtime/remote.py": "e38878491cfba431e57161d19c7890b77050b1e6c3ce7db2bc14970d82499d1e",
     "foundry_runtime/runtime.py": "443a5b866d2b96ede653ba6f8b4c5baf97522f977d695a8599c80c639838639a",
-    "foundry_runtime/worker.py": "8d1725dcbb5562c8185447d35444e790ce9e08a7354772ab814ffdf1dab529f7"
+    "foundry_runtime/worker.py": "4e0c7ec0707d2bb37e0f0e1a7d125e6ba80fa46798ffd75669a5a3dd1242d4df"
   }
 }
