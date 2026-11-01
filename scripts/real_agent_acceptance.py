@@ -169,7 +169,7 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
                      'assert p.is_file(); text=p.read_text().lower(); '
                      'assert all(t.lower() in text for t in ' + repr(terms) + '); '
                      'suite=unittest.TestSuite([unittest.defaultTestLoader.discover("tests",pattern="test_core.py"),unittest.defaultTestLoader.discover("tests",pattern="test_transport.py")]); '
-                     'suite.addTests(unittest.defaultTestLoader.loadTestsFromName(\"test_gap_regressions.GapRegressions.\"+name) for name in '+repr(['test_assignment_finds_review_after_first_history_page','test_cached_result_race_releases_probe_without_claiming_network_health','test_local_rejection_releases_half_open_probe_without_claiming_health','test_read_and_diff_pages_reconstruct_full_stable_content','test_resource_status_and_server_reset_are_parsed_from_response_metadata','test_server_reset_blocks_automatic_and_operator_early_probes'])+'); '
+                     'suite.addTests(unittest.defaultTestLoader.loadTestsFromName(\"test_gap_regressions.GapRegressions.\"+name) for name in '+repr(['test_assignment_finds_review_after_first_history_page','test_cached_result_race_releases_probe_without_claiming_network_health','test_local_rejection_releases_half_open_probe_without_claiming_health','test_read_and_diff_pages_reconstruct_full_stable_content','test_resource_status_and_server_reset_are_parsed_from_response_metadata','test_server_reset_blocks_automatic_and_operator_early_probes', 'test_transport_diagnostics_are_classified_without_raw_error_text'])+'); '
                      'r=unittest.TextTestRunner(verbosity=1).run(suite); assert r.wasSuccessful()')
             return {'origin': origin, 'service_token': server.tokens[actor], 'binding': binding,
                     'role': role, 'workspace': str(directory), 'base_sha': base,
@@ -342,6 +342,12 @@ Read history through all necessary pages; heartbeat/record noise is not the late
             assert after['attempt']['id']==first['attempt']['id'] and after['candidate']==first['candidate']
             persisted=work('history',{'contract_id':task[0],'limit':100})
             assert persisted['events'][:len(before_history['events'])]==before_history['events']
+            mcp=mock.Client(origin,server.tokens,'mcp',15);mcp.initialize()
+            mcp_job=mcp.call('workflow_get',{'project_id':pid,'contract_id':task[0]},'reader')['workflow']['job']
+            assert mcp_job['candidate']==after['candidate'] and mcp_job['attempt']['id']==after['attempt']['id']
+            mcp_history=mcp.call('workflow_history',{'project_id':pid,'contract_id':task[0],'limit':100},'reader')['workflow']
+            assert mcp_history['events'][:len(before_history['events'])]==before_history['events']
+            report['http_mcp_native_restart_readback']=True
             until=time.monotonic()+20
             while time.monotonic()<until:
                 events=[json.loads(line) for line in (Path(config['home'])/'events.jsonl').read_text().splitlines()]

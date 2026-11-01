@@ -228,7 +228,10 @@ class Tools:
                     raise Barrier('history continuation did not advance')
                 after = page[-1]['id']
             return {'job': job, 'pending_submission': self.pending_submission(), 'history': events[-10:], 'history_total': len(events),
-                    'latest_review': next((e for e in reversed(events) if e['operation'] == 'verdict'), None),
+                    'latest_review': next((e for e in reversed(events) if e['operation'] == 'verdict'
+                        and e.get('job', {}).get('revision', {}).get('number') == self.binding['revision']
+                        and e.get('job', {}).get('revision', {}).get('digest') == self.binding['digest']
+                        and e.get('job', {}).get('attempt', {}).get('id') == self.binding['attempt_id']), None),
                     'files': sorted(str(p.relative_to(self.workspace)) for p in self.workspace.rglob('*')
                         if p.is_file() and not any(x.startswith('.git') for x in p.relative_to(self.workspace).parts))[:200]}
         if operation == 'history':

@@ -73,7 +73,8 @@ class GapRegressions(unittest.TestCase):
     def test_assignment_finds_review_after_first_history_page(self):
         tools=self.tools()
         events=[{'id':i,'operation':'heartbeat'} for i in range(1,151)]
-        events[105]={'id':106,'operation':'verdict','evidence':'current QA corrections'}
+        events[105]={'id':106,'operation':'verdict','evidence':'current QA corrections','job':{'revision':{'number':1,'digest':'d'},'attempt':{'id':'a'}}}
+        events[145]={'id':146,'operation':'verdict','evidence':'stale different attempt','job':{'revision':{'number':1,'digest':'d'},'attempt':{'id':'other'}}}
         class Service:
             def authority(self,*args):return {'stage':'Implementing'}
             def workflow(self,operation,body):
@@ -142,9 +143,23 @@ class GapRegressions(unittest.TestCase):
             self.assertEqual('open',db.execute('SELECT state FROM connections').fetchone()[0])
         permit=gate.operator_probe();gate.outcome(permit)
 
+    def test_transport_diagnostics_are_classified_without_raw_error_text(self):
+        import urllib.error
+        from foundry_runtime.runtime import Client, ServiceUnavailable
+        client=Client('http://127.0.0.1:1','fixture-only')
+        cases=[(ConnectionRefusedError('secret driver detail'),'connection_refused'),
+               (TimeoutError('secret driver detail'),'timeout'),
+               (ConnectionResetError('secret driver detail'),'connection_reset')]
+        for cause,expected in cases:
+            with patch.object(client.opener,'open',side_effect=urllib.error.URLError(cause)):
+                with self.assertRaises(ServiceUnavailable) as result:client.workflow('get',{})
+                self.assertEqual(expected,result.exception.category)
+                self.assertNotIn('secret driver detail',str(result.exception))
+
     def test_resource_status_and_server_reset_are_parsed_from_response_metadata(self):
         samples=[('HTTP 404: Not Found; request id abc401def','resource',None),
                  ('< HTTP/2 403\n< X-RateLimit-Remaining: 0\n< X-RateLimit-Reset: 4600\nAPI rate limit exceeded','rate_limit',3600),
+                 ('< HTTP/2 403\n< X-RateLimit-Remaining: 0\n< X-RateLimit-Reset: 4600\ngh: API rate limit exceeded (HTTP 403)','rate_limit',3600),
                  ('HTTP 403: insufficient repository permission','resource',None)]
         for stderr,category,delay in samples:
             with patch('subprocess.run',return_value=subprocess.CompletedProcess([],1,'',stderr)),patch('foundry_runtime.remote.time.time',return_value=1000):

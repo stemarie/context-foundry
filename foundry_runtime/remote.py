@@ -27,9 +27,10 @@ def response_metadata(stderr, now=None):
         elif line.startswith('< '):
             line = line[2:].strip()
         status = re.match(r'^HTTP(?:/\d+(?:\.\d+)?)?\s+([1-5]\d{2})(?:\s|:|$)', line, re.IGNORECASE)
+        header_status = status
         if not status:
             status = re.search(r'\(HTTP\s+([1-5]\d{2})\)\s*$', line, re.IGNORECASE)
-        if status:
+        if status and (header_status or not statuses or statuses[-1] != int(status[1])):
             statuses.append(int(status[1])); headers = {}
         header = re.match(r'^(Retry-After|X-RateLimit-Reset|X-RateLimit-Remaining):\s*(.*?)\s*$', line, re.IGNORECASE)
         if header:
