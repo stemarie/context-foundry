@@ -11,10 +11,10 @@ Current credentials expire 30 days after issue; exact expiry and IDs are in priv
 Use a trusted absolute import root; do not imply that generic `python -m` works from an arbitrary cwd:
 
 ```sh
-/usr/bin/python3 -I -B -c "import sys; sys.path.insert(0, '$HOME/.local/share/context-foundry/runtime'); from foundry_runtime.local_connection import main; main()" --config ~/.config/context-foundry/bee1.json status
+/usr/bin/python3 -I -B -c "import os, sys; sys.path.insert(0, os.path.expanduser('~/.local/share/context-foundry/runtime')); from foundry_runtime.local_connection import main; main()" --config ~/.config/context-foundry/bee1.json status
 ```
 
-`$HOME/.local/share/context-foundry/runtime` is the trusted expansion of `~/.local/share/context-foundry/runtime`. When configured, status reports the repository, project, planning horizon, queue target, pools, service readiness, and last native job. It does not prove `Done`.
+`os.path.expanduser` converts the trusted runtime location to an absolute path before importing. When configured, status reports the repository, project, planning horizon, queue target, pools, service readiness, and last native job. It does not prove `Done`.
 
 The stdio bridge owns a loopback-only SSH tunnel for its invocation and shuts it down at exit; it is not a daemon. SSH reaches `karell@192.168.1.176` and the already-running private listener `127.0.0.1:18080`. This makes no service change or deployment.
 
