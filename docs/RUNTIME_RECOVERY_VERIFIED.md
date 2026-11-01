@@ -27,3 +27,7 @@ The **breaker** is a single connection-scoped gate stored in one shared runtime 
 ## Practical correction example
 
 When QA requests a correction, the assigned Worker stays on the same attempt. First read every history page to find the current QA finding and its exact requested evidence. Make only the in-scope guide correction, run the supplied sandboxed check again, and submit the changed immutable candidate with a new concise summary. The submission path verifies that the checked workspace snapshot has not changed, commits once, and binds the service request to that candidate SHA. QA must then review the new exact candidate independently; QA acceptance still does not mark the contract Done.
+
+### Disposable acceptance evidence
+
+`CF-VALIDATED-9438790305684afea8c6e2b8b791b5aa` is disposable acceptance evidence requested by the staged correction fixture. It identifies the corrected guide for the fixture's marker check only; it is not a runtime control, a service record, or evidence of QA acceptance or delivery.
