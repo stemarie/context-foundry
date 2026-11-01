@@ -2,6 +2,8 @@
 
 The three findings against Context Foundry `37697f9` are corrected. AI.Contract remains unchanged at `d7748418a23e6ae8747bb0bed0730fc6c06f1fbf`. This follow-up uses disposable local fixtures and read-only remote queries during verification. No deployment, persistent profile or scheduler was installed.
 
+Later closure: [command admission, target recovery and final-source Hermes proof](COMMAND_ADMISSION_PROOFS_2026-11-01.md). The evidence below retains its original source and scope.
+
 ## Confirmed causes and fixes
 
 | Finding | Demonstrated cause and correction | Proof |

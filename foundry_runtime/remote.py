@@ -104,22 +104,27 @@ def tracked_command(gate, argv, cwd, env):
         gate.transport_finished(identity, not_started=True)
         raise
     try:
-        stdout, stderr = process.communicate(timeout=90)
-    except subprocess.TimeoutExpired:
-        # Only an un-reaped, still-running owned leader can be signalled safely.
-        if process.poll() is not None:
-            raise Barrier('transport leader exited; descendant quiescence requires reconciliation') from None
-        os.killpg(process.pid, signal.SIGKILL)
         try:
-            process.communicate(timeout=5)
+            stdout, stderr = process.communicate(timeout=90)
         except subprocess.TimeoutExpired:
-            raise Barrier('transport stop not confirmed') from None
+            # Only an un-reaped, still-running owned leader can be signalled safely.
+            if process.poll() is not None:
+                raise Barrier('transport leader exited; descendant quiescence requires reconciliation') from None
+            os.killpg(process.pid, signal.SIGKILL)
+            try:
+                process.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                raise Barrier('transport stop not confirmed') from None
+            gate.transport_finished(identity)
+            raise
         gate.transport_finished(identity)
-        raise
-    gate.transport_finished(identity)
-    if process.returncode == 125:
-        raise Barrier('transport command could not start; connection health unestablished')
-    return subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
+        if process.returncode == 125:
+            raise Barrier('transport command could not start; connection health unestablished')
+        return subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
+    finally:
+        process.stdout.close()
+        process.stderr.close()
+
 
 
 class GitHub:
@@ -144,6 +149,11 @@ class GitHub:
             except BlockingIOError:
                 raise Barrier('target integration busy; wait for current owner') from None
             try:
+                # A dead controller releases flock, but its Git process can live
+                # on. Inspect all connection aliases in this shared journal while
+                # holding the target lock, before admitting another integration.
+                with self.gate.journal.transaction() as db:
+                    self.gate.quiescent(db, all_connections=True)
                 yield
             finally:
                 fcntl.flock(stream, fcntl.LOCK_UN)

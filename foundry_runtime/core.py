@@ -15,6 +15,7 @@ import uuid
 
 
 active_gate = contextvars.ContextVar('active_transport_gate', default=None)
+active_admission = contextvars.ContextVar('active_transport_admission', default=None)
 
 
 class Barrier(RuntimeError):
@@ -50,6 +51,8 @@ class Journal:
                 db.execute('ALTER TABLE connections ADD COLUMN server_until REAL NOT NULL DEFAULT 0')
             if 'transport_tracking' not in fields:
                 db.execute('ALTER TABLE connections ADD COLUMN transport_tracking INTEGER NOT NULL DEFAULT 0')
+            if 'generation' not in fields:
+                db.execute('ALTER TABLE connections ADD COLUMN generation INTEGER NOT NULL DEFAULT 0')
             db.execute("CREATE TABLE IF NOT EXISTS submissions (identity TEXT PRIMARY KEY, intent TEXT NOT NULL, payload TEXT)")
             db.execute("CREATE TABLE IF NOT EXISTS transports (identity TEXT PRIMARY KEY, alias TEXT NOT NULL, pid INTEGER)")
         os.chmod(self.path, 0o600)
@@ -153,10 +156,11 @@ class Gate:
     def __init__(self, journal, alias):
         self.journal, self.alias = journal, alias
 
-    def quiescent(self, db, identity=None):
+    def quiescent(self, db, identity=None, all_connections=False):
         # Acknowledgement precedes exec in a new session. An absent leader is
         # insufficient: its process group can still contain an orphaned Git child.
-        rows = db.execute('SELECT identity,pid FROM transports WHERE alias=?', (self.alias,)).fetchall()
+        rows = (db.execute('SELECT identity,pid FROM transports').fetchall() if all_connections else
+                db.execute('SELECT identity,pid FROM transports WHERE alias=?', (self.alias,)).fetchall())
         for row in rows:
             if identity is not None and row['identity'] != identity:
                 continue
@@ -174,6 +178,15 @@ class Gate:
     def transport_intent(self):
         identity = uuid.uuid4().hex
         with self.journal.transaction() as db:
+            if active_gate.get() is self:
+                admission = active_admission.get()
+                row = db.execute('SELECT * FROM connections WHERE alias=?', (self.alias,)).fetchone()
+                if not admission or not row or row['generation'] != admission['generation']:
+                    raise Barrier('command admission changed; reconcile operation before retry')
+                permit = admission['permit']
+                if not ((permit is None and row['state'] == 'closed') or
+                        (permit is not None and row['state'] == 'half_open' and row['owner'] == permit)):
+                    raise Barrier('shared GitHub connection paused before command launch')
             db.execute('INSERT INTO transports VALUES(?,?,NULL)', (identity, self.alias))
         return identity
 
@@ -215,10 +228,10 @@ class Gate:
                 delay = min(300, 30 * 2 ** min(failures - 1, 4))
                 if retry_after is not None:
                     delay = max(delay, float(retry_after))
-                db.execute("UPDATE connections SET state='open',until=?,server_until=?,owner=NULL,owner_pid=NULL,failures=?,category=? WHERE alias=?",
+                db.execute("UPDATE connections SET state='open',until=?,server_until=?,owner=NULL,owner_pid=NULL,failures=?,category=?,generation=generation+1 WHERE alias=?",
                            (max(row['until'], row['server_until'], now + delay), max(row["server_until"], now + float(retry_after or 0)), failures, category, self.alias))
             elif permit is not None:
-                db.execute("UPDATE connections SET state='closed',until=0,server_until=0,owner=NULL,owner_pid=NULL,failures=0,category=NULL WHERE alias=?", (self.alias,))
+                db.execute("UPDATE connections SET state='closed',until=0,server_until=0,owner=NULL,owner_pid=NULL,failures=0,category=NULL,generation=generation+1 WHERE alias=?", (self.alias,))
             # A late success from before a failure must not close an open breaker.
 
     def release_probe(self, permit):
@@ -269,8 +282,14 @@ class Gate:
                 return json.loads(prior["result"])
         permit = self.acquire()
         token = active_gate.set(self)
+        admission_token = active_admission.set(None)
         try:
             with self.journal.transaction() as db:
+                row = db.execute('SELECT * FROM connections WHERE alias=?', (self.alias,)).fetchone()
+                if not ((permit is None and row['state'] == 'closed') or
+                        (permit is not None and row['state'] == 'half_open' and row['owner'] == permit)):
+                    raise Barrier('connection admission changed before operation')
+                active_admission.set({'permit': permit, 'generation': row['generation']})
                 prior = db.execute("SELECT * FROM remote_operations WHERE identity=?", (identity,)).fetchone()
                 if prior and (prior["alias"] != self.alias or prior["intent"] != hashed):
                     raise Barrier("remote operation identity conflict")
@@ -295,6 +314,7 @@ class Gate:
             self.outcome(permit, exc.category, exc.retry_after)
             raise Barrier("remote operation failed; reconcile before retry") from None
         finally:
+            active_admission.reset(admission_token)
             active_gate.reset(token)
             self.release_probe(permit)
 

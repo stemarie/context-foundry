@@ -76,3 +76,12 @@ API. Only `Alpha 1.0` is supported; missing/unknown versions fail closed. The
 model receives the checked version alongside the current native executable body;
 the ordinary body never substitutes for the native revision. No service schema,
 endpoint or assignment authority changes.
+
+The [command-admission/integration proof](COMMAND_ADMISSION_PROOFS_2026-11-01.md)
+adds per-command generation checks: opening/recovering the breaker invalidates an
+older callback's grant. Each command records its intent only after checking the
+current state and probe owner. A new operation must reconcile an uncertain old
+outcome; successful connection recovery does not authorize blindly replaying it.
+Target integration also waits for all recorded transport groups in the shared
+journal, across connection aliases, after acquiring the target lock. Controller
+exit releases the OS lock but cannot attest that a prior Git process stopped.
