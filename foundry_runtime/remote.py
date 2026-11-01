@@ -99,7 +99,7 @@ class GitHub:
                 raise Barrier('delivery must fast-forward')
             # Git's advertised expected head is checked again by the pre-push hook.
             # The push itself has no force option. A receive-side race is rejected by Git.
-            with tempfile.TemporaryDirectory(prefix='cf-push-', dir='/private/tmp') as root:
+            with tempfile.TemporaryDirectory(prefix='cf-push-', dir=Path(self.gate.journal.path).parent) as root:
                 hook = Path(root) / 'pre-push'
                 hook.write_text('#!/usr/bin/python3\nimport sys\nrows=[line.split() for line in sys.stdin]\n'
                                 'assert len(rows)==1\nr=rows[0]\nassert r[1]==' + repr(sha) +
@@ -126,7 +126,7 @@ class GitHub:
             prior = reconcile()
             if prior:
                 return prior
-            with tempfile.NamedTemporaryFile(mode='w', prefix='cf-issue-', suffix='.md', dir='/private/tmp') as stream:
+            with tempfile.NamedTemporaryFile(mode='w', prefix='cf-issue-', suffix='.md', dir=Path(self.gate.journal.path).parent) as stream:
                 stream.write(body + '\n\n' + marker + '\n')
                 stream.flush()
                 url = command(['gh', 'issue', 'create', '--repo', self.repository, '--title', title,

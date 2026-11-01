@@ -1,4 +1,6 @@
 import importlib.util
+import contextlib
+import io
 from pathlib import Path
 import subprocess
 import tempfile
@@ -67,7 +69,8 @@ class TransportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             report=Path(root)/'report.json';report.write_text('previous safe evidence')
             with patch.object(module.json,'dump',side_effect=OSError('fixture capacity failure')):
-                self.assertFalse(module.write_report(report,{'new':'evidence'}))
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.assertFalse(module.write_report(report,{'new':'evidence'}))
             self.assertEqual('previous safe evidence',report.read_text())
             self.assertEqual([report],list(Path(root).iterdir()))
 
