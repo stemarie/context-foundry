@@ -2,6 +2,8 @@
 
 Passed for the bounded, operator-invoked macOS backend. This was an actual installed-Hermes Worker/QA run with real repository delivery, not a substitution of the service mock receipts. No production deployment, persistent role profile, recurring scheduler or active Hermes configuration change was made.
 
+Subsequent audit and corrective acceptance: [six-gap closure and actual Docker/correction proof](HERMES_GAP_CLOSURE_2026-11-01.md). The historical runs below retain their original scopes; the follow-up supersedes the identified implementation/coverage gaps.
+
 ## Scope and versions
 
 - Approved repository: `stemarie/context-foundry`, direct non-force delivery to `main` under AGENTS.md. AI.Contract source was unchanged.

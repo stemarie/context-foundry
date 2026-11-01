@@ -7,7 +7,7 @@ assignments, leases, candidates, QA and integration evidence.
 
 The operator supplies a separate disposable native home, scratch directory,
 workspace, role credential and immutable binding to `Launcher.ensure(config,
-model_runtime)`. Use a prepared Hermes virtualenv. The child sets the supported `HERMES_DISABLE_LAZY_INSTALLS=1` mode, so isolated homes do not provision dependency copies. Missing dependencies fail closed. Provider credentials arrive through private stdin, never the
+model_runtime)`. Native startup uses isolated Python (`-I -B`) with explicit trusted import roots; candidate modules cannot bootstrap the agent. Use a prepared Hermes virtualenv. The child sets the supported `HERMES_DISABLE_LAZY_INSTALLS=1` mode, so isolated homes do not provision dependency copies. Missing dependencies fail closed. Provider credentials arrive through private stdin, never the
 launch journal or model tool arguments. `inspect(key)` returns running, stopped
 or unknown. Repeated `ensure` reconciles the existing identity. An unknown
 execution blocks recovery; `stop` must prove the owned process group stopped.
@@ -42,3 +42,20 @@ PYTHONDONTWRITEBYTECODE=1 TMPDIR=/private/tmp python3 -m unittest discover -s te
 The separate `scripts/acceptance_preflight.py` verifies service/native skill
 prerequisites. It does not claim real-agent acceptance. The `real_agent_acceptance.py` scenarios use actual model calls and authorized main delivery; `breaker_acceptance.py` uses actual disposable service projects with simulated remote failures. See the [acceptance report](HERMES_ACCEPTANCE_2026-11-01.md)
 for executed scenarios, actual revisions, delivery identities and remaining limits.
+
+
+Read/diff pages expose `next_offset`, `total_characters`, `truncated` and `version`.
+Continue with the returned offset/version until next_offset is null. History uses
+`after`/`next_after`; assignment resolves all pages and separately exposes the
+current-attempt `latest_review`. Historical reviews never transfer acceptance.
+
+Submission prepares a durable local outbox intent before committing. Retrying a
+verified unchanged workspace uses its original SHA/evidence/idempotency request;
+`pending_submission` exposes its original summary. The outbox is transport
+reconciliation only. AI.Contract remains authoritative for whether it accepted it.
+
+Connection probes are released on every callback exit. Recovery can reclaim a
+proven dead process owner, never a live/unobservable one. Operator intervention
+respects known server reset deadlines. Transport diagnostics use safe categories;
+transient service outages fence actions until actual current authority and the
+owning heartbeat are revalidated. See the [gap-closure proof](HERMES_GAP_CLOSURE_2026-11-01.md).

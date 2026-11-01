@@ -10,7 +10,7 @@ Architect prepares bounded contracts within human-defined scope. Coordinator res
 
 The skill source pack is version 0.3. Native AI.Contract workflow support and the
 bounded local Hermes adapter/shared GitHub gate are implemented and tested.
-[Real-agent acceptance](docs/HERMES_ACCEPTANCE_2026-11-01.md) passed with independent
+[Real-agent acceptance](docs/HERMES_ACCEPTANCE_2026-11-01.md) and the [audit-gap closure](docs/HERMES_GAP_CLOSURE_2026-11-01.md) passed with independent
 QA, concurrent Workers, restart/expiry recovery and actual direct-main delivery.
 The verified backend is an operator-invoked macOS process wrapper with restricted
 checks. No persistent profiles, scheduler, active configuration change or

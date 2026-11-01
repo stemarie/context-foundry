@@ -607,7 +607,7 @@ def main():
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--scenario',choices=['single','parallel','recovery','correction'],default='single')
     parser.add_argument('--docker-image')
-    parser.add_argument('--docker-host',default='unix:///Users/karellste-marie/.colima/gapfix/docker.sock')
+    parser.add_argument('--docker-host',default=os.environ.get('DOCKER_HOST','unix:///var/run/docker.sock'))
     run(parser.parse_args())
 
 if __name__ == '__main__':
