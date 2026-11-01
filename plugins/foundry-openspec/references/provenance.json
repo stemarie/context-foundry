@@ -1,0 +1,172 @@
+{
+  "official_openspec_source": "https://github.com/Fission-AI/OpenSpec",
+  "official_revision": "27c0515724decc633818c735ee596481eec78a8b",
+  "copied_from_local_installation": "2026-10-31",
+  "adaptations": [
+    "Shared runtime and skill-loading guidance",
+    "Removed CLI-specific allowed-tools restriction in plugin copies",
+    "Normalized unsupported legacy product metadata without restricting products",
+    "Resized bundled skill icon to 128 pixels"
+  ],
+  "native_foundry_source": "https://github.com/stemarie/context-foundry",
+  "native_foundry_content": {
+    "source_repository": "https://github.com/stemarie/context-foundry",
+    "source_sha256": {
+      "skills/openspec-foundry/SKILL.md": "ddadfce5a73474e36ab0bbc4407046f8c7452f9fc8daf6f933de43434f2d519e",
+      "skills/foundry-worker/SKILL.md": "1ca58900745871105157582b34b4df8a6afc84f38db43004454b55ca98e6cef1",
+      "docs/WORKFLOW.md": "2e5cd7513b1484a8cafa6b4bc64b0a21cf9def5bf627fd8a1e3277665016de4f",
+      "docs/HERMES_HANDOFF.md": "543cc9ccbafd886158ea380946a9d32f06b2198883c02083300296418e9801d9",
+      "docs/LOCAL_RUNTIME.md": "546c3350752139d04c67d0b5dd2e3a8cd39659c32bdbd497193a6ee6e12dfe22",
+      "docs/COMMAND_ADMISSION_PROOFS_2026-11-01.md": "b37af66d026952ee7e55f827b1bdb420a3b6160df1314bd1e88fee933c3c21b2",
+      "docs/FOLLOWUP_GAP_CLOSURE_2026-11-01.md": "59428ba8a27a19fa24ca25724036f87bed05c8669a8e1cc06dab885965fed87d",
+      "docs/HERMES_GAP_CLOSURE_2026-11-01.md": "fdb7bff4116453fa44b7311707ed61e9c98038914186ccecd987711bad92e98d",
+      "docs/HERMES_ACCEPTANCE.md": "478ecea94fa5d8dc6e9197669cda62b6512f0c344477ec44643d0c0731b2723a",
+      "docs/HERMES_RUNTIME_ADAPTER.md": "4daa8f8cb9d102a7d429bfb98105f33c5d33f21ec45f92c934830d2a4bfba5c5",
+      "skills/AI_CONTRACT_INTERFACE.md": "d103392b7a69a874ddb37b12b67d818556e14fff141ac20bf7685271b4b055fb",
+      "docs/HERMES_ACCEPTANCE_2026-11-01.md": "6364f3289b64602718dede1cc45ccc099802cc764d55b79a6a6910c641acb51e",
+      "WORK_CONTRACT.md": "33fc1f05f05a4d8652a987d21624115adb928e6135c454f6422a82aab5021df4",
+      "skills/README.md": "32fbfc4d56f82602e5785d9751ea4ba6ea4d6f3702780c962a7ada1bc906c05e",
+      "docs/SKILL_REVIEW.md": "857be9765a7a1daad023cc9690baba2e5c61d60208bf33b4090f571a9de55611",
+      "docs/AI_CONTRACT_CHANGES.md": "8aff97ec2e1cbca888093ccbcc7158b97ceb22f28c8d89bbcd6db7850146f60f",
+      "skills/OPERATING_RULES.md": "5e807beca31187b7f4cd53cdf92b7b9e5f82bd6b7b8f4cf95be54ed84cb283fc",
+      "skills/foundry-start/SKILL.md": "f44c8bbf2b7ec9cc82d96101d8bfa936ad0ebde9f83ea5223a3eb7be51ee96e6",
+      "skills/foundry-qa/SKILL.md": "f3f3ce319008f630aee992d989ba14f76e3069523d307958ba9c0aa8f7ff1423",
+      "skills/foundry-propose/SKILL.md": "dfa9623c093a776190acabda63cd689121328468000725f74acf30b03b4e47ab",
+      "skills/foundry-loop/SKILL.md": "1939897f7bba44051f784cc9eaf9427cf5c41deff2cabb985fb6e48d9103f8d3",
+      "skills/foundry-implement/SKILL.md": "7015f5843e4b058e4bbe3c8bca809989bf44a901470a2a13a909178affaeec69",
+      "skills/foundry-explore/SKILL.md": "72c99db0bd0561995f3547f027f1ff0f432aead1ba2a265fdd3f39d434cab512",
+      "skills/foundry-create-workorder/SKILL.md": "fbf8d65a189afb9adaf0f8273a4f90bcf0a31c9f2bfefaffc62d83ae08a539ea",
+      "skills/foundry-coordinator/SKILL.md": "33a3f305df3b28fee435ded27e52c15ecfed897756f3e2244742ec3154e298fc",
+      "skills/foundry-commit/SKILL.md": "2333d586b13a199b4ce959a2c07c0e8c1c36d13e913000e5ee5ebfd166d5c091",
+      "skills/foundry-audit/SKILL.md": "49a7b010b28e1b007aa46c1660ce8b4e36a7c195b8151adaa48429e5d66c60ec",
+      "skills/foundry-architect/SKILL.md": "99c65d55e2b3e2ed6b9d60953da5fa2c903287ad5eb37ccc6f6d016d3153b784"
+    },
+    "skills": [
+      "foundry-architect",
+      "foundry-audit",
+      "foundry-commit",
+      "foundry-coordinator",
+      "foundry-create-workorder",
+      "foundry-explore",
+      "foundry-implement",
+      "foundry-loop",
+      "foundry-propose",
+      "foundry-qa",
+      "foundry-start",
+      "foundry-worker",
+      "openspec-foundry"
+    ]
+  },
+  "preserved_openspec_sha256": {
+    "openspec-apply-change": "785eeaf72cf8183bf48e77bec0400c77ed9f6bbe5bb1abb64bf9767dae069385",
+    "openspec-explore": "98cf815beeb4e473cd1fd6ce39ea2e2b9adf0d85eee6922578cb2c634b400efd",
+    "openspec-verify-change": "4236cfa901041e253157e8fc9b2706e810a64d6c77e9509a5e08dfb23c9458bf",
+    "openspec-new-change": "ffee45c0d3e627c5d65c66a683f75f2a2e3338df863f1775da21b29357fd6105",
+    "openspec-update-change": "3fc19d533314078a25a92eca1979c3ce580489277b562da0e07a25b9d049208b",
+    "openspec-archive-change": "2d2f914f2714dbf948fc8e562e32da6677215c78f1a495c68fe01f7d26b03fcd",
+    "openspec-onboard": "4260b249e6f930af59d87b2d224236016d26c64d341f4207de1a7217a4d84fbc",
+    "openspec-propose": "2761f08ff1347a7af054712891a1073d38a3cd3734aec596810eb98b37b893e7",
+    "openspec-bulk-archive-change": "579c4384b8d03de80dbc87b979c9e90dff47df198abee8037362ce6adffa155e",
+    "openspec-continue-change": "37495f599a9301b32dcbc0ff6715a317ab06ed2e4be94ec39518d86b1f4e7265",
+    "openspec-sync-specs": "6c57d52939000b4904e664c93474ca3fc5d52c57ffcbe57068a1fa18a472c83e",
+    "openspec-ff-change": "a7108a1c3442f46cd09c02dff8fb42b85f5e82e256faac8b2d7dd142508db14e"
+  },
+  "prior_release_provenance": {
+    "official_openspec_source": "https://github.com/Fission-AI/OpenSpec",
+    "official_revision": "27c0515724decc633818c735ee596481eec78a8b",
+    "copied_from_local_installation": "2026-10-31",
+    "adaptations": [
+      "Shared runtime and skill-loading guidance",
+      "Removed CLI-specific allowed-tools restriction in plugin copies",
+      "Normalized unsupported legacy product metadata without restricting products",
+      "Resized bundled skill icon to 128 pixels"
+    ],
+    "skills": {
+      "foundry-audit": {
+        "original_sha256": "a75d1d95aa6f2f4d70a1382438c164c2cac3460d86933c18c2231c2c4183181f",
+        "plugin_sha256": "2b4a44d17f217d6e479fcfc69486ce46a5bad05aa65050ee5cfab6e56874e86e"
+      },
+      "foundry-commit": {
+        "original_sha256": "86077153343727fd9c5d9b90e9c5cfa9486ab88990b613526e58d1d4bb45412c",
+        "plugin_sha256": "06f2e40bbd8a7ccde3f52b0ef6d4d96d3a6b810a0e0ee716601c18babf319210"
+      },
+      "foundry-create-workorder": {
+        "original_sha256": "ce8a83ea7f8119aa84f034dd9a3ea6a3e405346d416d57d71f81428c107168b8",
+        "plugin_sha256": "6835b97782e5f4873f4b39a69fd85a0ddd9184a246f5ae2623e4dafed78aa4a1"
+      },
+      "foundry-explore": {
+        "original_sha256": "72c99db0bd0561995f3547f027f1ff0f432aead1ba2a265fdd3f39d434cab512",
+        "plugin_sha256": "149c91f19f9751785baf07b90f88290942973f6ca814e416e59dab1bf64f4d83"
+      },
+      "foundry-implement": {
+        "original_sha256": "c034d9cca84e00eb240fa590d2235efdbd4818fe088b760076ced6b2fe58c95f",
+        "plugin_sha256": "14462a2fdb97365f64b8d6260e1f8c8240775c87e82c3d3d4b50c77b3150f655"
+      },
+      "foundry-loop": {
+        "original_sha256": "8eee03f7e55f90dc53b9f662f65bd390d76ed508c32dcca069574bf0cbe043a0",
+        "plugin_sha256": "1f22b433c75aa9fdb4ce17244068747d53c585f6941379b53c576c44df93854e"
+      },
+      "foundry-propose": {
+        "original_sha256": "259d87ccc979ecad6fbffe8ba731b1bba91f31f87ca7e55503380f16cbe712ec",
+        "plugin_sha256": "4f4bb97fc6f6c84fc3a27480b570e9e66839f13cad072cf53abd8687e57b09ed"
+      },
+      "foundry-start": {
+        "original_sha256": "990a26888a36b164f9cfe567242aafb17ce8eacea9336eef5b8b426c787e8e1c",
+        "plugin_sha256": "0b6da9b63c50e6edff165acc570ac157c34145b97b638bfce72b85f5ce9d9f8b"
+      },
+      "openspec-apply-change": {
+        "original_sha256": "40fc0655ae650213a130f376eed1475527d6c65cdc32973754449776a3227152",
+        "plugin_sha256": "785eeaf72cf8183bf48e77bec0400c77ed9f6bbe5bb1abb64bf9767dae069385"
+      },
+      "openspec-archive-change": {
+        "original_sha256": "b080e65449e9895fb63964c811168943bf99cb131a378b6a9937ed519ae4d37f",
+        "plugin_sha256": "2d2f914f2714dbf948fc8e562e32da6677215c78f1a495c68fe01f7d26b03fcd"
+      },
+      "openspec-bulk-archive-change": {
+        "original_sha256": "cf2d41a55e4edc805ae9da48b418c8da3055e0ffd4824070a501b3dd840a5484",
+        "plugin_sha256": "579c4384b8d03de80dbc87b979c9e90dff47df198abee8037362ce6adffa155e"
+      },
+      "openspec-continue-change": {
+        "original_sha256": "2c63e2828d784d0d4eaa94211421b329875fde290503b7823c93518735f60cec",
+        "plugin_sha256": "37495f599a9301b32dcbc0ff6715a317ab06ed2e4be94ec39518d86b1f4e7265"
+      },
+      "openspec-explore": {
+        "original_sha256": "e9fe2acf923d5f9376c5e198df235d7cc531913ba3d760faff867f9c60dbfebb",
+        "plugin_sha256": "98cf815beeb4e473cd1fd6ce39ea2e2b9adf0d85eee6922578cb2c634b400efd"
+      },
+      "openspec-ff-change": {
+        "original_sha256": "8532ec76a78ef0754de03525b0706ed470cecff397558a4496da3fcc28db603b",
+        "plugin_sha256": "a7108a1c3442f46cd09c02dff8fb42b85f5e82e256faac8b2d7dd142508db14e"
+      },
+      "openspec-foundry": {
+        "original_sha256": "5205abd4e1338f79e990bf4d64f7b6b64a275f56cfcda0a7f5653249a097b466",
+        "plugin_sha256": "4ac7748a96b6ee84ea3bd83fac02529ca9ecf6a1121b196d15aa204b6866693e"
+      },
+      "openspec-new-change": {
+        "original_sha256": "5b28565b38e7cb46c4895c0b190ed1dd896da3853c38a96065b3101604f9ba24",
+        "plugin_sha256": "ffee45c0d3e627c5d65c66a683f75f2a2e3338df863f1775da21b29357fd6105"
+      },
+      "openspec-onboard": {
+        "original_sha256": "3418d949ea0c49de6110e6d9bbe714799517b0f159804647931fcc23dfedfcd1",
+        "plugin_sha256": "4260b249e6f930af59d87b2d224236016d26c64d341f4207de1a7217a4d84fbc"
+      },
+      "openspec-propose": {
+        "original_sha256": "e9f4baa05e9fdbc969fcbdb8b13b4795c19640cc920999cf06c30a1a1934bb5c",
+        "plugin_sha256": "2761f08ff1347a7af054712891a1073d38a3cd3734aec596810eb98b37b893e7"
+      },
+      "openspec-sync-specs": {
+        "original_sha256": "474952afb40497c5cb756e5654ddc901619de6b3bd57aaa03fb11d2611a99da3",
+        "plugin_sha256": "6c57d52939000b4904e664c93474ca3fc5d52c57ffcbe57068a1fa18a472c83e"
+      },
+      "openspec-update-change": {
+        "original_sha256": "9ca71b1ec6252e743028e561d73df32678e4486f80d2cb63887aa8648dc3a5cb",
+        "plugin_sha256": "3fc19d533314078a25a92eca1979c3ce580489277b562da0e07a25b9d049208b"
+      },
+      "openspec-verify-change": {
+        "original_sha256": "f06dfdd46d810b3db1e900044542fe89864578bd43b6705faff67e8f39bce97b",
+        "plugin_sha256": "4236cfa901041e253157e8fc9b2706e810a64d6c77e9509a5e08dfb23c9458bf"
+      }
+    }
+  },
+  "native_update_date": "2026-11-01"
+}

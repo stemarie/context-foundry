@@ -1,0 +1,4 @@
+interface:
+  display_name: "Foundry Explore"
+  short_description: "Explore system ideas through OpenSpec"
+  default_prompt: "Use $foundry-explore to explore this system and clarify its requirements."

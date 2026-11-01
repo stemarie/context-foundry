@@ -1,0 +1,5 @@
+interface:
+  display_name: Foundry Audit
+  short_description: AI.Contract-backed Foundry workflow
+  default_prompt: Independently audit the assigned exact AI.Contract candidate without
+    implementing changes.

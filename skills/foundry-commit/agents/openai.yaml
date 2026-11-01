@@ -1,0 +1,5 @@
+interface:
+  display_name: Foundry Commit
+  short_description: AI.Contract-backed Foundry workflow
+  default_prompt: Integrate the accepted AI.Contract candidate under AGENTS.md and
+    record verified completion/history.

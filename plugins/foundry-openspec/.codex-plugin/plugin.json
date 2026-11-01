@@ -1,0 +1,32 @@
+{
+  "interface": {
+    "capabilities": [],
+    "category": "Developer Tools",
+    "composerIcon": "./assets/icon.svg",
+    "defaultPrompt": [
+      "Use foundry-explore to clarify my system requirements.",
+      "Use foundry-propose to create a system proposal.",
+      "Use foundry-start to execute my prepared OpenSpec change."
+    ],
+    "developerName": "Karell Ste-Marie",
+    "displayName": "Foundry + OpenSpec",
+    "logo": "./assets/icon.svg",
+    "longDescription": "Twelve Foundry execution and role skills, twelve official OpenSpec planning skills, and the OpenSpec–Foundry adapter. AI.Contract owns live contracts, attempts, QA and completion; GitHub records final history. Execution requires a verified service connection, scoped actors and runtime adapters. This skills-only plugin creates no machine connection, credentials, scheduler or deployment.",
+    "shortDescription": "Specs to verified delivery"
+  },
+  "name": "foundry-openspec",
+  "version": "1.1.0",
+  "description": "Explore and specify systems with OpenSpec, then deliver bounded work orders through the Foundry workflow.",
+  "author": {
+    "name": "Karell Ste-Marie",
+    "email": "karell.stemarie@gmail.com"
+  },
+  "keywords": [
+    "foundry",
+    "openspec",
+    "specifications",
+    "work-orders",
+    "software-development"
+  ],
+  "skills": "./skills"
+}

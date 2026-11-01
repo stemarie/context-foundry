@@ -1,0 +1,4 @@
+interface:
+  display_name: "Foundry Propose"
+  short_description: "Create OpenSpec proposals through Foundry"
+  default_prompt: "Use $foundry-propose to turn this system design into an OpenSpec proposal."

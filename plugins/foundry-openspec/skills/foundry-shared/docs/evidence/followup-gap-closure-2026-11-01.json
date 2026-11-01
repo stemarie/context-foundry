@@ -1,0 +1,206 @@
+{
+  "baseline": "37697f9e3adbb4a41267ad5fd955cdb051ff7963",
+  "ai_contract_revision": "d7748418a23e6ae8747bb0bed0730fc6c06f1fbf",
+  "scope": "Three confirmed Context Foundry audit findings; disposable local process/service proofs; no deployment",
+  "fail_first": {
+    "tests": 3,
+    "failures": 2,
+    "errors": 1,
+    "causes": [
+      "reset deadline shortened",
+      "orphaned command admitted another probe",
+      "semantic version absent"
+    ]
+  },
+  "final_tests": {
+    "count": 30,
+    "status": "passed",
+    "output": "test_file_capabilities_reject_escape_symlink_and_git_metadata (test_core.CoreTests) ... ok\ntest_launch_intent_replay_and_missing_handle_remain_unknown (test_core.CoreTests) ... ok\ntest_service_timestamp_variable_nanosecond_precision (test_core.CoreTests) ... ok\ntest_shared_breaker_single_probe_backoff_and_resource_errors (test_core.CoreTests) ... ok\ntest_uncertain_remote_write_reconciles_without_duplicate (test_core.CoreTests) ... ok\ntest_dead_controller_does_not_release_live_transport_group (test_followup_regressions.FollowupRegressions) ... ok\ntest_exec_failure_releases_probe_without_claiming_connection_health (test_followup_regressions.FollowupRegressions) ... ok\ntest_exited_transport_leader_does_not_hide_live_descendant (test_followup_regressions.FollowupRegressions) ... ok\ntest_late_failure_preserves_longest_server_deadline (test_followup_regressions.FollowupRegressions) ... ok\ntest_legacy_probe_cannot_infer_transport_quiescence (test_followup_regressions.FollowupRegressions) ... ok\ntest_semantic_version_read_precedes_native_authority (test_followup_regressions.FollowupRegressions) ... ok\ntest_unknown_transport_start_stays_blocked (test_followup_regressions.FollowupRegressions) ... ok\ntest_unknown_version_blocks_launch_before_process_or_intent (test_followup_regressions.FollowupRegressions) ... ok\ntest_assignment_finds_review_after_first_history_page (test_gap_regressions.GapRegressions) ... ok\ntest_cached_result_race_releases_probe_without_claiming_network_health (test_gap_regressions.GapRegressions) ... ok\ntest_candidate_modules_never_run_during_native_startup (test_gap_regressions.GapRegressions) ... ok\ntest_dead_probe_owner_can_be_recovered_but_live_owner_cannot (test_gap_regressions.GapRegressions) ... ok\ntest_local_rejection_releases_half_open_probe_without_claiming_health (test_gap_regressions.GapRegressions) ... ok\ntest_read_and_diff_pages_reconstruct_full_stable_content (test_gap_regressions.GapRegressions) ... ok\ntest_resource_status_and_server_reset_are_parsed_from_response_metadata (test_gap_regressions.GapRegressions) ... ok\ntest_server_reset_blocks_automatic_and_operator_early_probes (test_gap_regressions.GapRegressions) ... ok\ntest_submission_retry_reuses_commit_and_identical_request_after_restart (test_gap_regressions.GapRegressions) ... ok\ntest_transport_diagnostics_are_classified_without_raw_error_text (test_gap_regressions.GapRegressions) ... ok\ntest_check_runs_but_network_fork_and_other_home_reads_fail (test_sandbox.SandboxTests) ... ok\ntest_cached_write_does_not_close_open_breaker (test_transport.TransportTests) ... ok\ntest_cli_rate_hint_and_resource_error_classification (test_transport.TransportTests) ... ok\ntest_lost_git_push_response_reconciles_without_another_push (test_transport.TransportTests) ... ok\ntest_report_capacity_error_preserves_previous_evidence (test_transport.TransportTests) ... ok\ntest_target_lock_excludes_another_project_caller (test_transport.TransportTests) ... ok\ntest_two_project_callers_share_gate_and_resource_errors_stay_local (test_transport.TransportTests) ... ok\n\n----------------------------------------------------------------------\nRan 30 tests in 0.784s\n\nOK\n"
+  },
+  "runtime_sha256": {
+    "foundry_runtime/__init__.py": "2dc11d40432d1dc267e0b082abff8ad38205bb3be2bfc47f4df183257e07f759",
+    "foundry_runtime/core.py": "a33fb95fdb765452d612e633a54e9edff033e3819503239f81e2f731d33d46da",
+    "foundry_runtime/remote.py": "fa5896a51a0ce437a7116b070496a4ec6c82281440af3053de2747a8cd1e6252",
+    "foundry_runtime/runtime.py": "231d5f337677574be256f8c614f96ea3b230546dee0392e879f61e16f6c4882a",
+    "foundry_runtime/worker.py": "6aafcd5a068dd89ed34c18d24c6af8e3299037633f8ad2412d9f30f8e393aa12"
+  },
+  "real_service": {
+    "scope": "Actual local service and actor-bound adapter reads; no model/QA execution, remote delivery or deployment",
+    "ai_contract_revision": "d7748418a23e6ae8747bb0bed0730fc6c06f1fbf",
+    "service_binary_sha256": "a0393c70f147346fc0d246575d07b90e883d6cfa8cdfc91b93a23e5180fca0e9",
+    "status": "passed",
+    "worker_version": "Alpha 1.0",
+    "qa_version": "Alpha 1.0",
+    "native_body_remains_authoritative": true,
+    "history": {
+      "events": [
+        {
+          "id": 4,
+          "operation": "define",
+          "actor": "mock-architect",
+          "at": "2026-11-01T18:57:18.479708Z",
+          "job": {
+            "contract_id": "b0039b50-bfab-447a-b94b-0a896e810769",
+            "project_id": "b3c21762-6058-45a5-9bf8-14f60e3c39ab",
+            "milestone_id": "77fde987-782b-42e1-8f0b-047c81006cd5",
+            "revision": {
+              "number": 1,
+              "digest": "9bbc82d2c481b72d0153dab94ab9dcc8b4ff0917a87e7ccfefa38ec14e1a19c3",
+              "title": "Version authority fixture",
+              "body_markdown": "Native current body; read this separately from semantic version.",
+              "delivery_policy": "No delivery or deployment.",
+              "dependencies": null,
+              "conflicts": null
+            },
+            "stage": "Draft",
+            "queue_sequence": 0
+          }
+        },
+        {
+          "id": 5,
+          "operation": "ready",
+          "actor": "mock-architect",
+          "at": "2026-11-01T18:57:18.485232Z",
+          "job": {
+            "contract_id": "b0039b50-bfab-447a-b94b-0a896e810769",
+            "project_id": "b3c21762-6058-45a5-9bf8-14f60e3c39ab",
+            "milestone_id": "77fde987-782b-42e1-8f0b-047c81006cd5",
+            "revision": {
+              "number": 1,
+              "digest": "9bbc82d2c481b72d0153dab94ab9dcc8b4ff0917a87e7ccfefa38ec14e1a19c3",
+              "title": "Version authority fixture",
+              "body_markdown": "Native current body; read this separately from semantic version.",
+              "delivery_policy": "No delivery or deployment.",
+              "dependencies": null,
+              "conflicts": null
+            },
+            "stage": "Ready",
+            "queue_sequence": 5
+          }
+        },
+        {
+          "id": 6,
+          "operation": "reserve",
+          "actor": "followup-coordinator",
+          "at": "2026-11-01T18:57:18.486626Z",
+          "job": {
+            "contract_id": "b0039b50-bfab-447a-b94b-0a896e810769",
+            "project_id": "b3c21762-6058-45a5-9bf8-14f60e3c39ab",
+            "milestone_id": "77fde987-782b-42e1-8f0b-047c81006cd5",
+            "revision": {
+              "number": 1,
+              "digest": "9bbc82d2c481b72d0153dab94ab9dcc8b4ff0917a87e7ccfefa38ec14e1a19c3",
+              "title": "Version authority fixture",
+              "body_markdown": "Native current body; read this separately from semantic version.",
+              "delivery_policy": "No delivery or deployment.",
+              "dependencies": null,
+              "conflicts": null
+            },
+            "stage": "Implementing",
+            "queue_sequence": 5,
+            "attempt": {
+              "id": "76a7461a-97a2-4285-a45e-31f3797d5b6e",
+              "worker": "followup-worker",
+              "expires_at": "2026-11-01T19:02:18.486626Z"
+            }
+          }
+        },
+        {
+          "id": 7,
+          "operation": "submit",
+          "actor": "followup-worker",
+          "at": "2026-11-01T18:57:18.550512Z",
+          "evidence": "Actual local fixture commit; no model or independent QA execution claimed.",
+          "job": {
+            "contract_id": "b0039b50-bfab-447a-b94b-0a896e810769",
+            "project_id": "b3c21762-6058-45a5-9bf8-14f60e3c39ab",
+            "milestone_id": "77fde987-782b-42e1-8f0b-047c81006cd5",
+            "revision": {
+              "number": 1,
+              "digest": "9bbc82d2c481b72d0153dab94ab9dcc8b4ff0917a87e7ccfefa38ec14e1a19c3",
+              "title": "Version authority fixture",
+              "body_markdown": "Native current body; read this separately from semantic version.",
+              "delivery_policy": "No delivery or deployment.",
+              "dependencies": null,
+              "conflicts": null
+            },
+            "stage": "QA",
+            "queue_sequence": 5,
+            "attempt": {
+              "id": "76a7461a-97a2-4285-a45e-31f3797d5b6e",
+              "worker": "followup-worker",
+              "expires_at": "2026-11-01T19:02:18.486626Z"
+            },
+            "candidate": {
+              "id": "75a792f1-40a4-4314-8c27-eb822c21788f",
+              "sha": "479970d6052718d9bad0c71fd4fe82a155906024",
+              "evidence": "Actual local fixture commit; no model or independent QA execution claimed.",
+              "submitted_at": "2026-11-01T18:57:18.550512Z",
+              "sequence": 7
+            }
+          }
+        },
+        {
+          "id": 8,
+          "operation": "assign_qa",
+          "actor": "followup-coordinator",
+          "at": "2026-11-01T18:57:18.551258Z",
+          "job": {
+            "contract_id": "b0039b50-bfab-447a-b94b-0a896e810769",
+            "project_id": "b3c21762-6058-45a5-9bf8-14f60e3c39ab",
+            "milestone_id": "77fde987-782b-42e1-8f0b-047c81006cd5",
+            "revision": {
+              "number": 1,
+              "digest": "9bbc82d2c481b72d0153dab94ab9dcc8b4ff0917a87e7ccfefa38ec14e1a19c3",
+              "title": "Version authority fixture",
+              "body_markdown": "Native current body; read this separately from semantic version.",
+              "delivery_policy": "No delivery or deployment.",
+              "dependencies": null,
+              "conflicts": null
+            },
+            "stage": "QA",
+            "queue_sequence": 5,
+            "attempt": {
+              "id": "76a7461a-97a2-4285-a45e-31f3797d5b6e",
+              "worker": "followup-worker",
+              "expires_at": "2026-11-01T19:02:18.486626Z"
+            },
+            "candidate": {
+              "id": "75a792f1-40a4-4314-8c27-eb822c21788f",
+              "sha": "479970d6052718d9bad0c71fd4fe82a155906024",
+              "evidence": "Actual local fixture commit; no model or independent QA execution claimed.",
+              "submitted_at": "2026-11-01T18:57:18.550512Z",
+              "sequence": 7
+            },
+            "reviewer": "followup-qa"
+          }
+        }
+      ],
+      "revisions": [
+        {
+          "number": 1,
+          "digest": "9bbc82d2c481b72d0153dab94ab9dcc8b4ff0917a87e7ccfefa38ec14e1a19c3",
+          "title": "Version authority fixture",
+          "body_markdown": "Native current body; read this separately from semantic version.",
+          "delivery_policy": "No delivery or deployment.",
+          "dependencies": null,
+          "conflicts": null
+        }
+      ]
+    },
+    "cleanup": {
+      "service_stopped": true,
+      "disposable_state_removed": true,
+      "credential_log_scan": "passed"
+    }
+  },
+  "live_transport_read": {
+    "remote_head": "37697f9e3adbb4a41267ad5fd955cdb051ff7963",
+    "outstanding_transports_after": 0
+  },
+  "limits": [
+    "No new model/independent-QA/Docker proof claimed",
+    "Earlier unknown heartbeat trigger remains unknown",
+    "Unknown or legacy transport ownership remains blocked"
+  ]
+}

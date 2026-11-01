@@ -1,6 +1,6 @@
 # AI.Contract interface for Foundry skills
 
-Interface source: merged [AI.Contract PR #53](https://github.com/stemarie/AI.Contract/pull/53), candidate `8d25067867e44acdb2a9b075c74c15ac9dbbda76`. Projects and milestones are merged via PR #51. Native workflow operations are implemented, tested, and merged into AI.Contract main; deployment and runtime connectivity are not established.
+Interface source: current [AI.Contract native workflow](https://github.com/stemarie/AI.Contract/blob/d7748418a23e6ae8747bb0bed0730fc6c06f1fbf/docs/native-workflow.md). Service implementation, a particular deployment and configured actor/runtime connectivity remain distinct facts to verify.
 
 This mapping does not grant capabilities. Before live use inspect the connected service's MCP tools and verify the required behavior/permissions. A source implementation, successful mock client, or merged PR is not proof of a running deployment.
 
@@ -11,6 +11,8 @@ Use MCP `workflow_<operation>`, or POST JSON to `/api/v1/workflow/<operation>`. 
 The authoritative executable body is `job.revision.body_markdown`, with `job.revision.number` and `job.revision.digest`. Generic contract CRUD/projection data remains the original record; it is not a replacement for this frozen revision.
 
 Mutations of an existing job use `contract_id`, `revision`, and `digest`. Execution operations add `attempt_id`. Candidate-bound operations use `candidate_id`; integration/completion also require exact `candidate_sha`. Read and reuse service-returned bindings. Contract format `Alpha 1.0` and serial-chain digests do not identify a native revision.
+
+Before native execution, read the ordinary record through the existing contract GET API using the actor's read credential and validate its semantic `contract_version`. Only Alpha 1.0 is supported; missing/unknown versions fail closed. Continue to use the native revision body rather than the original ordinary body. Native revision numbers and the semantic version are different identifiers.
 
 Actor identity is the authenticated token name. Worker/QA pool actor names must match their actual credentials. Do not pass actor or role as client-selectable JSON authority. Runtime adapters must bind an agent invocation to that identity and execution attempt.
 
@@ -69,3 +71,5 @@ The service validates identity/state and stores attestations. It does not perfor
 Live execution requires a matching reachable service, actor-bound credentials, project scope/pools and a configured runtime. The bounded local macOS adapter now supplies verified workspace isolation, launch/stop/identity reconciliation and a shared GitHub gate; see [acceptance](../docs/HERMES_ACCEPTANCE_2026-11-01.md). No active Hermes configuration, background process or production deployment is installed by these source files.
 
 The [native workflow guide](https://github.com/stemarie/AI.Contract/blob/8d25067867e44acdb2a9b075c74c15ac9dbbda76/docs/native-workflow.md) documents fields, limits, pagination, and compatibility. Report missing capabilities with concrete evidence; preparation drafts do not become a local substitute for AI.Contract.
+
+Shared transport recovery must honor the longest server reset deadline and revalidate each command's generation/state/probe ownership. A prior callback grant remains stale after recovery. Target integration requires both the target lock and recorded transport-group quiescence across connection aliases; controller exit or lease expiry cannot prove a subprocess stopped. See [current controls](../docs/LOCAL_RUNTIME.md).

@@ -1,6 +1,6 @@
 # Agreed Foundry workflow
 
-Status: agreed design with native AI.Contract support and the version 0.3 skill pack. The bounded local macOS Hermes adapter has [passed real-agent acceptance](HERMES_ACCEPTANCE_2026-11-01.md). Production deployment and other backends remain separate; follow the [Hermes handoff](HERMES_HANDOFF.md).
+Status: agreed design with native AI.Contract support and the version 0.4 skill pack. The bounded local macOS Hermes adapter has [passed real-agent acceptance](HERMES_ACCEPTANCE_2026-11-01.md). Production deployment and other backends remain separate; follow the [Hermes handoff](HERMES_HANDOFF.md).
 
 ## Ownership and boundaries
 
@@ -8,7 +8,7 @@ A human defines project goal and scope. Within it the Architect can create ready
 
 Each AI.Contract project binds one target repository and has its own queue. AI.Contract owns contracts, queue state, execution claims, revisions, and evidence. Foundry owns runtime-neutral skills and coordination behavior. GitHub hosts source and final historical issues; it is not the work queue or authority for execution state.
 
-Skills remain runtime-neutral; Hermes is the target of the current setup handoff. Verify the installed backend and implement its adapter. Do not restore the archived Hermes profiles, Kanban control plane, or a competing contract store.
+Skills remain runtime-neutral; Hermes is the target of the current setup handoff. Verify and reuse the selected installed backend; another backend requires separately scoped implementation and proof. Do not restore the archived Hermes profiles, Kanban control plane, or a competing contract store.
 
 ## Four skills
 
@@ -37,7 +37,7 @@ FIFO must skip currently ineligible contracts, rather than stall independent wor
 
 ## Identity, recovery, and revisions
 
-Reservations and evidence need distinct execution-attempt identities even if agents share a GitHub account. Exact actor bootstrap and runtime transport are deferred; no particular account arrangement is selected.
+Reservations and evidence need distinct execution-attempt identities even if agents share a GitHub account. The bounded local macOS adapter supplies actor-bound clients, isolated native homes/worktrees and launch/stop identity reconciliation. Verify actual service credentials/pools and host capabilities before execution; additional backends require their own implementation and proof.
 
 On expired execution ownership, the Coordinator confirms termination or stops the old execution before reassignment. Reject stale submissions and prevent stale integration. Expiry alone cannot guarantee the old process stopped.
 
@@ -65,7 +65,7 @@ Cooldown durations, failure thresholds, probe selection, and authentication-spec
 
 ## Deferred decisions
 
-Runtime and launch/stop/health adapter; worker and QA identity/bootstrap; API/schema details; fairness for correction reviews; exact conflict-key vocabulary and reservation lifetime; breaker storage owner and timing; compatibility/migration of existing AI.Contract chains.
+The local macOS runtime adapter, actor bootstrap, native API, shared breaker storage/timing and compatibility behavior are implemented within their documented bounds. Other runtime platforms, unrestricted builds, unattended scheduling and production hardening remain separate decisions. Projects must still supply authorized scope, actual credentials/pools and meaningful conflict declarations; source acceptance does not provision them.
 
 These do not change the agreed workflow. Specify them in bounded implementation work before claiming unattended operation.
 

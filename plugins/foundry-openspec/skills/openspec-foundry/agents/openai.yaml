@@ -1,0 +1,5 @@
+interface:
+  display_name: OpenSpec + Foundry
+  short_description: AI.Contract-backed Foundry workflow
+  default_prompt: Map this OpenSpec change into AI.Contract-backed Foundry execution
+    while preserving planning boundaries.

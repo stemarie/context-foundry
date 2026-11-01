@@ -1,6 +1,6 @@
 # Foundry skills
 
-Version 0.3: runtime-neutral instructions. Source files exist; they are not automatically installed into this chat or any runtime. The [native service interface](https://github.com/stemarie/AI.Contract/blob/main/docs/native-workflow.md) is merged and tested; the bounded local macOS adapter and [real-agent acceptance](../docs/HERMES_ACCEPTANCE_2026-11-01.md) are available. Live project configuration and deployment remain separate.
+Version 0.4: runtime-neutral instructions. Source files exist; they are not automatically installed into this chat or any runtime. The [native service interface](https://github.com/stemarie/AI.Contract/blob/main/docs/native-workflow.md) is merged and tested; the bounded local macOS adapter and [real-agent acceptance](../docs/HERMES_ACCEPTANCE_2026-11-01.md) are available. Live project configuration and deployment remain separate.
 
 - [Architect](foundry-architect/SKILL.md): author and reassess bounded contracts.
 - [Coordinator](foundry-coordinator/SKILL.md): reserve, dispatch, recover, integrate, and record history.
@@ -22,3 +22,19 @@ Preparation can inspect source and return clearly marked drafts without service 
 ## Manual review exercises
 
 These are instruction walkthroughs, not runtime tests or proof of service behavior. See [review scenarios](../docs/SKILL_REVIEW.md). Actual one-contract and concurrent operation are recorded separately in the acceptance report.
+
+## Native execution entry points
+
+The installed `foundry-start` and `foundry-loop` entry points use AI.Contract for
+live work. `foundry-create-workorder`, `foundry-implement`, `foundry-audit` and
+`foundry-commit` cover bounded native stages; the four role skills provide their
+role procedures. GitHub issues record final outcomes only. `foundry-explore`,
+`foundry-propose` and the OpenSpec skills retain planning boundaries;
+`openspec-foundry` maps requirements/tasks without becoming another queue.
+
+`scripts/package_skills.py` renders portable local/plugin copies with a complete
+shared-reference closure. Source role references are preserved semantically and
+rewritten only for the installed layout. The four roles and nine entry/adapter
+skills are maintained here. Official OpenSpec planning skills remain separate
+unchanged dependencies. Reinstall from the owning source rather than editing a
+versioned plugin cache.

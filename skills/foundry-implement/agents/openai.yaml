@@ -1,0 +1,5 @@
+interface:
+  display_name: Foundry Implement
+  short_description: AI.Contract-backed Foundry workflow
+  default_prompt: Implement my current AI.Contract Worker assignment and submit verified
+    candidate evidence.
