@@ -292,7 +292,7 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
             return job
 
         if args.scenario == 'single':
-            first = contract('Local runtime quickstart', 'docs/RUNTIME_QUICKSTART.md', ['AI.Contract', 'unknown', 'independent QA', 'no deployment'])
+            first = contract('Local runtime quickstart', 'docs/RUNTIME_QUICKSTART.md', ['AI.Contract', 'unknown', 'independent QA', 'no deployment', 'HERMES_DISABLE_LAZY_INSTALLS', 'runtime_launch'])
             first_job = work('reserve', {'lease_seconds': 300})['job']
             directory = workspace('HEAD', 'worker-first')
             actor = first_job['attempt']['worker'].removeprefix('acceptance-')

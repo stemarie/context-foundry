@@ -46,9 +46,9 @@ def main():
                     return
                 tools.client.workflow('heartbeat', {**command_binding(tools.binding), 'lease_seconds': config.get('lease_seconds', 300),
                                                      'idempotency_key': 'heartbeat:' + args.launch + ':' + str(time.time_ns())})
-            except Exception:
+            except Exception as exc:
                 unsafe.set()
-                event('authority_unavailable')
+                event('authority_unavailable', error_category=type(exc).__name__, service_code=getattr(exc, 'code', None))
                 return
 
     if tools.role == 'worker' and config.get('heartbeat', True):
