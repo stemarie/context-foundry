@@ -121,16 +121,18 @@ def main():
             event('model_started')
             result = agent.run_conversation(prompt)
             event('model_finished', completed=bool(result.get('completed')), api_calls=result.get('api_calls', 0))
-            if result.get('error') or not result.get('completed'):
-                raise Barrier('native model turn did not complete')
-            if tools.role == 'qa':
-                reviewed = tools.client.workflow('get', {'project_id': tools.binding['project_id'], 'contract_id': tools.binding['contract_id']})['job']
-                if reviewed['stage'] == 'QA':
-                    raise Barrier('QA returned without recording a verdict')
-                break
             refreshed = tools.client.workflow('get', {'project_id': tools.binding['project_id'], 'contract_id': tools.binding['contract_id']})['job']
-            if refreshed['stage'] == 'Implementing':
-                raise Barrier('Worker returned without submitting a candidate')
+            if tools.role == 'worker' and refreshed['stage'] == 'QA':
+                # A successful service submission survives model iteration exhaustion.
+                # Keep this process and heartbeat through QA and corrections.
+                continue
+            if tools.role == 'qa' and refreshed['stage'] != 'QA':
+                break  # Reconcile the actual verdict even if the final model reply was cut short.
+            if result.get('error') or not result.get('completed'):
+                event('turn_reconciled', stage=refreshed['stage'])
+                continue  # Current authority is checked again; bounded invocation still applies.
+            raise Barrier('actor returned without its required service transition')
+
         else:
             raise Barrier('bounded invocation ended; current assignment retained')
         event('retired')

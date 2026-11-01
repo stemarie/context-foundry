@@ -145,7 +145,8 @@ class Tools:
         job = self.client.authority(self.binding, self.role)
         self.calls.append(operation)
         if operation == 'assignment':
-            return {'job': job, 'files': sorted(str(p.relative_to(self.workspace)) for p in self.workspace.rglob('*')
+            history = self.client.workflow('history', {'project_id': self.binding['project_id'], 'contract_id': self.binding['contract_id']})
+            return {'job': job, 'history': history.get('events', [])[-10:], 'files': sorted(str(p.relative_to(self.workspace)) for p in self.workspace.rglob('*')
                                                if p.is_file() and not any(x.startswith('.git') for x in p.relative_to(self.workspace).parts))[:200]}
         if operation == 'read':
             path = checked_path(self.workspace, arguments['path'])
