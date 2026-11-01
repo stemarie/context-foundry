@@ -86,7 +86,9 @@ def main():
         for name in list(registry.get_all_tool_names()):
             if name != 'foundry_action':
                 registry.deregister(name)
+                registry.deregister(name, scope=registry.current_scope_key())
         exposed = {t['function']['name'] for t in agent.tools}
+        event('capability_probe', exposed=sorted(exposed), registry=sorted(registry.get_all_tool_names()))
         if exposed != {'foundry_action'} or set(registry.get_all_tool_names()) != {'foundry_action'}:
             raise Barrier('native tool isolation could not be established')
         for prohibited in ('terminal', 'execute_code', 'delegate_task', 'web_extract', 'web_search'):
