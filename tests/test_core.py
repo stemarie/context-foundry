@@ -81,7 +81,8 @@ class CoreTests(unittest.TestCase):
             gate.run('final-history', {'contract': 'other'}, write)
 
     def test_service_timestamp_variable_nanosecond_precision(self):
-        for fraction in ('1', '12', '123', '12345', '123456', '123456789'):
+        for digits in range(1, 10):
+            fraction = '123456789'[:digits]
             value = parse_service_time('2026-11-01T15:01:23.' + fraction + 'Z')
             self.assertEqual(int(fraction[:6].ljust(6, '0')), value.microsecond)
             self.assertIsNotNone(value.tzinfo)

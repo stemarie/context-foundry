@@ -1,6 +1,6 @@
 # Hermes runtime adapter specification
 
-Status: implementation contract, not an existing adapter. The native AI.Contract operations already exist; the runtime bridge and GitHub breaker described here still need to be built and tested against the installed Hermes version.
+Status: implemented for the bounded local macOS backend in `foundry_runtime`; see [usage and limits](LOCAL_RUNTIME.md) and [executed acceptance](HERMES_ACCEPTANCE_2026-11-01.md). The requirements below remain the contract for additional backends. No production deployment or unattended scheduler is implied.
 
 Use [the handoff](HERMES_HANDOFF.md) for setup and [acceptance](HERMES_ACCEPTANCE.md) for observable completion criteria.
 

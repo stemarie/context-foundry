@@ -1,4 +1,4 @@
-import contextlib
+import importlib.util
 from pathlib import Path
 import subprocess
 import tempfile
@@ -38,6 +38,38 @@ class TransportTests(unittest.TestCase):
             with self.assertRaises(Barrier):project_one.acquire()
             project_two.outcome(probe)
             self.assertIsNone(project_one.acquire())
+
+    def test_lost_git_push_response_reconciles_without_another_push(self):
+        with tempfile.TemporaryDirectory() as root:
+            github=GitHub.__new__(GitHub)
+            github.repository='stemarie/context-foundry';github.checkout=Path(root)
+            github.gate=Gate(Journal(Path(root)/'runtime.sqlite'),'shared')
+            expected,sha='a'*40,'b'*40
+            remote={'head':expected,'pushes':0}
+            def transport(argv,cwd):
+                if 'ls-remote' in argv:return remote['head']+' refs/heads/main'
+                if 'push' in argv:
+                    self.assertFalse(any(arg.startswith('--force') for arg in argv))
+                    remote['head']=sha;remote['pushes']+=1
+                    raise RemoteFailure('connection')  # Remote committed; response was lost.
+                raise AssertionError('unexpected transport')
+            with patch('foundry_runtime.remote.command',side_effect=transport), patch('subprocess.run',return_value=subprocess.CompletedProcess([],0)):
+                with self.assertRaises(Barrier):github.push(sha,expected,lambda:None)
+                probe=github.gate.operator_probe();github.gate.outcome(probe)
+                result=github.push(sha,expected,lambda:self.fail('uncertain push repeated'))
+            self.assertTrue(result['reconciled'])
+            self.assertEqual(1,remote['pushes'])
+
+    def test_report_capacity_error_preserves_previous_evidence(self):
+        path=Path(__file__).resolve().parents[1]/'scripts/real_agent_acceptance.py'
+        spec=importlib.util.spec_from_file_location('acceptance_runner_test',path)
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as root:
+            report=Path(root)/'report.json';report.write_text('previous safe evidence')
+            with patch.object(module.json,'dump',side_effect=OSError('fixture capacity failure')):
+                self.assertFalse(module.write_report(report,{'new':'evidence'}))
+            self.assertEqual('previous safe evidence',report.read_text())
+            self.assertEqual([report],list(Path(root).iterdir()))
 
     def test_target_lock_excludes_another_project_caller(self):
         with tempfile.TemporaryDirectory() as root:

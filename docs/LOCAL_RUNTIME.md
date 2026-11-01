@@ -7,7 +7,7 @@ assignments, leases, candidates, QA and integration evidence.
 
 The operator supplies a separate disposable native home, scratch directory,
 workspace, role credential and immutable binding to `Launcher.ensure(config,
-model_runtime)`. Provider credentials arrive through private stdin, never the
+model_runtime)`. Use a prepared Hermes virtualenv. The child sets the supported `HERMES_DISABLE_LAZY_INSTALLS=1` mode, so isolated homes do not provision dependency copies. Missing dependencies fail closed. Provider credentials arrive through private stdin, never the
 launch journal or model tool arguments. `inspect(key)` returns running, stopped
 or unknown. Repeated `ensure` reconciles the existing identity. An unknown
 execution blocks recovery; `stop` must prove the owned process group stopped.
@@ -15,7 +15,7 @@ execution blocks recovery; `stop` must prove the owned process group stopped.
 Each actual AIAgent exposes only `foundry_action`: assignment/read/diff/check,
 Worker write/submit, or QA verdict. Every operation revalidates current service
 ownership. Checks use operator-selected argv under the macOS sandbox, denying
-network, process forks, foreign data reads and foreign writes. This intentionally
+network, process forks, foreign data reads, foreign writes and Git metadata writes. This intentionally
 supports a restricted check suite; arbitrary build systems need a separately
 verified backend. There is no unsandboxed fallback.
 
@@ -25,8 +25,8 @@ Only the operator Coordinator obtains native integration ownership, reconciles
 target drift, delivers and verifies the remote target, then completes the job.
 Changed candidates require renewed QA.
 
-All operator GitHub paths use `remote.GitHub` and one shared `core.Gate` journal
-and stable connection alias across projects. Qualifying failures pause remote
+The verified delivery allowlist is `stemarie/context-foundry`; other targets require explicit operator authorization and configuration. All operator GitHub paths use `remote.GitHub` and one shared `core.Gate` journal
+and stable connection alias across projects. One shared journal path is mandatory across Coordinators; independent journals cannot coordinate the same connection. `GitHub.integration()` holds a target lock through ownership, push, postchecks and native Done. Qualifying failures pause remote
 operations with a single half-open probe; ordinary resource errors remain local.
 Uncertain writes require authoritative reconciliation. Git pushes check both the
 preflight head and the head advertised to the pre-push hook, use no force option,
@@ -40,5 +40,5 @@ PYTHONDONTWRITEBYTECODE=1 TMPDIR=/private/tmp python3 -m unittest discover -s te
 ```
 
 The separate `scripts/acceptance_preflight.py` verifies service/native skill
-prerequisites. It does not claim real-agent acceptance. See the acceptance report
+prerequisites. It does not claim real-agent acceptance. The `real_agent_acceptance.py` scenarios use actual model calls and authorized main delivery; `breaker_acceptance.py` uses actual disposable service projects with simulated remote failures. See the [acceptance report](HERMES_ACCEPTANCE_2026-11-01.md)
 for executed scenarios, actual revisions, delivery identities and remaining limits.

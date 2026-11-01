@@ -1,10 +1,10 @@
 # Foundry work contract
 
-Version: 0.2 — agreed workflow; service extensions not yet implemented.
+Version: 0.3 — native service workflow and bounded local Hermes runtime verified.
 
 Architect, Coordinator, Worker, and Auditor / QA are separate runtime-neutral skills, not persistent profiles. AI.Contract is the authoritative record for projects, contracts, queue state, claims, revisions, and execution evidence. GitHub issues are historical records created only after delivery or cancellation.
 
-See [workflow decisions](docs/WORKFLOW.md) and [AI.Contract change proposal](docs/AI_CONTRACT_CHANGES.md). These describe the target behavior, not current service capabilities.
+See [workflow decisions](docs/WORKFLOW.md) and [AI.Contract change proposal](docs/AI_CONTRACT_CHANGES.md). The historical proposal records the original gap; the current service mapping and acceptance report identify implemented capabilities.
 
 Adapted from the [archived template](https://github.com/stemarie/context-foundry/blob/archive/pre-reset-2026-10-25/kits/contract-orchestration/templates/contract-template.md).
 
@@ -59,7 +59,7 @@ The Coordinator integrates under the resolved policy. A contract does not indepe
 
 The Architect maintains a small queue toward a configurable target within the approved scope. A contract is Ready when its outcome, boundaries, dependencies, acceptance criteria, verification, and delivery policy are defined and no blocking decision remains. Prerequisite completion and conflict availability determine dispatch eligibility separately.
 
-The Coordinator selects FIFO among eligible ready contracts: all prerequisites are Done, no declared conflicts are active, and an assigned Worker is available. It atomically reserves the contract in AI.Contract before launching the Worker. Workers discover their assigned work through AI.Contract; GitHub issues do not assign or unlock work. Runtime bootstrap and actor identity details remain deferred.
+The Coordinator selects FIFO among eligible ready contracts: all prerequisites are Done, no declared conflicts are active, and an assigned Worker is available. It atomically reserves the contract in AI.Contract before launching the Worker. Workers discover their assigned work through AI.Contract; GitHub issues do not assign or unlock work. The verified local bootstrap binds each invocation to its own actor credential and immutable service assignment; see [local runtime](docs/LOCAL_RUNTIME.md).
 
 Each project has a defined Worker pool. When all Workers are busy the Coordinator waits. The Worker stays assigned through QA and corrections until acceptance or explicit reassignment.
 
@@ -78,7 +78,7 @@ Draft → Ready → Implementing → QA → QA accepted → Integrating → Done
 - QA accepted binds the contract revision and exact candidate SHA.
 - Done requires integration into the target branch and successful required post-integration checks.
 
-These are proposed Foundry/service semantics. Current AI.Contract serial-chain PASS-to-Done behavior must be changed before using it for this workflow.
+These are implemented by the separate native workflow. Ordinary contracts and serial-chain PASS-to-Done semantics remain unchanged; they do not substitute for native workflow enrollment.
 
 ## Worker receipt
 
@@ -113,4 +113,4 @@ Use the shared connection-scoped circuit breaker defined in [WORKFLOW.md](docs/W
 
 ## Limits
 
-This is a contract convention. [Version 0.1 skill instructions](skills/README.md) are available. Dispatching, service extensions, runtime adapters, and unattended execution are not yet implemented. Prove one complete delivery, then two independent contracts concurrently.
+The [version 0.3 skills](skills/README.md), native service and bounded macOS Hermes adapter have [executed acceptance evidence](docs/HERMES_ACCEPTANCE_2026-11-01.md). Live execution still requires explicit project, credential, workspace and connection setup. No unattended scheduler or production deployment is installed.

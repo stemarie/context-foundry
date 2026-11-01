@@ -2,7 +2,7 @@
 
 Use after the [service setup](https://github.com/stemarie/AI.Contract/blob/main/docs/hermes-service-setup.md), [skill installation/handoff](HERMES_HANDOFF.md), and [runtime adapter implementation](HERMES_RUNTIME_ADAPTER.md).
 
-This runbook specifies tests; it is not evidence they have already been run on Hermes. Perform failure injection on a disposable test project/backend with authorized resources.
+This runbook specifies tests. Executed evidence for the bounded local macOS backend is in the [2026-11-01 report](HERMES_ACCEPTANCE_2026-11-01.md); the runbook itself is not proof of another backend. Perform failure injection on a disposable test project/backend with authorized resources.
 
 ## Record the test context
 

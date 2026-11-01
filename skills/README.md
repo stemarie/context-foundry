@@ -1,6 +1,6 @@
 # Foundry skills
 
-Version 0.2: runtime-neutral instructions. Source files exist; they are not automatically installed into this chat or any runtime. The [native service interface](https://github.com/stemarie/AI.Contract/blob/main/docs/native-workflow.md) is merged and tested; deployment and a runtime adapter are still required for live coordinated execution.
+Version 0.3: runtime-neutral instructions. Source files exist; they are not automatically installed into this chat or any runtime. The [native service interface](https://github.com/stemarie/AI.Contract/blob/main/docs/native-workflow.md) is merged and tested; the bounded local macOS adapter and [real-agent acceptance](../docs/HERMES_ACCEPTANCE_2026-11-01.md) are available. Live project configuration and deployment remain separate.
 
 - [Architect](foundry-architect/SKILL.md): author and reassess bounded contracts.
 - [Coordinator](foundry-coordinator/SKILL.md): reserve, dispatch, recover, integrate, and record history.
@@ -13,7 +13,7 @@ For Hermes installation, actor isolation, runtime implementation, and real-agent
 
 ## Invocation and capability boundary
 
-Provide the AI.Contract connection reference, project identifier or verified project lookup, target repository context, and authenticated actor identity. Coordinator invocation additionally needs configured Worker/QA pools and launch/stop/health and integration adapters. Workers and QA discover their assignment in the service using their runtime-bound identity. Exact identity/bootstrap mechanisms are deliberately deferred.
+Provide the AI.Contract connection reference, project identifier or verified project lookup, target repository context, and authenticated actor identity. Coordinator invocation additionally needs configured Worker/QA pools and launch/stop/health and integration adapters. Workers and QA discover their assignment in the service using their runtime-bound identity. The verified local identity/bootstrap interface is documented in [LOCAL_RUNTIME.md](../docs/LOCAL_RUNTIME.md).
 
 Use the documented native workflow interface only after checking live capabilities and authorization. Existing serial-chain PASS-to-Done semantics remain incompatible; native workflow enrollment provides a separate state machine.
 
@@ -21,4 +21,4 @@ Preparation can inspect source and return clearly marked drafts without service 
 
 ## Manual review exercises
 
-These are instruction walkthroughs, not runtime tests or proof of service behavior. See [review scenarios](../docs/SKILL_REVIEW.md). Prove actual operation later with one delivered contract, then two independent contracts concurrently.
+These are instruction walkthroughs, not runtime tests or proof of service behavior. See [review scenarios](../docs/SKILL_REVIEW.md). Actual one-contract and concurrent operation are recorded separately in the acceptance report.

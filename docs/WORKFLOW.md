@@ -1,6 +1,6 @@
 # Agreed Foundry workflow
 
-Status: agreed design; the [version 0.2 skill pack](../skills/README.md) and native AI.Contract service implementation are available. Hermes runtime implementation, deployment, and real-agent demonstrations remain pending; follow the [Hermes handoff](HERMES_HANDOFF.md).
+Status: agreed design with native AI.Contract support and the version 0.3 skill pack. The bounded local macOS Hermes adapter has [passed real-agent acceptance](HERMES_ACCEPTANCE_2026-11-01.md). Production deployment and other backends remain separate; follow the [Hermes handoff](HERMES_HANDOFF.md).
 
 ## Ownership and boundaries
 

@@ -1,4 +1,4 @@
-# Hermes handoff: install, implement, and prove Foundry
+# Hermes handoff: configure and verify Foundry
 
 This is the entry point to give Hermes. Read both repositories' AGENTS.md first. Authorized changes go directly to main with non-force expected-head updates; do not create PRs. GitHub issues record final delivery/cancellation, never live coordination.
 
@@ -8,10 +8,10 @@ This is the entry point to give Hermes. Read both repositories' AGENTS.md first.
 | --- | --- |
 | AI.Contract projects/milestones and native workflow | Implemented, merged, tested over HTTP/MCP |
 | Architect, Coordinator, Worker, QA skill source | Available with shared rules and API mapping |
-| Installed Hermes connection on your host | Must be inspected/configured |
-| Runtime launch/stop/identity/workspace adapter | Still needs implementation and testing |
-| Shared GitHub circuit breaker | Still needs implementation and testing |
-| Real one-contract and parallel-agent acceptance | Still needs demonstration |
+| Installed Hermes connection on this host | Native discovery and actor isolation verified in disposable homes; active config unchanged |
+| Runtime launch/stop/identity/workspace adapter | Implemented and verified for bounded local macOS execution |
+| Shared GitHub circuit breaker | Implemented; shared-project simulation and real gated delivery verified |
+| Real one-contract and parallel-agent acceptance | Passed; [report and boundaries](HERMES_ACCEPTANCE_2026-11-01.md) |
 
 The service mock clients use mock execution attestations. They are not evidence that Hermes workers ran. This guide authorizes no production deployment by itself; use the actual operator task and existing permissions.
 
@@ -71,9 +71,9 @@ The Worker and QA contexts must receive their own actor-bound API/MCP clients th
 
 The GitHub credential is separate from AI.Contract tokens and model-provider authentication. Preserve existing configured authentication; absence of a particular CLI is not proof that access is unavailable. GitHub operations must use the shared circuit gate described in the adapter spec.
 
-## Implement the missing runtime piece
+## Select the verified runtime backend
 
-Create the smallest adapter meeting [the specification](HERMES_RUNTIME_ADAPTER.md), with meaningful tests and actual installed-Hermes probes. Exact filenames and local design are implementation choices. Keep all queue/assignment/contract decisions in AI.Contract; store only runtime handles, launch reconciliation, and transport-breaker health locally.
+The local `foundry_runtime` adapter meets the exercised macOS scope; read [its interface](LOCAL_RUNTIME.md) and [acceptance report](HERMES_ACCEPTANCE_2026-11-01.md). Additional backends must meet [the specification](HERMES_RUNTIME_ADAPTER.md) with their own tests and actual installed-Hermes probes. Keep all queue/assignment/contract decisions in AI.Contract; store only runtime handles, launch reconciliation, and transport-breaker health locally.
 
 Start with a bounded invocation of the Coordinator. Do not install a cron, gateway, daemon, or a second dispatcher unless requested. A Coordinator that returns is not a background system; report its checkpoint and next invocation/event honestly.
 
@@ -85,7 +85,7 @@ Replace the input placeholders before treating this as a live execution instruct
 
 > Read AGENTS.md in both checkouts and docs/HERMES_HANDOFF.md in Context Foundry. Our goal is to run the existing four skills as an assembly line using AI.Contract's native project queue. AI.Contract checkout: <path>; Foundry checkout: <path>; Hermes runtime/home: <verified location>; service origin: <origin>; project and approved milestones/horizon: <scope reference>; actor/credential references: <references only>; GitHub connection: <reference>; authorized deployment target/actions: <explicit scope>.
 >
-> Verify installed Hermes capabilities and the deployed service, install/discover the full skill pack, and implement the missing runtime adapter and shared GitHub breaker to the linked specification. Reuse supported native delegation where it satisfies identity, lifecycle, and recovery tests. Do not create role profiles, Kanban coordination, another queue, PRs, or an unsolicited recurring scheduler. Make routine reversible choices within scope. Report concrete missing access or product decisions after completing independent work that is possible.
+> Verify installed Hermes capabilities and the deployed service, install/discover the full skill pack, and use the verified local runtime adapter and shared GitHub breaker. Implement additional backends only when the authorized scope requires them. Reuse supported native delegation where it satisfies identity, lifecycle, and recovery tests. Do not create role profiles, Kanban coordination, another queue, PRs, or an unsolicited recurring scheduler. Make routine reversible choices within scope. Report concrete missing access or product decisions after completing independent work that is possible.
 >
 > Run the linked acceptance sequence: one real contract through independent QA and direct-main delivery, then two independent contracts with overlapping execution. Record real commands, candidate/target revisions, service receipts, process/identity/worktree evidence, and historical issue links. Do not mark Done from a summary, mock receipt, or pushed branch. Stop at the authorized milestone boundary and report remaining limitations.
 

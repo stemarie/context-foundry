@@ -66,6 +66,6 @@ The service validates identity/state and stores attestations. It does not perfor
 
 ## Remaining live-operation requirements
 
-Deployment of the matching interface, a reachable connection, actor-bound credentials, project scope/pools, workspace isolation, launch/stop/health adapters, idempotent runtime launching, and a shared GitHub connection breaker are still prerequisites. No Hermes installation or background process is supplied by these files.
+Live execution requires a matching reachable service, actor-bound credentials, project scope/pools and a configured runtime. The bounded local macOS adapter now supplies verified workspace isolation, launch/stop/identity reconciliation and a shared GitHub gate; see [acceptance](../docs/HERMES_ACCEPTANCE_2026-11-01.md). No active Hermes configuration, background process or production deployment is installed by these source files.
 
 The [native workflow guide](https://github.com/stemarie/AI.Contract/blob/8d25067867e44acdb2a9b075c74c15ac9dbbda76/docs/native-workflow.md) documents fields, limits, pagination, and compatibility. Report missing capabilities with concrete evidence; preparation drafts do not become a local substitute for AI.Contract.

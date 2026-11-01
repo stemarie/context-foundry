@@ -1,0 +1,49 @@
+{
+  "scope": "Actual local service projects and durable gate; simulated GitHub transport/clock. No production failure injection.",
+  "status": "passed",
+  "projects": [
+    {
+      "origin": "http://127.0.0.1:53886",
+      "project": {
+        "id": "c59317dd-28a8-4336-aead-fb3858137ecd",
+        "title": "Disposable shared-breaker project 1",
+        "repository": "stemarie/context-foundry",
+        "delivery_policy": "Transport failure fixture only; no repository changes or deployment.",
+        "planning_through": 0,
+        "boundary_revision": 0,
+        "created_by": "mock-admin",
+        "created_at": "2026-11-01T15:24:39.067462Z",
+        "updated_by": "mock-admin",
+        "updated_at": "2026-11-01T15:24:39.067462Z"
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:53892",
+      "project": {
+        "id": "74ae1d0c-ced8-4d95-be04-449534dabd1e",
+        "title": "Disposable shared-breaker project 2",
+        "repository": "stemarie/context-foundry",
+        "delivery_policy": "Transport failure fixture only; no repository changes or deployment.",
+        "planning_through": 0,
+        "boundary_revision": 0,
+        "created_by": "mock-admin",
+        "created_at": "2026-11-01T15:24:39.16064Z",
+        "updated_by": "mock-admin",
+        "updated_at": "2026-11-01T15:24:39.16064Z"
+      }
+    }
+  ],
+  "shared_alias": "same-approved-github-connection",
+  "both_projects_paused": true,
+  "local_git_continued": true,
+  "one_half_open_probe": true,
+  "failed_probe_reopened": true,
+  "operator_recovery": true,
+  "ordinary_resource_error_local": true,
+  "lost_issue_response_deduplicated": true,
+  "known_live_raw_network_denied": {
+    "passed": true,
+    "exit_code": 0,
+    "output": "kernel denied connection to known live service\n"
+  }
+}

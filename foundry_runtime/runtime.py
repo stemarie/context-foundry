@@ -194,7 +194,8 @@ class Tools:
                       'user.email=' + self.binding['actor'] + '@localhost', 'commit', '-m', arguments['summary'])
             sha = local_git(self.workspace, 'rev-parse', 'HEAD')
             evidence = json.dumps({'actor': self.binding['actor'], 'checks': self.checks,
-                                   'workspace': str(self.workspace), 'base_sha': self.config['base_sha'],
+                                   'workspace': str(self.workspace), 'branch': local_git(self.workspace, 'branch', '--show-current'),
+                                   'base_sha': self.config['base_sha'],
                                    'candidate_sha': sha, 'summary': arguments['summary']})
             result = self.client.workflow('submit', {**command_binding(self.binding), 'candidate_sha': sha,
                                                    'evidence': evidence, 'idempotency_key': 'submit:' + sha})

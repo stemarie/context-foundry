@@ -169,12 +169,21 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
                     'checks': ['/Library/Developer/CommandLineTools/usr/bin/python3', '-E', '-s', '-c', check],
                     'start_barrier': str(barrier) if barrier else None, 'invocation_seconds': 600}
 
+        def record_launch(config, key):
+            binding=config['binding']
+            command={name:binding[name] for name in ('contract_id','revision','digest','attempt_id')}
+            work('record', {**command, 'evidence':json.dumps({'runtime_launch':key,
+                'pid':journal.get(key)['pid'],'role':config['role'],'actor':binding['actor'],
+                'workspace':config['workspace'],'branch':local_git(config['workspace'],'branch','--show-current'),
+                'base_sha':config['base_sha'],'reconciled_running':True})})
+
         def launch(config):
             key = launcher.ensure(config, runtime); launches.append(key)
             assert launcher.ensure(config, runtime) == key
             restarted = Launcher(Journal(journal.path), args.hermes_python, args.hermes_source)
             assert restarted.ensure(config, runtime) == key
             assert restarted.inspect(key) == 'running'
+            record_launch(config,key)
             print('LAUNCHED', config['role'], config['binding']['actor'], key, flush=True)
             return key
 
@@ -370,7 +379,32 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
             actor = job['attempt']['worker'].removeprefix('acceptance-')
             config = configuration(job, actor, directory, expected, task[2], task[1], 'worker', root/'never-release')
             config['heartbeat'] = False
-            key = launch(config)
+            # The original launcher actually exits. Its independent native child
+            # survives; the successor controller has no original Popen handle.
+            controller = """import sys,json,os
+from foundry_runtime.core import Journal
+from foundry_runtime.runtime import Launcher
+payload=json.load(sys.stdin)
+Launcher(Journal(sys.argv[1]),sys.argv[2],sys.argv[3]).ensure(payload['config'],payload['runtime'])
+os._exit(0)
+"""
+            predecessor = subprocess.Popen([sys.executable,'-c',controller,journal.path,
+                str(args.hermes_python),str(args.hermes_source)],stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,
+                env={'PATH':os.environ['PATH'],'PYTHONPATH':str(checkout),'PYTHONDONTWRITEBYTECODE':'1'})
+            output,error=predecessor.communicate(json.dumps({'config':config,'runtime':runtime}),timeout=90)
+            if predecessor.returncode:
+                raise Barrier('disposable predecessor launcher failed')
+            binding={'origin':config['origin'],'role':config['role'],**config['binding']}
+            row,created=journal.intent(binding)
+            assert not created
+            key=launcher.ensure(config,runtime);launches.append(key)
+            assert key==row['key'] and launcher.inspect(key)=='running'
+            assert journal.get(key)['pid']!=predecessor.pid
+            record_launch(config,key)
+            report['actual_launcher_process_exit_reconciled']={'predecessor_pid':predecessor.pid,
+                'successor_pid':os.getpid(),'native_pid':journal.get(key)['pid'],'launch':key,
+                'no_replacement_spawned':True}
             # The installed AIAgent has initialized and is alive at its start barrier.
             until = time.monotonic()+30
             while not (Path(config['home'])/'events.jsonl').exists() and time.monotonic()<until:
