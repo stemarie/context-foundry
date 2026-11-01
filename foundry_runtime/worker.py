@@ -10,12 +10,14 @@ import threading
 import time
 
 from .core import Barrier, Journal
-from .runtime import Tools, command_binding
+from .runtime import Tools, ServiceUnavailable, command_binding, parse_service_time
 
 
 def main():
     # Hermes may re-exec while preparing an isolated home's dependencies.
     # Import before consuming stdin or acknowledging the durable launch.
+    if not sys.flags.isolated:
+        raise Barrier('native startup requires isolated Python')
     from run_agent import AIAgent
     parser = argparse.ArgumentParser()
     parser.add_argument('--journal', required=True)
@@ -36,7 +38,13 @@ def main():
 
     stop = threading.Event()
     unsafe = threading.Event()
+    terminal = threading.Event()
     tools = Tools(config)
+
+    def unavailable(exc):
+        unsafe.set()
+        event('authority_unavailable', error_category=type(exc).__name__,
+              transport_category=getattr(exc, 'category', None), service_code=getattr(exc, 'code', None))
 
     def heartbeat():
         while not stop.wait(config.get('heartbeat_seconds', 5)):
@@ -44,18 +52,26 @@ def main():
                 job = tools.client.workflow('get', {'project_id': tools.binding['project_id'], 'contract_id': tools.binding['contract_id']})['job']
                 if job['stage'] not in ('Implementing', 'QA'):
                     return
-                tools.client.workflow('heartbeat', {**command_binding(tools.binding), 'lease_seconds': config.get('lease_seconds', 300),
-                                                     'idempotency_key': 'heartbeat:' + args.launch + ':' + str(time.time_ns())})
+                tools.client.authority(tools.binding, tools.role)
+                renewed = tools.client.workflow('heartbeat', {**command_binding(tools.binding),
+                    'lease_seconds': config.get('lease_seconds', 300),
+                    'idempotency_key': 'heartbeat:' + args.launch + ':' + str(time.time_ns())})['job']
+                was_unsafe = unsafe.is_set()
+                unsafe.clear()
+                if was_unsafe:
+                    event('authority_recovered', attempt=renewed['attempt']['id'])
+            except ServiceUnavailable as exc:
+                unavailable(exc)  # Fence writes; retry only against actual current authority.
             except Exception as exc:
-                unsafe.set()
-                event('authority_unavailable', error_category=type(exc).__name__, service_code=getattr(exc, 'code', None))
+                unavailable(exc)
+                terminal.set()  # Expiry, stale binding, revoked credentials: never renew by inference.
                 return
 
     if tools.role == 'worker' and config.get('heartbeat', True):
         threading.Thread(target=heartbeat, daemon=True).start()
     try:
         from tools.registry import registry
-        operations = ['assignment', 'read', 'diff', 'check'] + (['write', 'submit'] if tools.role == 'worker' else ['verdict'])
+        operations = ['assignment', 'history', 'read', 'diff', 'check'] + (['write', 'submit'] if tools.role == 'worker' else ['verdict'])
 
         def action(values, **_kwargs):
             try:
@@ -66,6 +82,9 @@ def main():
                     raise Barrier('operation not exposed to this actor')
                 event('tool', operation=op)
                 return json.dumps(tools.invoke(op, values))
+            except ServiceUnavailable as exc:
+                unavailable(exc)
+                return json.dumps({'error': str(exc), 'transport_category': exc.category})
             except Exception as exc:
                 # Fixed authority errors and local file errors only; no raw HTTP/provider response.
                 return json.dumps({'error': str(exc) if isinstance(exc, Barrier) else type(exc).__name__})
@@ -74,6 +93,8 @@ def main():
                   'parameters': {'type': 'object', 'properties': {
                       'operation': {'type': 'string', 'enum': operations}, 'path': {'type': 'string'},
                       'content': {'type': 'string'}, 'summary': {'type': 'string'},
+                      'offset': {'type': 'integer', 'minimum': 0}, 'limit': {'type': 'integer', 'minimum': 1, 'maximum': 64000},
+                      'after': {'type': 'integer', 'minimum': 0}, 'version': {'type': 'string'},
                       'verdict': {'type': 'string', 'enum': ['Accepted', 'Changes requested', 'Blocked']}},
                       'required': ['operation'], 'additionalProperties': False}}
         registry.register('foundry_action', 'cf_invocation', schema, action)
@@ -94,6 +115,7 @@ def main():
         for prohibited in ('terminal', 'execute_code', 'delegate_task', 'web_extract', 'web_search'):
             if registry.get_entry(prohibited) is not None:
                 raise Barrier('unexpected inherited capability')
+        event('startup_isolation', isolated=bool(sys.flags.isolated))
         event('capabilities', tools=sorted(exposed), actor=tools.binding['actor'], role=tools.role)
         barrier = config.get('start_barrier')
         if barrier:
@@ -104,24 +126,43 @@ def main():
                 time.sleep(.05)
         deadline = time.monotonic() + config.get('invocation_seconds', 600)
         while time.monotonic() < deadline:
-            job = tools.client.workflow('get', {'project_id': tools.binding['project_id'], 'contract_id': tools.binding['contract_id']})['job']
-            if unsafe.is_set():
-                raise Barrier('lease lost or service unavailable')
-            if tools.role == 'worker' and job['stage'] == 'QA':
-                time.sleep(.2)
+            try:
+                job = tools.client.workflow('get', {'project_id': tools.binding['project_id'], 'contract_id': tools.binding['contract_id']})['job']
+                if tools.role == 'worker' and job['stage'] in ('QA accepted', 'Integrating', 'Done', 'Cancelled', 'Blocked'):
+                    break
+                if tools.role == 'qa' and job['stage'] != 'QA':
+                    break
+                tools.client.authority(tools.binding, tools.role)
+            except ServiceUnavailable as exc:
+                unavailable(exc)
+                stop.wait(.5)
                 continue
-            if tools.role == 'worker' and job['stage'] in ('QA accepted', 'Integrating', 'Done', 'Cancelled', 'Blocked'):
-                break
-            tools.client.authority(tools.binding, tools.role)
+            if terminal.is_set():
+                raise Barrier('lease expired, revoked or stale; recovery requires confirmed stop')
+            if unsafe.is_set():
+                if tools.role == 'qa':
+                    unsafe.clear()  # Full current QA authority was just revalidated.
+                    event('authority_recovered', attempt=tools.binding['attempt_id'])
+                else:
+                    stop.wait(.2)  # Only a validated, successful owning heartbeat clears this fence.
+                    continue
+            if tools.role == 'worker' and job['stage'] == 'QA':
+                stop.wait(.2)
+                continue
             prompt = config['role_instructions'] + '\n\nAssigned immutable work:\n' + job['revision']['body_markdown']
             if tools.role == 'worker':
                 prompt += '\nUse assignment/read/write/check tools. After successful checks, submit with a concise commit summary. Do not integrate, approve yourself or invoke a remote transport. If QA requested corrections, inspect current history and correct this same assignment.'
             else:
                 prompt += '\nIndependently inspect assignment, exact candidate diff and relevant files; run check yourself. Record an evidence-backed verdict with verdict/summary. Do not write, commit, integrate, or mark Done.'
+            prompt += '\nUse history continuation and read/diff next_offset/version until the required evidence is fully inspected. Assignment includes the latest QA verdict even after many heartbeats. A pending_submission identifies a prepared immutable commit; retry its original summary after revalidation. Never claim a truncated prefix is a full review.'
             event('model_started')
             result = agent.run_conversation(prompt)
             event('model_finished', completed=bool(result.get('completed')), api_calls=result.get('api_calls', 0))
-            refreshed = tools.client.workflow('get', {'project_id': tools.binding['project_id'], 'contract_id': tools.binding['contract_id']})['job']
+            try:
+                refreshed = tools.client.workflow('get', {'project_id': tools.binding['project_id'], 'contract_id': tools.binding['contract_id']})['job']
+            except ServiceUnavailable as exc:
+                unavailable(exc)
+                continue
             if tools.role == 'worker' and refreshed['stage'] == 'QA':
                 # A successful service submission survives model iteration exhaustion.
                 # Keep this process and heartbeat through QA and corrections.

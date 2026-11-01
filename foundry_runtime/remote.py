@@ -15,6 +15,57 @@ from .core import Barrier, RemoteFailure
 from .runtime import local_git
 
 
+def response_metadata(stderr, now=None):
+    """Parse response/status lines, never numeric substrings in IDs or bodies."""
+    now = time.time() if now is None else now
+    statuses, headers = [], {}
+    for raw in stderr.splitlines():
+        line = raw.strip()
+        trace = re.search(r'<=\s*Recv header:\s*(.*)$', line, re.IGNORECASE)
+        if trace:
+            line = trace[1]
+        elif line.startswith('< '):
+            line = line[2:].strip()
+        status = re.match(r'^HTTP(?:/\d+(?:\.\d+)?)?\s+([1-5]\d{2})(?:\s|:|$)', line, re.IGNORECASE)
+        if not status:
+            status = re.search(r'\(HTTP\s+([1-5]\d{2})\)\s*$', line, re.IGNORECASE)
+        if status:
+            statuses.append(int(status[1])); headers = {}
+        header = re.match(r'^(Retry-After|X-RateLimit-Reset|X-RateLimit-Remaining):\s*(.*?)\s*$', line, re.IGNORECASE)
+        if header:
+            headers[header[1].lower()] = header[2]
+    status = statuses[-1] if statuses else None
+    message = stderr.lower()
+    if status == 401:
+        category = 'authentication'
+    elif status == 429 or (status == 403 and (headers.get('x-ratelimit-remaining') == '0' or
+            'retry-after' in headers or 'api rate limit exceeded' in message or 'secondary rate limit' in message)):
+        category = 'rate_limit'
+    elif status is not None:
+        category = 'service' if status >= 500 else 'resource'
+    elif any(value in message for value in ('authentication failed', 'could not read username')):
+        category = 'authentication'
+    elif any(value in message for value in ('could not resolve', 'unable to access', 'connection refused',
+             'connection reset', 'timed out', 'failed to connect', "couldn't resolve host")):
+        category = 'connection'
+    elif 'rate limit' in message:
+        category = 'rate_limit'
+    else:
+        category = 'resource'
+    hints = []
+    value = headers.get('retry-after')
+    if value:
+        try:
+            hints.append(max(0, float(value)))
+        except ValueError:
+            try: hints.append(max(0, parsedate_to_datetime(value).timestamp() - now))
+            except (TypeError, ValueError, OverflowError): pass
+    if category == 'rate_limit' and headers.get('x-ratelimit-reset'):
+        try: hints.append(max(0, float(headers['x-ratelimit-reset']) - now))
+        except ValueError: pass
+    return category, max(hints) if hints else None
+
+
 def command(argv, cwd):
     env = dict(os.environ, GIT_TRACE_CURL='1', GIT_TRACE_CURL_NO_DATA='1', GH_DEBUG='api')
     try:
@@ -22,25 +73,7 @@ def command(argv, cwd):
     except subprocess.TimeoutExpired:
         raise RemoteFailure('connection') from None
     if result.returncode:
-        message = result.stderr.lower()
-        if any(value in message for value in ('401', 'authentication failed', 'could not read username')):
-            category = 'authentication'
-        elif any(value in message for value in ('429', 'rate limit')):
-            category = 'rate_limit'
-        elif any(value in message for value in ('could not resolve', 'unable to access', 'connection refused', 'timed out')):
-            category = 'connection'
-        elif any(value in message for value in ('502', '503', '500 internal')):
-            category = 'service'
-        else:
-            category = 'resource'
-        hint = re.search(r'retry-after:\s*([^\r\n]+)', message, re.IGNORECASE)
-        delay = None
-        if hint:
-            try:
-                delay = float(hint[1])
-            except ValueError:
-                try: delay = max(0, parsedate_to_datetime(hint[1]).timestamp() - time.time())
-                except (TypeError, ValueError): pass
+        category, delay = response_metadata(result.stderr)
         raise RemoteFailure(category, delay)
     return result.stdout.strip()
 

@@ -54,7 +54,11 @@ def run(args):
     root.chmod(0o700)
     print('PRIVATE_FIXTURE', root, flush=True)
     mock = load('acceptance_mock', args.ai_contract_checkout / 'scripts/mock_client.py')
-    server = mock.LocalServer(str(args.service_binary), str(root), 15)
+    if args.docker_image:
+        fixture = load('cf_docker_fixture', checkout/'scripts/docker_service_fixture.py')
+        server = fixture.DockerService(args.docker_host,args.docker_image,root)
+    else:
+        server = mock.LocalServer(str(args.service_binary), str(root), 15)
     journal = Journal(root / 'runtime.sqlite')
     launcher = Launcher(journal, args.hermes_python, args.hermes_source)
     launches, worktrees, reports = [], [], []
@@ -66,9 +70,12 @@ def run(args):
     try:
         for actor, scopes in [('coordinator', 'read,write,coordinator'), ('worker-one', 'read,write,writer'),
                               ('worker-two', 'read,write,writer'), ('qa', 'read,write,auditor')]:
-            result = subprocess.run([str(args.service_binary), 'token', 'issue', 'acceptance-' + actor, scopes],
-                                    env=server.env, capture_output=True, text=True, check=True)
-            server.tokens[actor] = next(line[6:] for line in result.stdout.splitlines() if line.startswith('token='))
+            if args.docker_image:
+                server.tokens[actor] = server.issue_token('acceptance-' + actor, scopes)
+            else:
+                result = subprocess.run([str(args.service_binary), 'token', 'issue', 'acceptance-' + actor, scopes],
+                                        env=server.env, capture_output=True, text=True, check=True)
+                server.tokens[actor] = next(line[6:] for line in result.stdout.splitlines() if line.startswith('token='))
         origin = server.start()
         report['origin'] = origin
         class QuietClient(mock.Client):
@@ -117,7 +124,7 @@ def run(args):
         expected = github.head()
         assert local_git(checkout, 'merge-base', expected, 'HEAD') == expected
 
-        def contract(name, path, terms):
+        def contract(name, path, terms, extra=""):
             bootstrap_scope = ('The delivered candidate intentionally includes the operator-authored runtime prerequisites, tests, preflight and LOCAL_RUNTIME.md since the remote baseline. These are authorized prerequisite changes; QA must review those files as well as this guide. Worker writes only the guide.' if not report['delivery'] else 'The candidate may include operator-authored runtime prerequisites, focused compatibility fixes, tests and acceptance runner since the declared remote baseline; those are authorized and QA must inspect them. Worker writes only the guide.')
             body = f'''# Objective
 Create `{path}` as a concise operator guide for {name} in the bounded local Hermes adapter.
@@ -135,6 +142,7 @@ Worker runs the supplied checks and submits an actual commit. Independent QA ins
 # Verification and delivery
 Use the check capability. Coordinator integrates serially, verifies expected-head non-force main delivery and postchecks, then records native Done and historical issue. No deployment.
 '''
+            body += extra
             c = api.call('milestone_contract_create', {'project_id': pid, 'milestone_id': milestone['id'],
                          'title': name, 'body_markdown': body}, 'architect')['contract']
             job = work('define', {'contract_id': c['id'], 'title': name, 'body_markdown': body,
@@ -161,12 +169,13 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
                      'assert p.is_file(); text=p.read_text().lower(); '
                      'assert all(t.lower() in text for t in ' + repr(terms) + '); '
                      'suite=unittest.TestSuite([unittest.defaultTestLoader.discover("tests",pattern="test_core.py"),unittest.defaultTestLoader.discover("tests",pattern="test_transport.py")]); '
+                     'suite.addTests(unittest.defaultTestLoader.loadTestsFromName(\"test_gap_regressions.GapRegressions.\"+name) for name in '+repr(['test_assignment_finds_review_after_first_history_page','test_cached_result_race_releases_probe_without_claiming_network_health','test_local_rejection_releases_half_open_probe_without_claiming_health','test_read_and_diff_pages_reconstruct_full_stable_content','test_resource_status_and_server_reset_are_parsed_from_response_metadata','test_server_reset_blocks_automatic_and_operator_early_probes'])+'); '
                      'r=unittest.TextTestRunner(verbosity=1).run(suite); assert r.wasSuccessful()')
             return {'origin': origin, 'service_token': server.tokens[actor], 'binding': binding,
                     'role': role, 'workspace': str(directory), 'base_sha': base,
                     'candidate_sha': job.get('candidate', {}).get('sha'), 'home': str(home), 'scratch': str(scratch),
                     'model': 'gpt-5.6-terra', 'role_instructions': roletext,
-                    'checks': ['/Library/Developer/CommandLineTools/usr/bin/python3', '-E', '-s', '-c', check],
+                    'checks': ['/Library/Developer/CommandLineTools/usr/bin/python3', '-B', '-E', '-s', '-c', check],
                     'start_barrier': str(barrier) if barrier else None, 'invocation_seconds': 600}
 
         def record_launch(config, key):
@@ -302,6 +311,75 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
             accepted = review(submitted, first[1], first[2], expected, key)
             complete = deliver(accepted, expected)
             reports.append({'job': complete, 'history': work('history', {'contract_id': first[0]}), 'launch': key})
+        elif args.scenario == 'correction':
+            if not args.docker_image:
+                raise Barrier('correction/replacement acceptance requires the actual service image')
+            extra = """
+# Authorized staged acceptance fixture
+This contract deliberately exercises independent correction, not immediate final approval.
+The first Worker MUST submit an initial guide WITHOUT a verification marker. This is an
+explicit authorized draft review, an exception to requiring all final evidence before a first submission.
+After service-container replacement the Coordinator records a fresh verification_marker in native history.
+QA MUST read that current record, independently run the supplied marker check, and request changes
+when it is absent. Include the exact expected marker in the actionable QA findings.
+The same Worker/attempt MUST then add the exact marker from latest QA feedback, explain it as
+disposable acceptance evidence, check again and submit a changed immutable candidate.
+Fresh independent QA must check the corrected candidate. Only the corrected accepted candidate may be delivered.
+Read history through all necessary pages; heartbeat/record noise is not the latest QA finding.
+"""
+            task = contract('Verified runtime recovery and correction', 'docs/RUNTIME_RECOVERY_VERIFIED.md',
+                            ['AI.Contract','isolated','retry','history','paging','breaker'], extra)
+            job = work('reserve', {'lease_seconds':300})['job']
+            directory = workspace('HEAD','worker-correction')
+            actor = job['attempt']['worker'].removeprefix('acceptance-')
+            config = configuration(job,actor,directory,expected,task[2],task[1],'worker')
+            key=launch(config)
+            first=wait_stage(task[0],['QA'],key)
+            pid_before=journal.get(key)['pid']
+            before_history=work('history',{'contract_id':task[0],'limit':100})
+            replacement=server.replace(downtime=6)
+            after=work('get',{'contract_id':task[0]})['job']
+            assert after['attempt']['id']==first['attempt']['id'] and after['candidate']==first['candidate']
+            persisted=work('history',{'contract_id':task[0],'limit':100})
+            assert persisted['events'][:len(before_history['events'])]==before_history['events']
+            until=time.monotonic()+20
+            while time.monotonic()<until:
+                events=[json.loads(line) for line in (Path(config['home'])/'events.jsonl').read_text().splitlines()]
+                if any(e['event']=='authority_recovered' for e in events):break
+                time.sleep(.2)
+            else:raise Barrier('Worker did not revalidate authority after actual image replacement')
+            failures=[e for e in events if e['event']=='authority_unavailable']
+            assert failures and all(e.get('transport_category') for e in failures)
+            assert launcher.inspect(key)=='running' and journal.get(key)['pid']==pid_before
+            report['service_replacement']=replacement
+            report['outage_diagnostics']=failures
+            for n in range(60):
+                work('record',{**bound(after),'evidence':'Disposable history pagination noise '+str(n)})
+            marker='CF-VALIDATED-'+uuid.uuid4().hex
+            work('record',{**bound(after),'evidence':json.dumps({'verification_marker':marker,'image':server.image})})
+            q=work('assign_qa',{'contract_id':task[0]})['job']
+            qa_dir=workspace(q['candidate']['sha'],'qa-first-draft')
+            qa_config=configuration(q,'qa',qa_dir,expected,task[2]+[marker],task[1],'qa')
+            qa_key=launch(qa_config)
+            correction=wait_stage(task[0],['Implementing','Blocked'],qa_key)
+            if correction['stage']!='Implementing':
+                raise Barrier('real QA blocked the staged fixture; inspect findings')
+            launcher.stop(qa_key)
+            assert correction['attempt']['id']==first['attempt']['id']
+            for n in range(55):
+                work('record',{**bound(correction),'evidence':'Correction visibility pagination noise '+str(n)})
+            second=wait_stage(task[0],['QA'],key)
+            assert second['candidate']['sha']!=first['candidate']['sha']
+            assert second['attempt']['id']==first['attempt']['id']
+            assert journal.get(key)['pid']==pid_before and launcher.inspect(key)=='running'
+            accepted=review(second,task[1],task[2]+[marker],expected,key)
+            complete=deliver(accepted,expected)
+            history=work('history',{'contract_id':task[0],'limit':100})
+            reports.append({'job':complete,'launch':key,'first_candidate':first['candidate'],
+                            'corrected_candidate':second['candidate'],'same_worker_pid':pid_before,
+                            'same_attempt':first['attempt']['id'],'verification_marker':marker})
+            report['real_correction_same_worker_attempt']=True
+            report['history_exceeds_default_page']=True
         elif args.scenario == 'parallel':
             # Prerequisites have already had independent QA and real main delivery.
             report['delivery'].append({'previously_verified_base': expected})
@@ -378,6 +456,8 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
             directory = workspace('HEAD', 'recovery-worker')
             actor = job['attempt']['worker'].removeprefix('acceptance-')
             config = configuration(job, actor, directory, expected, task[2], task[1], 'worker', root/'never-release')
+            (directory/'run_agent.py').write_text('raise RuntimeError("candidate startup module executed")\n')
+            (directory/'sitecustomize.py').write_text('raise RuntimeError("candidate site customization executed")\n')
             config['heartbeat'] = False
             # The original launcher actually exits. Its independent native child
             # survives; the successor controller has no original Popen handle.
@@ -443,6 +523,8 @@ os._exit(0)
             cancelled=work('cancel',{**bound(renewed),'stopped_confirmed':True,'evidence':'Renewed attempt was never launched; prior real Worker stopped. Disposable recovery proof complete.'})['job']
             reports.append({'job':cancelled,'history':work('history',{'contract_id':task[0]}),'launch':key,'unknown_launch':unknown['key']})
             report['expiry_while_real_hermes_alive']=True
+        if args.docker_image:
+            report['docker_services'] = server.events
         report['status'] = args.scenario + '_passed'
         report['limits'] = []
         write_report(args.report, report)
@@ -461,8 +543,21 @@ os._exit(0)
                 report.setdefault('cleanup_unknown', []).append(key)
         try:
             if 'work' in locals():
-                report['all_history'] = [work('history', {'contract_id': job['contract_id'], 'limit':100})
-                                         for job in work('list').get('jobs', [])]
+                report['all_history'] = []
+                queued, cursor = [], 0
+                while True:
+                    page = work('list', {'after':cursor,'limit':100}).get('jobs',[])
+                    queued.extend(page)
+                    if len(page)<100:break
+                    cursor=page[-1]['queue_sequence']
+                for job in queued:
+                    events, cursor, revisions = [], 0, []
+                    while True:
+                        page = work('history', {'contract_id':job['contract_id'],'after':cursor,'limit':100})
+                        rows=page.get('events',[]);events.extend(rows);revisions=page.get('revisions',[])
+                        if len(rows)<100:break
+                        cursor=rows[-1]['id']
+                    report['all_history'].append({'events':events,'revisions':revisions})
             diagnostics = []
             for home in root.glob('home-*'):
                 row = {'home': home.name}
@@ -485,6 +580,8 @@ os._exit(0)
             report['preserved_private_fixture'] = str(root)
             write_report(args.report, report)
             raise Barrier('quiescence or evidence publication unresolved; private fixtures retained')
+        if args.docker_image:
+            server.cleanup()
         for path in root.glob('home-*'):
             shutil.rmtree(path)
         shutil.rmtree(root / 'data', ignore_errors=True)
@@ -502,7 +599,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('ai-contract-checkout', 'service-binary', 'hermes-source', 'hermes-python', 'report'):
         parser.add_argument('--' + name, type=Path, required=True)
-    parser.add_argument('--scenario',choices=['single','parallel','recovery'],default='single')
+    parser.add_argument('--scenario',choices=['single','parallel','recovery','correction'],default='single')
+    parser.add_argument('--docker-image')
+    parser.add_argument('--docker-host',default='unix:///Users/karellste-marie/.colima/gapfix/docker.sock')
     run(parser.parse_args())
 
 if __name__ == '__main__':

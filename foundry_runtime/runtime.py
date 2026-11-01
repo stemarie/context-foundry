@@ -14,6 +14,9 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+import threading
+import socket
+import http.client
 import urllib.error
 import urllib.request
 
@@ -30,6 +33,33 @@ class ServiceError(Barrier):
     def __init__(self, code):
         self.code = code
         super().__init__(code)
+
+
+class ServiceUnavailable(Barrier):
+    def __init__(self, category, code=None):
+        self.category, self.code = category, code
+        super().__init__('service unavailable; current authority must be revalidated')
+
+
+def native_worker_command(python, source, adapter_root):
+    """Only trusted roots enter Python's import path, including at interpreter startup."""
+    source, adapter_root = str(Path(source).resolve()), str(Path(adapter_root).resolve())
+    entry = ('import sys; sys.path[:0]=' + repr([source, adapter_root]) + '; '
+             'from run_agent import AIAgent; import runpy; sys.path.insert(0,' + repr(adapter_root) + '); '
+             'runpy.run_module("foundry_runtime.worker",run_name="__main__")')
+    return [str(python), '-I', '-B', '-c', entry]
+
+
+def text_page(text, arguments, field):
+    offset, limit = arguments.get('offset', 0), arguments.get('limit', 64000)
+    if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 64000:
+        raise Barrier('invalid page bounds')
+    version = hashlib.sha256(text.encode()).hexdigest()
+    if arguments.get('version') and arguments['version'] != version:
+        raise Barrier('content changed between pages; restart at offset zero')
+    end = min(len(text), offset + limit)
+    return {field: text[offset:end], 'offset': offset, 'total_characters': len(text),
+            'next_offset': end if end < len(text) else None, 'truncated': end < len(text), 'version': version}
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -54,9 +84,19 @@ class Client:
                 code = json.load(exc).get('error', {}).get('code', 'service_rejected')
             except (ValueError, AttributeError):
                 code = 'service_rejected'
+            if exc.code >= 500:
+                raise ServiceUnavailable('http_service_failure', code) from None
             raise ServiceError(code) from None
-        except (OSError, ValueError):
-            raise Barrier('service unavailable; no local transition inferred') from None
+        except (OSError, ValueError, http.client.HTTPException) as exc:
+            cause = getattr(exc, 'reason', exc)
+            if isinstance(cause, TimeoutError): category = 'timeout'
+            elif isinstance(cause, ConnectionRefusedError): category = 'connection_refused'
+            elif isinstance(cause, ConnectionResetError): category = 'connection_reset'
+            elif isinstance(cause, socket.gaierror): category = 'dns_failure'
+            elif isinstance(cause, http.client.RemoteDisconnected): category = 'connection_closed'
+            elif isinstance(cause, ValueError): category = 'invalid_response'
+            else: category = 'connection_failure'
+            raise ServiceUnavailable(category) from None
 
     def workflow(self, operation, command):
         return self.call('/api/v1/workflow/' + operation, command)['workflow']
@@ -148,19 +188,62 @@ class Tools:
         self.checks = None
         self.candidate = None
         self.calls = []
+        self.lock = threading.RLock()
 
     def invoke(self, operation, arguments):
+        # Native batched tool calls must not race workspace mutation or commits.
+        with self.lock:
+            return self._invoke(operation, arguments)
+
+    def submission_identity(self, content):
+        return hashlib.sha256(json.dumps({'origin': self.config['origin'], 'binding': self.binding,
+                                          'content': content}, sort_keys=True).encode()).hexdigest()
+
+    def pending_submission(self):
+        if not self.config.get('runtime_journal'):
+            return None
+        journal = Journal(self.config['runtime_journal'])
+        identity = self.submission_identity(snapshot(self.workspace))
+        with journal.transaction() as db:
+            row = db.execute('SELECT intent,payload FROM submissions WHERE identity=?', (identity,)).fetchone()
+        if not row:
+            return None
+        intent = json.loads(row['intent'])
+        payload = json.loads(row['payload']) if row['payload'] else {}
+        return {'summary': intent['summary'], 'candidate_sha': payload.get('candidate_sha'),
+                'idempotency_key': payload.get('idempotency_key')}
+
+    def _invoke(self, operation, arguments):
         job = self.client.authority(self.binding, self.role)
         self.calls.append(operation)
         if operation == 'assignment':
-            history = self.client.workflow('history', {'project_id': self.binding['project_id'], 'contract_id': self.binding['contract_id']})
-            return {'job': job, 'history': history.get('events', [])[-10:], 'files': sorted(str(p.relative_to(self.workspace)) for p in self.workspace.rglob('*')
-                                               if p.is_file() and not any(x.startswith('.git') for x in p.relative_to(self.workspace).parts))[:200]}
+            events, after = [], 0
+            while True:
+                page = self.client.workflow('history', {'project_id': self.binding['project_id'],
+                    'contract_id': self.binding['contract_id'], 'after': after, 'limit': 100}).get('events', [])
+                events.extend(page)
+                if len(page) < 100:
+                    break
+                if page[-1]['id'] <= after:
+                    raise Barrier('history continuation did not advance')
+                after = page[-1]['id']
+            return {'job': job, 'pending_submission': self.pending_submission(), 'history': events[-10:], 'history_total': len(events),
+                    'latest_review': next((e for e in reversed(events) if e['operation'] == 'verdict'), None),
+                    'files': sorted(str(p.relative_to(self.workspace)) for p in self.workspace.rglob('*')
+                        if p.is_file() and not any(x.startswith('.git') for x in p.relative_to(self.workspace).parts))[:200]}
+        if operation == 'history':
+            after, limit = arguments.get('after', 0), arguments.get('limit', 100)
+            if type(after) is not int or after < 0 or type(limit) is not int or not 1 <= limit <= 100:
+                raise Barrier('invalid history page bounds')
+            result = self.client.workflow('history', {'project_id': self.binding['project_id'],
+                'contract_id': self.binding['contract_id'], 'after': after, 'limit': limit})
+            events = result.get('events', [])
+            return {**result, 'next_after': events[-1]['id'] if len(events) == limit else None}
         if operation == 'read':
             path = checked_path(self.workspace, arguments['path'])
-            return {'content': path.read_text()[:64000]}
+            return text_page(path.read_text(), arguments, 'content')
         if operation == 'diff':
-            return {'diff': local_git(self.workspace, 'diff', self.config['base_sha'], 'HEAD')[:64000]}
+            return text_page(local_git(self.workspace, 'diff', self.config['base_sha'], 'HEAD'), arguments, 'diff')
         if operation == 'write':
             if self.role != 'worker' or job['stage'] != 'Implementing':
                 raise Barrier('write capability denied')
@@ -184,22 +267,58 @@ class Tools:
             self.checked_snapshot = after
             return self.checks
         if operation == 'submit':
-            if self.role != 'worker' or job['stage'] != 'Implementing' or not self.checks or not self.checks['passed']:
+            if self.role != 'worker' or job['stage'] not in ('Implementing', 'QA') or not self.checks or not self.checks['passed']:
                 raise Barrier('current checks and Worker authority required')
-            if snapshot(self.workspace) != self.checked_snapshot:
+            content_digest = snapshot(self.workspace)
+            if content_digest != self.checked_snapshot:
                 raise Barrier('candidate changed since verification')
-            local_git(self.workspace, 'diff', '--check')
-            local_git(self.workspace, 'add', '--all')
-            local_git(self.workspace, '-c', 'user.name=' + self.binding['actor'], '-c',
-                      'user.email=' + self.binding['actor'] + '@localhost', 'commit', '-m', arguments['summary'])
-            sha = local_git(self.workspace, 'rev-parse', 'HEAD')
-            evidence = json.dumps({'actor': self.binding['actor'], 'checks': self.checks,
-                                   'workspace': str(self.workspace), 'branch': local_git(self.workspace, 'branch', '--show-current'),
-                                   'base_sha': self.config['base_sha'],
-                                   'candidate_sha': sha, 'summary': arguments['summary']})
-            result = self.client.workflow('submit', {**command_binding(self.binding), 'candidate_sha': sha,
-                                                   'evidence': evidence, 'idempotency_key': 'submit:' + sha})
-            self.candidate = sha
+            if not self.config.get('runtime_journal'):
+                raise Barrier('durable transport journal is required for submission')
+            journal = Journal(self.config['runtime_journal'])
+            identity = self.submission_identity(content_digest)
+            with journal.transaction() as db:
+                row = db.execute('SELECT * FROM submissions WHERE identity=?', (identity,)).fetchone()
+                if row:
+                    intent = json.loads(row['intent'])
+                else:
+                    intent = {'parent': local_git(self.workspace, 'rev-parse', 'HEAD'),
+                              'summary': arguments['summary'], 'workspace': str(self.workspace), 'checks': self.checks}
+                    db.execute('INSERT INTO submissions VALUES(?,?,NULL)', (identity, json.dumps(intent)))
+            if intent['summary'] != arguments['summary'] or intent['workspace'] != str(self.workspace):
+                raise Barrier('prepared submission intent differs; inspect original summary/workspace')
+            if row and row['payload']:
+                command = json.loads(row['payload'])
+            else:
+                head = local_git(self.workspace, 'rev-parse', 'HEAD')
+                if head == intent['parent']:
+                    if job['stage'] != 'Implementing':
+                        raise Barrier('candidate already submitted; reconcile assignment')
+                    local_git(self.workspace, 'diff', '--check')
+                    local_git(self.workspace, 'add', '--all')
+                    local_git(self.workspace, '-c', 'user.name=' + self.binding['actor'], '-c',
+                              'user.email=' + self.binding['actor'] + '@localhost', 'commit', '-m', intent['summary'])
+                    head = local_git(self.workspace, 'rev-parse', 'HEAD')
+                elif (local_git(self.workspace, 'rev-parse', 'HEAD^') != intent['parent'] or
+                      local_git(self.workspace, 'log', '-1', '--format=%B') != intent['summary'] or
+                      local_git(self.workspace, 'status', '--porcelain')):
+                    raise Barrier('local commit outcome unknown; explicit reconciliation required')
+                evidence = json.dumps({'actor': self.binding['actor'], 'checks': intent['checks'],
+                    'workspace': str(self.workspace), 'branch': local_git(self.workspace, 'branch', '--show-current'),
+                    'base_sha': self.config['base_sha'], 'candidate_sha': head, 'summary': intent['summary']})
+                command = {**command_binding(self.binding), 'candidate_sha': head,
+                           'evidence': evidence, 'idempotency_key': 'submit:' + head}
+                with journal.transaction() as db:
+                    db.execute('UPDATE submissions SET payload=? WHERE identity=?', (json.dumps(command), identity))
+            if local_git(self.workspace, 'rev-parse', 'HEAD') != command['candidate_sha']:
+                raise Barrier('workspace moved after candidate preparation')
+            if job['stage'] == 'QA':
+                if job['candidate']['sha'] != command['candidate_sha']:
+                    raise Barrier('service candidate differs from prepared submission')
+                return {'job': job, 'reconciled': True}
+            if job.get('candidate', {}).get('sha') == command['candidate_sha']:
+                raise Barrier('QA requested changes; change and verify the candidate before resubmitting')
+            result = self.client.workflow('submit', command)
+            self.candidate = command['candidate_sha']
             return result
         if operation == 'verdict':
             if self.role != 'qa':
@@ -235,20 +354,20 @@ class Launcher:
         (home / 'config.yaml').write_text(json.dumps({'model': {'provider': model_runtime['provider'], 'default': config['model']},
                                                      'memory': {'enabled': False}, 'plugins': {'enabled': []},
                                                      'tools': {'tool_search': {'enabled': 'off'}}}))
+        if Path(self.source).resolve().is_relative_to(Path(config['workspace']).resolve()) or Path(__file__).resolve().parent.parent.is_relative_to(Path(config['workspace']).resolve()):
+            raise Barrier('trusted runtime source must be outside the candidate workspace')
         env = {'PATH': os.environ.get('PATH', '/usr/bin:/bin'), 'HOME': config['home'],
-               'HERMES_HOME': config['home'], 'PYTHONPATH': self.source + os.pathsep + str(Path(__file__).resolve().parent.parent),
+               'HERMES_HOME': config['home'],
                'PYTHONDONTWRITEBYTECODE': '1', 'TMPDIR': config['scratch'],
                'HERMES_DISABLE_LAZY_INSTALLS': '1'}
         stream = open(Path(config['home']) / 'invocation.log', 'w')
-        entry = ('from run_agent import AIAgent; import sys,runpy; sys.path.insert(0,' +
-                 repr(str(Path(__file__).resolve().parent.parent)) +
-                 '); runpy.run_module("foundry_runtime.worker",run_name="__main__")')
-        process = subprocess.Popen([self.python, '-c', entry, '--journal', self.journal.path,
+        command = native_worker_command(self.python, self.source, Path(__file__).resolve().parent.parent)
+        process = subprocess.Popen([*command, '--journal', self.journal.path,
                                     '--launch', row['key'], '--nonce', row['nonce']], env=env, cwd=config['workspace'],
                                    stdin=subprocess.PIPE, stdout=stream, stderr=stream, start_new_session=True, text=True)
         self.children[row['key']] = process
         stream.close()
-        process.stdin.write(json.dumps({'config': config, 'model_runtime': model_runtime}))
+        process.stdin.write(json.dumps({'config': dict(config, runtime_journal=self.journal.path), 'model_runtime': model_runtime}))
         process.stdin.close()
         deadline = time.monotonic() + 90
         while self.journal.get(row['key'])['pid'] is None and time.monotonic() < deadline:

@@ -37,6 +37,14 @@ class Journal:
                   identity TEXT PRIMARY KEY, alias TEXT NOT NULL, intent TEXT NOT NULL,
                   state TEXT NOT NULL, result TEXT);
             """)
+        # Additive local transport metadata; never assignment/queue authority.
+        with self.transaction() as db:
+            fields = {row[1] for row in db.execute('PRAGMA table_info(connections)')}
+            if 'owner_pid' not in fields:
+                db.execute('ALTER TABLE connections ADD COLUMN owner_pid INTEGER')
+            if 'server_until' not in fields:
+                db.execute('ALTER TABLE connections ADD COLUMN server_until REAL NOT NULL DEFAULT 0')
+            db.execute("CREATE TABLE IF NOT EXISTS submissions (identity TEXT PRIMARY KEY, intent TEXT NOT NULL, payload TEXT)")
         os.chmod(self.path, 0o600)
 
     @contextlib.contextmanager
@@ -143,14 +151,14 @@ class Gate:
         with self.journal.transaction() as db:
             row = db.execute("SELECT * FROM connections WHERE alias=?", (self.alias,)).fetchone()
             if not row:
-                db.execute("INSERT INTO connections VALUES(?, 'closed',0,NULL,0,NULL)", (self.alias,))
+                db.execute("INSERT INTO connections(alias,state,until,owner,failures,category) VALUES(?, 'closed',0,NULL,0,NULL)", (self.alias,))
                 return None
             if row["state"] == "closed":
                 return None
             if row["state"] == "half_open" or row["until"] > now:
                 raise Barrier("shared GitHub connection paused")
             owner = uuid.uuid4().hex
-            db.execute("UPDATE connections SET state='half_open',owner=? WHERE alias=?", (owner, self.alias))
+            db.execute("UPDATE connections SET state='half_open',owner=?,owner_pid=? WHERE alias=?", (owner, os.getpid(), self.alias))
             return owner
 
     def outcome(self, permit, category=None, retry_after=None, now=None):
@@ -168,15 +176,40 @@ class Gate:
                 delay = min(300, 30 * 2 ** min(failures - 1, 4))
                 if retry_after is not None:
                     delay = max(delay, float(retry_after))
-                db.execute("UPDATE connections SET state='open',until=?,owner=NULL,failures=?,category=? WHERE alias=?",
-                           (now + delay, failures, category, self.alias))
+                db.execute("UPDATE connections SET state='open',until=?,server_until=?,owner=NULL,owner_pid=NULL,failures=?,category=? WHERE alias=?",
+                           (now + delay, max(row["server_until"], now + float(retry_after or 0)), failures, category, self.alias))
             elif permit is not None:
-                db.execute("UPDATE connections SET state='closed',until=0,owner=NULL,failures=0,category=NULL WHERE alias=?", (self.alias,))
+                db.execute("UPDATE connections SET state='closed',until=0,server_until=0,owner=NULL,owner_pid=NULL,failures=0,category=NULL WHERE alias=?", (self.alias,))
             # A late success from before a failure must not close an open breaker.
 
-    def operator_probe(self, now=None):
+    def release_probe(self, permit):
+        """An exited callback is quiescent, but did not establish connection health."""
+        if permit is None:
+            return
         with self.journal.transaction() as db:
-            db.execute("UPDATE connections SET until=0 WHERE alias=? AND state='open'", (self.alias,))
+            db.execute("UPDATE connections SET state='open',owner=NULL,owner_pid=NULL WHERE alias=? AND state='half_open' AND owner=?",
+                       (self.alias, permit))
+
+    def operator_probe(self, now=None):
+        now = time.time() if now is None else now
+        with self.journal.transaction() as db:
+            row = db.execute('SELECT * FROM connections WHERE alias=?', (self.alias,)).fetchone()
+            if row and row['state'] == 'half_open':
+                # PID reuse or permission uncertainty stays blocked. Never steal
+                # a live probe; a dead process can no longer issue its request.
+                pid = row['owner_pid']
+                if pid is None:
+                    raise Barrier('legacy probe owner is unknown; explicit reconciliation required')
+                try:
+                    os.kill(pid, 0)
+                except PermissionError:
+                    raise Barrier('probe process identity is not observable') from None
+                except ProcessLookupError:
+                    db.execute("UPDATE connections SET state='open',owner=NULL,owner_pid=NULL WHERE alias=? AND owner=?",
+                               (self.alias, row['owner']))
+                else:
+                    raise Barrier('shared probe owner is still alive')
+            db.execute("UPDATE connections SET until=server_until WHERE alias=? AND state='open'", (self.alias,))
         return self.acquire(now)
 
     def run(self, identity, intent, operation, reconcile=None):
@@ -189,13 +222,13 @@ class Gate:
             if prior and prior["state"] == "complete":
                 return json.loads(prior["result"])
         permit = self.acquire()
-        with self.journal.transaction() as db:
-            prior = db.execute("SELECT * FROM remote_operations WHERE identity=?", (identity,)).fetchone()
-            if prior and (prior["alias"] != self.alias or prior["intent"] != hashed):
-                raise Barrier("remote operation identity conflict")
-            if not prior:
-                db.execute("INSERT INTO remote_operations VALUES(?,?,?,'started',NULL)", (identity, self.alias, hashed))
         try:
+            with self.journal.transaction() as db:
+                prior = db.execute("SELECT * FROM remote_operations WHERE identity=?", (identity,)).fetchone()
+                if prior and (prior["alias"] != self.alias or prior["intent"] != hashed):
+                    raise Barrier("remote operation identity conflict")
+                if not prior:
+                    db.execute("INSERT INTO remote_operations VALUES(?,?,?,'started',NULL)", (identity, self.alias, hashed))
             if prior:
                 if prior['state'] == 'complete':
                     return json.loads(prior['result'])
@@ -214,6 +247,8 @@ class Gate:
         except RemoteFailure as exc:
             self.outcome(permit, exc.category, exc.retry_after)
             raise Barrier("remote operation failed; reconcile before retry") from None
+        finally:
+            self.release_probe(permit)
 
 
 class RemoteFailure(Exception):
