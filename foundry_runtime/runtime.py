@@ -223,7 +223,7 @@ class Launcher:
         home.mkdir(mode=0o700, exist_ok=True)
         Path(config['scratch']).mkdir(mode=0o700, exist_ok=True)
         (home / 'config.yaml').write_text(json.dumps({'model': {'provider': model_runtime['provider'], 'default': config['model']},
-                                                     'memory': {'enabled': False}, 'plugins': {'enabled': False},
+                                                     'memory': {'enabled': False}, 'plugins': {'enabled': []},
                                                      'tools': {'tool_search': {'enabled': 'off'}}}))
         env = {'PATH': os.environ.get('PATH', '/usr/bin:/bin'), 'HOME': config['home'],
                'HERMES_HOME': config['home'], 'PYTHONPATH': self.source + os.pathsep + str(Path(__file__).resolve().parent.parent),
