@@ -9,11 +9,13 @@ import contextlib
 import json
 import os
 from pathlib import Path
+import signal
 import socket
 import stat
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 
 from .core import Barrier
@@ -43,6 +45,26 @@ def credential(config, role):
 
 
 @contextlib.contextmanager
+def orderly_sigterm():
+    """Turn routine SIGTERM into stack unwinding while owned cleanup is active."""
+    if threading.current_thread() is not threading.main_thread():
+        raise Barrier('SIGTERM lifecycle protection requires the main thread')
+    previous = signal.getsignal(signal.SIGTERM)
+
+    def terminate(signum, frame):
+        raise SystemExit(128 + signum)
+
+    try:
+        signal.signal(signal.SIGTERM, terminate)
+    except (OSError, ValueError) as exc:
+        raise Barrier('SIGTERM lifecycle protection could not be established') from exc
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGTERM, previous)
+
+
+@contextlib.contextmanager
 def tunnel(config, port=0):
     ssh=config['ssh']
     if ssh['target']!='karell@192.168.1.176' or ssh['remote_host']!='127.0.0.1' or ssh['remote_port']!=18080:
@@ -55,8 +77,8 @@ def tunnel(config, port=0):
                  '-o','BatchMode=yes','-o','IdentitiesOnly=yes','-o','ExitOnForwardFailure=yes',
                  '-o','ConnectTimeout=10','-o','ServerAliveInterval=15','-o','ServerAliveCountMax=2',
                  '-i',ssh['identity_file'],'-N','-L',f'127.0.0.1:{port}:127.0.0.1:18080',ssh['target']]
-        with tempfile.TemporaryFile() as log:
-            process=subprocess.Popen(command,stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True)
+        with orderly_sigterm(), tempfile.TemporaryFile() as log:
+            process=subprocess.Popen(command,stdin=subprocess.DEVNULL,stdout=log,stderr=log)
             try:
                 deadline=time.monotonic()+15
                 while time.monotonic()<deadline:

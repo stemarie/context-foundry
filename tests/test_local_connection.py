@@ -1,9 +1,10 @@
 import json,os
 from pathlib import Path
+import signal
 import tempfile
 import unittest
 from foundry_runtime.core import Barrier
-from foundry_runtime.local_connection import credential,private_json,rpc
+from foundry_runtime.local_connection import credential,orderly_sigterm,private_json,rpc
 
 class LocalConnectionTests(unittest.TestCase):
     def test_reader_bridge_filters_discovery_and_blocks_mutations(self):
@@ -22,6 +23,21 @@ class LocalConnectionTests(unittest.TestCase):
         self.assertIsNone(rpc(service,{'jsonrpc':'2.0','method':'notifications/initialized'}))
         rpc(service,{'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'workflow_get'}})
         self.assertEqual(2,len(service.calls))
+
+    def test_sigterm_unwinds_and_restores_prior_handler(self):
+        prior=signal.getsignal(signal.SIGTERM)
+        restored=[]
+        def previous(signum,frame):restored.append(signum)
+        signal.signal(signal.SIGTERM,previous)
+        try:
+            with self.assertRaises(SystemExit) as stopped:
+                with orderly_sigterm():
+                    signal.raise_signal(signal.SIGTERM)
+            self.assertEqual(128+signal.SIGTERM,stopped.exception.code)
+            self.assertIs(signal.getsignal(signal.SIGTERM),previous)
+            self.assertEqual([],restored)
+        finally:
+            signal.signal(signal.SIGTERM,prior)
 
     def test_private_role_credentials_reject_admin_and_insecure_files(self):
         with tempfile.TemporaryDirectory() as root:
