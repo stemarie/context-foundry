@@ -98,7 +98,7 @@ def run(args):
         assert local_git(checkout, 'merge-base', expected, 'HEAD') == expected
 
         def contract(name, path, terms):
-            bootstrap_scope = ('The delivered candidate intentionally includes the operator-authored runtime prerequisites, tests, preflight and LOCAL_RUNTIME.md since the remote baseline. These are authorized prerequisite changes; QA must review those files as well as this guide. Worker writes only the guide.' if not report['delivery'] else 'The candidate may include operator-authored acceptance runner and historical-publication prerequisites since the declared remote baseline; those are authorized and QA must inspect them. Worker writes only the guide.')
+            bootstrap_scope = ('The delivered candidate intentionally includes the operator-authored runtime prerequisites, tests, preflight and LOCAL_RUNTIME.md since the remote baseline. These are authorized prerequisite changes; QA must review those files as well as this guide. Worker writes only the guide.' if not report['delivery'] else 'The candidate may include operator-authored runtime prerequisites, focused compatibility fixes, tests and acceptance runner since the declared remote baseline; those are authorized and QA must inspect them. Worker writes only the guide.')
             body = f'''# Objective
 Create `{path}` as a concise operator guide for {name} in the bounded local Hermes adapter.
 # Authority
@@ -140,7 +140,7 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
             check = ('import pathlib,unittest; p=pathlib.Path(' + repr(path) + '); '
                      'assert p.is_file(); text=p.read_text().lower(); '
                      'assert all(t.lower() in text for t in ' + repr(terms) + '); '
-                     'suite=unittest.defaultTestLoader.discover("tests",pattern="test_core.py"); '
+                     'suite=unittest.TestSuite([unittest.defaultTestLoader.discover("tests",pattern="test_core.py"),unittest.defaultTestLoader.discover("tests",pattern="test_transport.py")]); '
                      'r=unittest.TextTestRunner(verbosity=1).run(suite); assert r.wasSuccessful()')
             return {'origin': origin, 'service_token': server.tokens[actor], 'binding': binding,
                     'role': role, 'workspace': str(directory), 'base_sha': base,
@@ -192,6 +192,10 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
                 return reviewed
 
         def deliver(job, base):
+            with github.integration():
+                return deliver_owned(job, base)
+
+        def deliver_owned(job, base):
             nonlocal expected
             if job['stage'] != 'Integrating':
                 job = work('integrate', bound(job))['job']
@@ -211,6 +215,16 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
                 raise Barrier('operator integration checks failed; no Done')
             pushed = github.push(target, expected, authority)
             assert github.head() == target
+            # Deliberate disposable acceptance check failure: delivery alone cannot
+            # produce Done. Record the actual exit and rejected completion first.
+            failed_probe = subprocess.run([sys.executable, '-c', 'raise SystemExit(1)'])
+            assert failed_probe.returncode == 1
+            work('record', {**bound(job), 'evidence': 'Deliberate local postcheck probe exited 1; delivery is not completion.'})
+            work('complete', {**bound(job), 'target_sha': target, 'checks_passed': False,
+                              'reference': 'https://github.com/stemarie/context-foundry/commit/' + target,
+                              'evidence': 'Deliberate postcheck probe exited 1.'}, expected_error='project_conflict')
+            assert work('get', {'contract_id': job['contract_id']})['job']['stage'] == 'Integrating'
+            report['failed_postcheck_kept_unresolved'] = True
             post = subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-v'], cwd=checkout,
                                  env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1', TMPDIR='/private/tmp'), capture_output=True, text=True)
             if post.returncode:
@@ -272,7 +286,14 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
                 submissions.append((wait_stage(task[0], ['QA'], key), task, config, key))
             intervals = []
             for _, task, config, key in active:
-                events = [json.loads(line) for line in (Path(config['home'])/'events.jsonl').read_text().splitlines()]
+                until = time.monotonic() + 60
+                while True:
+                    events = [json.loads(line) for line in (Path(config['home'])/'events.jsonl').read_text().splitlines()]
+                    if any(e['event']=='model_finished' for e in events):
+                        break
+                    if time.monotonic()>until:
+                        raise Barrier('real model turn completion still pending')
+                    time.sleep(.2)
                 intervals.append((next(e['time'] for e in events if e['event']=='model_started'),
                                   next(e['time'] for e in events if e['event']=='model_finished')))
             assert max(i[0] for i in intervals) < min(i[1] for i in intervals)
@@ -357,7 +378,7 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
         args.report.write_text(json.dumps(report, indent=2) + '\n')
         raise
     finally:
-        for key in launches:
+        for key in set(launches) | set(launcher.children):
             try: launcher.stop(key)
             except Barrier: report.setdefault('cleanup_unknown', []).append(key)
         try:
@@ -381,6 +402,10 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
         report['diagnostics'] = diagnostics
         args.report.write_text(json.dumps(report, indent=2) + '\n')
         server.stop()
+        if report.get('cleanup_unknown'):
+            report['preserved_private_fixture'] = str(root)
+            args.report.write_text(json.dumps(report, indent=2) + '\n')
+            raise Barrier('owned execution quiescence unknown; private fixtures retained')
         # Preserve exported contract history, remove only owned secrets and native homes.
         for path in root.glob('home-*'):
             shutil.rmtree(path)

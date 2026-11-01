@@ -1,5 +1,11 @@
 """Operator-only GitHub transport. Children receive none of these capabilities."""
 import json
+import contextlib
+import fcntl
+import os
+import re
+from email.utils import parsedate_to_datetime
+import time
 from pathlib import Path
 import subprocess
 import tempfile
@@ -10,7 +16,11 @@ from .runtime import local_git
 
 
 def command(argv, cwd):
-    result = subprocess.run(argv, cwd=cwd, capture_output=True, text=True, timeout=90)
+    env = dict(os.environ, GIT_TRACE_CURL='1', GIT_TRACE_CURL_NO_DATA='1', GH_DEBUG='api')
+    try:
+        result = subprocess.run(argv, cwd=cwd, env=env, capture_output=True, text=True, timeout=90)
+    except subprocess.TimeoutExpired:
+        raise RemoteFailure('connection') from None
     if result.returncode:
         message = result.stderr.lower()
         if any(value in message for value in ('401', 'authentication failed', 'could not read username')):
@@ -23,7 +33,15 @@ def command(argv, cwd):
             category = 'service'
         else:
             category = 'resource'
-        raise RemoteFailure(category)
+        hint = re.search(r'retry-after:\s*([^\r\n]+)', message, re.IGNORECASE)
+        delay = None
+        if hint:
+            try:
+                delay = float(hint[1])
+            except ValueError:
+                try: delay = max(0, parsedate_to_datetime(hint[1]).timestamp() - time.time())
+                except (TypeError, ValueError): pass
+        raise RemoteFailure(category, delay)
     return result.stdout.strip()
 
 
@@ -35,6 +53,23 @@ class GitHub:
         remote = local_git(self.checkout, 'remote', 'get-url', 'origin')
         if remote not in ('https://github.com/' + repository + '.git', 'https://github.com/' + repository):
             raise Barrier('unexpected remote transport or repository')
+
+    @contextlib.contextmanager
+    def integration(self):
+        # One shared runtime journal is mandatory across all projects on this host.
+        # The lock covers ownership, target inspection, push, checks and native Done.
+        from .core import digest
+        path = Path(self.gate.journal.path).parent / ('integration-' + digest(self.repository + ':main') + '.lock')
+        with path.open('a') as stream:
+            os.chmod(path, 0o600)
+            try:
+                fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise Barrier('target integration busy; wait for current owner') from None
+            try:
+                yield
+            finally:
+                fcntl.flock(stream, fcntl.LOCK_UN)
 
     def _head(self):
         output = command(['git', 'ls-remote', '--exit-code', 'origin', 'refs/heads/main'], self.checkout)
@@ -81,7 +116,7 @@ class GitHub:
         # A deterministic marker is used by both creation and uncertain-response recovery.
         def reconcile():
             raw = command(['gh', 'issue', 'list', '--repo', self.repository, '--state', 'all',
-                           '--search', marker + ' in:body', '--json', 'url,body'], self.checkout)
+                           '--limit', '1000', '--json', 'url,body'], self.checkout)
             matches = [row['url'] for row in json.loads(raw) if marker in row['body']]
             if len(matches) > 1:
                 raise Barrier('duplicate historical records require reconciliation')
@@ -96,10 +131,13 @@ class GitHub:
                 stream.flush()
                 url = command(['gh', 'issue', 'create', '--repo', self.repository, '--title', title,
                                '--body-file', stream.name], self.checkout)
-            verified = reconcile()
-            if not verified or verified['url'] != url:
+            if not url.startswith('https://github.com/' + self.repository + '/issues/'):
                 raise Barrier('historical issue response requires reconciliation')
-            return verified
+            raw = command(['gh', 'issue', 'view', url, '--repo', self.repository, '--json', 'url,body'], self.checkout)
+            verified = json.loads(raw)
+            if verified.get('url') != url or marker not in verified.get('body', ''):
+                raise Barrier('historical issue response requires reconciliation')
+            return {'url': url}
 
         return self.gate.run('history:' + marker, {'title': title, 'body': body, 'repository': self.repository}, write, reconcile)
 
