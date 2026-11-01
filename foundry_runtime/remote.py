@@ -102,3 +102,21 @@ class GitHub:
             return verified
 
         return self.gate.run('history:' + marker, {'title': title, 'body': body, 'repository': self.repository}, write, reconcile)
+
+    def close_history(self, url):
+        if not url.startswith('https://github.com/' + self.repository + '/issues/'):
+            raise Barrier('unexpected historical reference')
+        number = url.rsplit('/', 1)[1]
+        if not number.isdigit():
+            raise Barrier('invalid historical reference')
+        def reconcile():
+            state = command(['gh', 'issue', 'view', number, '--repo', self.repository, '--json', 'state'], self.checkout)
+            return {'url': url, 'closed': True} if json.loads(state)['state'] == 'CLOSED' else None
+        def close():
+            if not reconcile():
+                command(['gh', 'issue', 'close', number, '--repo', self.repository, '--reason', 'completed'], self.checkout)
+            result = reconcile()
+            if not result:
+                raise Barrier('historical closure requires reconciliation')
+            return result
+        return self.gate.run('close:' + url, {'url': url, 'outcome': 'completed'}, close, reconcile)
