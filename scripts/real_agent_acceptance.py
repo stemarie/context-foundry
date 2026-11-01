@@ -17,7 +17,7 @@ import time
 import uuid
 
 from foundry_runtime.core import Barrier, Gate, Journal
-from foundry_runtime.runtime import Client, Launcher, local_git
+from foundry_runtime.runtime import Client, Launcher, ServiceError, local_git
 from foundry_runtime.remote import GitHub
 
 
@@ -173,6 +173,20 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
             while True:
                 q = work('assign_qa', {'contract_id': job['contract_id']})['job']
                 assert q['contract_id'] == job['contract_id']
+                worker_actor = q['attempt']['worker'].removeprefix('acceptance-')
+                work('verdict', {**bound(q), 'verdict':'Accepted', 'evidence':'Prohibited self-QA probe.'}, worker_actor, 'forbidden')
+                qa_client = Client(origin, server.tokens['qa'])
+                for override, expected_code in [({'revision':q['revision']['number']+1},'stale_revision'),
+                                                ({'attempt_id':str(uuid.uuid4())},'active_claim_conflict'),
+                                                ({'candidate_id':str(uuid.uuid4())},'validation_failed')]:
+                    try:
+                        qa_client.workflow('verdict', {'project_id':pid, **bound(q), **override,
+                            'verdict':'Accepted','evidence':'Stale binding rejection probe.','idempotency_key':uuid.uuid4().hex})
+                    except ServiceError as rejected:
+                        assert rejected.code==expected_code
+                    else:
+                        raise AssertionError('stale verdict binding accepted')
+                report['self_qa_and_stale_bindings_rejected']=True
                 directory = workspace(q['candidate']['sha'], 'qa-' + uuid.uuid4().hex[:6])
                 config = configuration(q, 'qa', directory, base, terms, path, 'qa')
                 key = launch(config)
@@ -354,6 +368,14 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
             assert stopped['stopped_confirmed'] and launcher.inspect(key)=='stopped'
             recovered = work('recover', {**bound(job), 'stopped_confirmed':True, 'evidence':'Actual adapter-owned Hermes process group stopped and absence confirmed.'})['job']
             assert recovered['stage']=='Ready'
+            revised=work('define', {'contract_id':job['contract_id'], 'expected_revision':job['revision']['number'],
+                'title':job['revision']['title'], 'body_markdown':job['revision']['body_markdown']+
+                '\nMaterial clarification: this is an execution recovery probe only; no document or Git delivery is required.'}, 'architect')['job']
+            assert revised['stage']=='Draft' and revised['revision']['number']==job['revision']['number']+1
+            assert revised['revision']['digest']!=job['revision']['digest']
+            work('ready', {'contract_id':revised['contract_id'],'revision':revised['revision']['number'],
+                           'digest':revised['revision']['digest']}, 'architect')
+            report['material_revision_requires_renewed_readiness']=True
             renewed = work('reserve', {'worker':job['attempt']['worker']})['job']
             assert renewed['attempt']['id'] != job['attempt']['id']
             try: Tools(config).invoke('write', {'path':task[1], 'content':'stale write'})

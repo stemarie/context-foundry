@@ -13,15 +13,16 @@ class SandboxTests(unittest.TestCase):
             workspace, scratch = root/'workspace', root/'scratch'
             workspace.mkdir(); scratch.mkdir()
             secret = root/'other-actor-secret'; secret.write_text('fixture-secret')
+            (workspace/'.git').write_text('fixture-metadata')
             script = '''import socket,os
 from pathlib import Path
 blocked=[]
-for action in [lambda:socket.create_connection(('127.0.0.1',9)),lambda:os.fork(),lambda:Path(%r).read_text()]:
+for action in [lambda:socket.create_connection(('127.0.0.1',9)),lambda:os.fork(),lambda:Path(%r).read_text(),lambda:Path('.git').write_text('tampered')]:
  try:action()
- except (PermissionError,OSError):blocked.append(True)
+ except PermissionError:blocked.append(True)
  else:raise AssertionError('capability escaped')
-assert len(blocked)==3
-print('network, fork and foreign file reads denied')
+assert len(blocked)==4
+print('network, fork, foreign file reads and Git metadata writes denied')
 ''' % str(secret)
             result=restricted_check(workspace,['/Library/Developer/CommandLineTools/usr/bin/python3','-E','-s','-c',script],scratch)
             self.assertTrue(result['passed'],result)

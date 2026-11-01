@@ -117,7 +117,8 @@ def restricted_check(workspace, argv, scratch, timeout=90):
                '(deny file-read-data (require-not (require-any ' + allowed +
                ' (literal "/dev/null") (literal "/dev/urandom") (literal "/dev/random"))))'
                '(deny file-write* (require-not (require-any ' + writable +
-               ' (literal "/dev/null"))))')
+               ' (literal "/dev/null"))))'
+               '(deny file-write* (subpath ' + json.dumps(str(workspace / '.git')) + '))')
     env = {'PATH': '/usr/bin:/bin', 'HOME': str(scratch), 'TMPDIR': str(scratch), 'PYTHONDONTWRITEBYTECODE': '1'}
     result = subprocess.run(['/usr/bin/sandbox-exec', '-p', profile, *argv], cwd=workspace, env=env,
                             capture_output=True, text=True, timeout=timeout)
