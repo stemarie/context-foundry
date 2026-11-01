@@ -97,7 +97,7 @@ def main():
         event('capabilities', tools=sorted(exposed), actor=tools.binding['actor'], role=tools.role)
         barrier = config.get('start_barrier')
         if barrier:
-            until = time.monotonic() + 30
+            until = time.monotonic() + config.get('start_barrier_seconds', 120)
             while not Path(barrier).exists():
                 if time.monotonic() > until:
                     raise Barrier('operator start barrier timed out')

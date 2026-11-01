@@ -5,7 +5,7 @@ import threading
 import unittest
 
 from foundry_runtime.core import Barrier, Gate, Journal, RemoteFailure
-from foundry_runtime.runtime import checked_path
+from foundry_runtime.runtime import checked_path, parse_service_time
 
 
 class CoreTests(unittest.TestCase):
@@ -79,6 +79,12 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(result, gate.run('final-history', {'contract': 'c'}, write))
         with self.assertRaises(Barrier):
             gate.run('final-history', {'contract': 'other'}, write)
+
+    def test_service_timestamp_variable_nanosecond_precision(self):
+        for fraction in ('1', '12', '123', '12345', '123456', '123456789'):
+            value = parse_service_time('2026-11-01T15:01:23.' + fraction + 'Z')
+            self.assertEqual(int(fraction[:6].ljust(6, '0')), value.microsecond)
+            self.assertIsNotNone(value.tzinfo)
 
     def test_file_capabilities_reject_escape_symlink_and_git_metadata(self):
         workspace = self.root / 'worker'

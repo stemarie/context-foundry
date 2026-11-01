@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 import json
 import hashlib
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -17,6 +18,12 @@ import urllib.error
 import urllib.request
 
 from .core import Barrier, Journal
+
+
+def parse_service_time(value):
+    # Go RFC3339Nano emits variable precision; Python 3.9 accepts only 3/6 digits.
+    normalized = re.sub(r'\.(\d+)', lambda match: '.' + match[1][:6].ljust(6, '0'), value)
+    return datetime.fromisoformat(normalized.replace('Z', '+00:00'))
 
 
 class ServiceError(Barrier):
@@ -59,7 +66,7 @@ class Client:
         revision, attempt = job['revision'], job.get('attempt')
         if (revision['number'] != binding['revision'] or revision['digest'] != binding['digest'] or
                 not attempt or attempt['id'] != binding['attempt_id'] or
-                datetime.fromisoformat(attempt['expires_at'].replace('Z', '+00:00')) <= datetime.now(timezone.utc)):
+                parse_service_time(attempt['expires_at']) <= datetime.now(timezone.utc)):
             raise Barrier('stale assignment or lease')
         assigned = self.workflow('assignments', {'project_id': binding['project_id']}).get('jobs', [])
         if not any(j['contract_id'] == binding['contract_id'] for j in assigned):
