@@ -229,7 +229,10 @@ class Launcher:
                'HERMES_HOME': config['home'], 'PYTHONPATH': self.source + os.pathsep + str(Path(__file__).resolve().parent.parent),
                'PYTHONDONTWRITEBYTECODE': '1', 'TMPDIR': config['scratch']}
         stream = open(Path(config['home']) / 'invocation.log', 'w')
-        process = subprocess.Popen([self.python, '-m', 'foundry_runtime.worker', '--journal', self.journal.path,
+        entry = ('from run_agent import AIAgent; import sys,runpy; sys.path.insert(0,' +
+                 repr(str(Path(__file__).resolve().parent.parent)) +
+                 '); runpy.run_module("foundry_runtime.worker",run_name="__main__")')
+        process = subprocess.Popen([self.python, '-c', entry, '--journal', self.journal.path,
                                     '--launch', row['key'], '--nonce', row['nonce']], env=env, cwd=config['workspace'],
                                    stdin=subprocess.PIPE, stdout=stream, stderr=stream, start_new_session=True, text=True)
         self.children[row['key']] = process
