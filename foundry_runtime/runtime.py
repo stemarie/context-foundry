@@ -236,7 +236,8 @@ class Launcher:
                                                      'tools': {'tool_search': {'enabled': 'off'}}}))
         env = {'PATH': os.environ.get('PATH', '/usr/bin:/bin'), 'HOME': config['home'],
                'HERMES_HOME': config['home'], 'PYTHONPATH': self.source + os.pathsep + str(Path(__file__).resolve().parent.parent),
-               'PYTHONDONTWRITEBYTECODE': '1', 'TMPDIR': config['scratch']}
+               'PYTHONDONTWRITEBYTECODE': '1', 'TMPDIR': config['scratch'],
+               'HERMES_DISABLE_LAZY_INSTALLS': '1'}
         stream = open(Path(config['home']) / 'invocation.log', 'w')
         entry = ('from run_agent import AIAgent; import sys,runpy; sys.path.insert(0,' +
                  repr(str(Path(__file__).resolve().parent.parent)) +

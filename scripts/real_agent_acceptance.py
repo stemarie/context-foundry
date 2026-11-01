@@ -28,6 +28,26 @@ def load(name, path):
     return module
 
 
+def write_report(path, report):
+    """Keep the previous evidence intact if capacity or atomic publication fails."""
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', prefix='.acceptance-', dir=path.parent, delete=False) as stream:
+            temporary = Path(stream.name)
+            json.dump(report, stream, indent=2)
+            stream.write('\n')
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        return True
+    except OSError:
+        print('REPORT_UNAVAILABLE private canonical fixture must be retained', flush=True)
+        return False
+    finally:
+        if temporary and temporary.exists():
+            temporary.unlink()
+
+
 def run(args):
     checkout = Path(__file__).resolve().parents[1]
     root = Path(tempfile.mkdtemp(prefix='cf-real-agent-', dir='/private/tmp'))
@@ -391,44 +411,46 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
             report['expiry_while_real_hermes_alive']=True
         report['status'] = args.scenario + '_passed'
         report['limits'] = []
-        args.report.write_text(json.dumps(report, indent=2) + '\n')
+        write_report(args.report, report)
         print('PASS actual scenario',args.scenario,flush=True)
 
     except BaseException as exc:
         report['status'] = 'blocked'
         report['failure_category'] = type(exc).__name__
-        args.report.write_text(json.dumps(report, indent=2) + '\n')
+        write_report(args.report, report)
         raise
     finally:
         for key in set(launches) | set(launcher.children):
-            try: launcher.stop(key)
-            except Barrier: report.setdefault('cleanup_unknown', []).append(key)
+            try:
+                launcher.stop(key)
+            except Barrier:
+                report.setdefault('cleanup_unknown', []).append(key)
         try:
             if 'work' in locals():
-                report['all_history'] = [work('history', {'contract_id': job['contract_id']})
+                report['all_history'] = [work('history', {'contract_id': job['contract_id'], 'limit':100})
                                          for job in work('list').get('jobs', [])]
+            diagnostics = []
+            for home in root.glob('home-*'):
+                row = {'home': home.name}
+                for name in ('failure.txt', 'events.jsonl', 'invocation.log'):
+                    path = home / name
+                    if path.exists():
+                        value = path.read_text(errors='replace')[-24000:]
+                        for secret in list(server.tokens.values()) + ([runtime.get('api_key', '')] if 'runtime' in locals() else []):
+                            if secret:
+                                value = value.replace(secret, '[REDACTED]')
+                        row[name] = value
+                diagnostics.append(row)
+            report['diagnostics'] = diagnostics
         except Exception:
             report['history_export_failed'] = True
-        diagnostics = []
-        for home in root.glob('home-*'):
-            row = {'home': home.name}
-            for name in ('failure.txt', 'events.jsonl', 'invocation.log'):
-                path = home / name
-                if path.exists():
-                    value = path.read_text(errors='replace')[-24000:]
-                    for secret in list(server.tokens.values()) + ([runtime.get('api_key', '')] if 'runtime' in locals() else []):
-                        if secret:
-                            value = value.replace(secret, '[REDACTED]')
-                    row[name] = value
-            diagnostics.append(row)
-        report['diagnostics'] = diagnostics
-        args.report.write_text(json.dumps(report, indent=2) + '\n')
-        server.stop()
-        if report.get('cleanup_unknown'):
+        finally:
+            server.stop()  # Reporting/capacity errors must not leave a live service.
+        saved = write_report(args.report, report)
+        if report.get('cleanup_unknown') or report.get('history_export_failed') or not saved:
             report['preserved_private_fixture'] = str(root)
-            args.report.write_text(json.dumps(report, indent=2) + '\n')
-            raise Barrier('owned execution quiescence unknown; private fixtures retained')
-        # Preserve exported contract history, remove only owned secrets and native homes.
+            write_report(args.report, report)
+            raise Barrier('quiescence or evidence publication unresolved; private fixtures retained')
         for path in root.glob('home-*'):
             shutil.rmtree(path)
         shutil.rmtree(root / 'data', ignore_errors=True)
@@ -436,6 +458,9 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
             path.unlink()
         for directory in worktrees:
             local_git(checkout, 'worktree', 'remove', '--force', str(directory))
+        report['cleanup'] = {'owned_processes_stopped':True,'native_homes_removed':True,
+                             'database_removed_after_history_export':True,'owned_worktrees_removed':True}
+        write_report(args.report, report)
         print('CLEANUP owned processes, worktrees, native homes and local database stopped/removed', flush=True)
 
 
