@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import contextlib
+import contextvars
 import hashlib
 import json
 import os
@@ -11,6 +12,9 @@ import sqlite3
 import subprocess
 import time
 import uuid
+
+
+active_gate = contextvars.ContextVar('active_transport_gate', default=None)
 
 
 class Barrier(RuntimeError):
@@ -44,7 +48,10 @@ class Journal:
                 db.execute('ALTER TABLE connections ADD COLUMN owner_pid INTEGER')
             if 'server_until' not in fields:
                 db.execute('ALTER TABLE connections ADD COLUMN server_until REAL NOT NULL DEFAULT 0')
+            if 'transport_tracking' not in fields:
+                db.execute('ALTER TABLE connections ADD COLUMN transport_tracking INTEGER NOT NULL DEFAULT 0')
             db.execute("CREATE TABLE IF NOT EXISTS submissions (identity TEXT PRIMARY KEY, intent TEXT NOT NULL, payload TEXT)")
+            db.execute("CREATE TABLE IF NOT EXISTS transports (identity TEXT PRIMARY KEY, alias TEXT NOT NULL, pid INTEGER)")
         os.chmod(self.path, 0o600)
 
     @contextlib.contextmanager
@@ -146,6 +153,37 @@ class Gate:
     def __init__(self, journal, alias):
         self.journal, self.alias = journal, alias
 
+    def quiescent(self, db, identity=None):
+        # Acknowledgement precedes exec in a new session. An absent leader is
+        # insufficient: its process group can still contain an orphaned Git child.
+        rows = db.execute('SELECT identity,pid FROM transports WHERE alias=?', (self.alias,)).fetchall()
+        for row in rows:
+            if identity is not None and row['identity'] != identity:
+                continue
+            if row['pid'] is None:
+                raise Barrier('transport launch unknown; explicit reconciliation required')
+            try:
+                os.killpg(row['pid'], 0)
+            except ProcessLookupError:
+                db.execute('DELETE FROM transports WHERE identity=?', (row['identity'],))
+            except PermissionError:
+                raise Barrier('transport process group is not observable') from None
+            else:
+                raise Barrier('prior transport process group is not stopped')
+
+    def transport_intent(self):
+        identity = uuid.uuid4().hex
+        with self.journal.transaction() as db:
+            db.execute('INSERT INTO transports VALUES(?,?,NULL)', (identity, self.alias))
+        return identity
+
+    def transport_finished(self, identity, not_started=False):
+        with self.journal.transaction() as db:
+            if not_started:
+                db.execute('DELETE FROM transports WHERE identity=? AND pid IS NULL', (identity,))
+                return
+            self.quiescent(db, identity)
+
     def acquire(self, now=None):
         now = time.time() if now is None else now
         with self.journal.transaction() as db:
@@ -157,8 +195,9 @@ class Gate:
                 return None
             if row["state"] == "half_open" or row["until"] > now:
                 raise Barrier("shared GitHub connection paused")
+            self.quiescent(db)
             owner = uuid.uuid4().hex
-            db.execute("UPDATE connections SET state='half_open',owner=?,owner_pid=? WHERE alias=?", (owner, os.getpid(), self.alias))
+            db.execute("UPDATE connections SET state='half_open',owner=?,owner_pid=?,transport_tracking=1 WHERE alias=?", (owner, os.getpid(), self.alias))
             return owner
 
     def outcome(self, permit, category=None, retry_after=None, now=None):
@@ -177,7 +216,7 @@ class Gate:
                 if retry_after is not None:
                     delay = max(delay, float(retry_after))
                 db.execute("UPDATE connections SET state='open',until=?,server_until=?,owner=NULL,owner_pid=NULL,failures=?,category=? WHERE alias=?",
-                           (now + delay, max(row["server_until"], now + float(retry_after or 0)), failures, category, self.alias))
+                           (max(row['until'], row['server_until'], now + delay), max(row["server_until"], now + float(retry_after or 0)), failures, category, self.alias))
             elif permit is not None:
                 db.execute("UPDATE connections SET state='closed',until=0,server_until=0,owner=NULL,owner_pid=NULL,failures=0,category=NULL WHERE alias=?", (self.alias,))
             # A late success from before a failure must not close an open breaker.
@@ -187,6 +226,10 @@ class Gate:
         if permit is None:
             return
         with self.journal.transaction() as db:
+            try:
+                self.quiescent(db)
+            except Barrier:
+                return  # Retain ownership until the transport group is proven stopped.
             db.execute("UPDATE connections SET state='open',owner=NULL,owner_pid=NULL WHERE alias=? AND state='half_open' AND owner=?",
                        (self.alias, permit))
 
@@ -195,8 +238,10 @@ class Gate:
         with self.journal.transaction() as db:
             row = db.execute('SELECT * FROM connections WHERE alias=?', (self.alias,)).fetchone()
             if row and row['state'] == 'half_open':
-                # PID reuse or permission uncertainty stays blocked. Never steal
-                # a live probe; a dead process can no longer issue its request.
+                # Dead controllers may leave remote subprocesses behind. Older
+                # journals lack that tracking and cannot establish quiescence.
+                if not row['transport_tracking']:
+                    raise Barrier('legacy transport quiescence unknown; explicit reconciliation required')
                 pid = row['owner_pid']
                 if pid is None:
                     raise Barrier('legacy probe owner is unknown; explicit reconciliation required')
@@ -205,6 +250,7 @@ class Gate:
                 except PermissionError:
                     raise Barrier('probe process identity is not observable') from None
                 except ProcessLookupError:
+                    self.quiescent(db)
                     db.execute("UPDATE connections SET state='open',owner=NULL,owner_pid=NULL WHERE alias=? AND owner=?",
                                (self.alias, row['owner']))
                 else:
@@ -222,6 +268,7 @@ class Gate:
             if prior and prior["state"] == "complete":
                 return json.loads(prior["result"])
         permit = self.acquire()
+        token = active_gate.set(self)
         try:
             with self.journal.transaction() as db:
                 prior = db.execute("SELECT * FROM remote_operations WHERE identity=?", (identity,)).fetchone()
@@ -248,6 +295,7 @@ class Gate:
             self.outcome(permit, exc.category, exc.retry_after)
             raise Barrier("remote operation failed; reconcile before retry") from None
         finally:
+            active_gate.reset(token)
             self.release_probe(permit)
 
 

@@ -8,10 +8,12 @@ from email.utils import parsedate_to_datetime
 import time
 from pathlib import Path
 import subprocess
+import signal
+import sys
 import tempfile
 import uuid
 
-from .core import Barrier, RemoteFailure
+from .core import Barrier, RemoteFailure, active_gate
 from .runtime import local_git
 
 
@@ -70,13 +72,54 @@ def response_metadata(stderr, now=None):
 def command(argv, cwd):
     env = dict(os.environ, GIT_TRACE_CURL='1', GIT_TRACE_CURL_NO_DATA='1', GH_DEBUG='api')
     try:
-        result = subprocess.run(argv, cwd=cwd, env=env, capture_output=True, text=True, timeout=90)
+        gate = active_gate.get()
+        if gate is None:
+            result = subprocess.run(argv, cwd=cwd, env=env, capture_output=True, text=True, timeout=90)
+        else:
+            result = tracked_command(gate, argv, cwd, env)
     except subprocess.TimeoutExpired:
         raise RemoteFailure('connection') from None
     if result.returncode:
         category, delay = response_metadata(result.stderr)
         raise RemoteFailure(category, delay)
     return result.stdout.strip()
+
+
+def tracked_command(gate, argv, cwd, env):
+    identity = gate.transport_intent()
+    # Before exec, this trusted isolated trampoline durably acknowledges its new
+    # session/group. No argv, environment, output or credential enters the journal.
+    entry = ('import os,sqlite3,sys\n'
+             'db=sqlite3.connect(sys.argv[1],timeout=15)\n'
+             'db.execute("UPDATE transports SET pid=? WHERE identity=?",(os.getpid(),sys.argv[2]))\n'
+             'db.commit(); db.close()\n'
+             'try: os.execvpe(sys.argv[3],sys.argv[3:],os.environ)\n'
+             'except OSError: sys.exit(125)\n')
+    try:
+        process = subprocess.Popen([sys.executable, '-I', '-B', '-c', entry,
+                                    gate.journal.path, identity, *argv], cwd=cwd, env=env,
+                                   stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, text=True, start_new_session=True)
+    except OSError:
+        gate.transport_finished(identity, not_started=True)
+        raise
+    try:
+        stdout, stderr = process.communicate(timeout=90)
+    except subprocess.TimeoutExpired:
+        # Only an un-reaped, still-running owned leader can be signalled safely.
+        if process.poll() is not None:
+            raise Barrier('transport leader exited; descendant quiescence requires reconciliation') from None
+        os.killpg(process.pid, signal.SIGKILL)
+        try:
+            process.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            raise Barrier('transport stop not confirmed') from None
+        gate.transport_finished(identity)
+        raise
+    gate.transport_finished(identity)
+    if process.returncode == 125:
+        raise Barrier('transport command could not start; connection health unestablished')
+    return subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
 
 
 class GitHub:

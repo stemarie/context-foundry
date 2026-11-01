@@ -132,7 +132,7 @@ def main():
                     break
                 if tools.role == 'qa' and job['stage'] != 'QA':
                     break
-                tools.client.authority(tools.binding, tools.role)
+                job = tools.client.authority(tools.binding, tools.role)
             except ServiceUnavailable as exc:
                 unavailable(exc)
                 stop.wait(.5)
@@ -149,7 +149,8 @@ def main():
             if tools.role == 'worker' and job['stage'] == 'QA':
                 stop.wait(.2)
                 continue
-            prompt = config['role_instructions'] + '\n\nAssigned immutable work:\n' + job['revision']['body_markdown']
+            prompt = (config['role_instructions'] + '\n\nContract semantic version: ' + job['contract_version'] +
+                      '\nAssigned immutable work:\n' + job['revision']['body_markdown'])
             if tools.role == 'worker':
                 prompt += '\nUse assignment/read/write/check tools. After successful checks, submit with a concise commit summary. Do not integrate, approve yourself or invoke a remote transport. If QA requested corrections, inspect current history and correct this same assignment.'
             else:

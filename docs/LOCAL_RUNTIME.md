@@ -59,3 +59,20 @@ proven dead process owner, never a live/unobservable one. Operator intervention
 respects known server reset deadlines. Transport diagnostics use safe categories;
 transient service outages fence actions until actual current authority and the
 owning heartbeat are revalidated. See the [gap-closure proof](HERMES_GAP_CLOSURE_2026-11-01.md).
+
+The [three-gap follow-up](FOLLOWUP_GAP_CLOSURE_2026-11-01.md) strengthens that
+recovery boundary. A late failure cannot shorten an existing server deadline.
+Remote commands entered through the gate persist a transport intent, then an
+isolated trampoline acknowledges a new process group before executing Git/GitHub.
+A dead controller is recoverable only after every recorded transport group is
+absent. An absent leader does not prove its descendants stopped. Unknown starts,
+permission uncertainty and legacy probes without transport tracking stay blocked
+for explicit reconciliation. No credential, command arguments or output is added
+to the journal. Uncertain remote outcomes still require authoritative readback.
+
+Before native authority, launch or each actor action, the adapter reads the
+ordinary record's immutable semantic `contract_version` through the existing GET
+API. Only `Alpha 1.0` is supported; missing/unknown versions fail closed. The
+model receives the checked version alongside the current native executable body;
+the ordinary body never substitutes for the native revision. No service schema,
+endpoint or assignment authority changes.

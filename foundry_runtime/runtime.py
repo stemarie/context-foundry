@@ -102,6 +102,9 @@ class Client:
         return self.call('/api/v1/workflow/' + operation, command)['workflow']
 
     def authority(self, binding, role):
+        contract = self.call('/api/v1/contracts/' + binding['contract_id'], method='GET').get('contract', {})
+        if contract.get('id') != binding['contract_id'] or contract.get('contract_version') != 'Alpha 1.0':
+            raise Barrier('unsupported or missing semantic contract version')
         job = self.workflow('get', {'project_id': binding['project_id'], 'contract_id': binding['contract_id']})['job']
         revision, attempt = job['revision'], job.get('attempt')
         if (revision['number'] != binding['revision'] or revision['digest'] != binding['digest'] or
@@ -116,7 +119,7 @@ class Client:
         if role == 'qa' and (job['stage'] != 'QA' or job['reviewer'] != binding['actor'] or
                              job['candidate']['id'] != binding['candidate_id']):
             raise Barrier('QA authority changed')
-        return job
+        return dict(job, contract_version=contract['contract_version'])
 
 
 def command_binding(binding):

@@ -2,6 +2,8 @@
 
 All six confirmed audit defects are corrected. The additional local proofs passed with the actual installed Hermes runtime and the unchanged AI.Contract Docker service image. No deployment, persistent profile or scheduler was installed. AI.Contract remains at `d7748418a23e6ae8747bb0bed0730fc6c06f1fbf` without source changes.
 
+Follow-up audit corrections and proof: [reset concurrency, transport quiescence and semantic version](FOLLOWUP_GAP_CLOSURE_2026-11-01.md). The six original reproductions remain historical evidence; the follow-up covers the later findings.
+
 ## Confirmed fixes
 
 | Audit finding | Correction | Verification |
