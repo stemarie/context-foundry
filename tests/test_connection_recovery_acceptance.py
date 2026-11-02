@@ -91,6 +91,22 @@ class ConnectionRecoveryAcceptanceTests(unittest.TestCase):
         process.stdout.close.assert_called_once()
         process.stderr.close.assert_called_once()
 
+    def test_wait_escalation_race_still_polls_and_closes_streams(self):
+        process = Mock(pid=100)
+        process.poll.return_value = None
+        process.wait.side_effect = [subprocess.TimeoutExpired(['bridge'], 15),
+                                    subprocess.TimeoutExpired(['bridge'], 15)]
+        process.stdin = Mock(closed=False)
+        process.stdout = Mock(closed=False)
+        process.stderr = Mock(closed=False)
+        with patch('scripts.connection_recovery_acceptance.os.killpg', side_effect=[None, ProcessLookupError]):
+            close(process, None)
+        self.assertEqual(2, process.wait.call_count)
+        process.poll.assert_called()
+        process.stdin.close.assert_called_once()
+        process.stdout.close.assert_called_once()
+        process.stderr.close.assert_called_once()
+
     def test_close_signals_exact_owned_post_parent_exit_survivor(self):
         process = Mock(pid=100)
         process.poll.return_value = 0
