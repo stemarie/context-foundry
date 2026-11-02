@@ -93,3 +93,46 @@ outcome; successful connection recovery does not authorize blindly replaying it.
 Target integration also waits for all recorded transport groups in the shared
 journal, across connection aliases, after acquiring the target lock. Controller
 exit releases the OS lock but cannot attest that a prior Git process stopped.
+
+## Operator-only historical close recovery
+
+`remote.GitHub.close_history(url)` remains conservative: a started close whose
+outcome reads OPEN remains uncertain and refuses another write. The operator may
+use `GitHub.recover_close_history_known_not_applied(url,
+known_not_applied=True)` only after explicitly determining that the original
+close is known not applied. This API is not exposed through `foundry_action` to
+Worker or QA and operators must not edit the SQLite journal directly.
+
+The procedure preserves `close:<url>` and its original intent. It records an
+append-only recovery attempt linked to that identity in the shared journal and
+holds a durable per-logical-operation callback owner across both the original
+`Gate.run` callback and recovery. This blocks a recovery while an original
+callback is paused before its first transport, and blocks concurrent recoveries;
+a dead owner is reclaimable only after all transport groups are quiescent. It
+validates the authorized repository, canonical issue URL and nonzero canonical
+issue number, reads a stable OPEN issue snapshot with a valid `updatedAt`,
+and reads complete paginated GitHub issue-event history. Every page and event
+must have the expected authoritative shape; closed snapshots require a valid
+`closedAt`. It rejects any close/reopen evidence, malformed or incomplete
+pagination, identity mismatch, or a changed snapshot. Thus an OPEN read alone
+never proves absence. A CLOSED result is reconciled without a second close.
+
+All proof reads, the retry, and final reconciliation run through the existing
+shared `Gate` current admission. Before proof and again before retry, every
+recorded transport group and every alias across connection aliases must be
+quiescent and tracked; live, unknown, unobservable, or any unconfirmed legacy
+`transport_tracking=0` alias (including CLOSED) blocks recovery. A CLOSED
+legacy alias with `transport_tracking=0` is not silently trusted: only an
+operator, after stopping and independently confirming all old callbacks,
+transports, and probes, may call
+`Gate.confirm_legacy_quiescence(evidence, confirmed_stopped=True)`. It requires
+nonempty evidence, rejects active/unknown ownership, preserves breaker state and
+deadlines, bumps generation to fence stale admissions, and appends durable
+confirmation evidence. It is not exposed to Worker/QA and never permits journal
+SQL edits. A stale
+admission generation, newly opened gate, cooldown, or another probe owner blocks
+the next command. The retry performs a fresh state read immediately before the
+close and verifies CLOSED afterward. A lost second response remains a started,
+reconcilable operation; it is never blindly retried. Retain the explicit operator
+attestation and command/check evidence with the pending historical-publication
+record. This does not claim delivery, native `Done`, or post-integration checks.

@@ -1,6 +1,7 @@
 """Operator-only GitHub transport. Children receive none of these capabilities."""
 import json
 import contextlib
+from datetime import datetime
 import fcntl
 import os
 import re
@@ -228,15 +229,46 @@ class GitHub:
 
         return self.gate.run('history:' + marker, {'title': title, 'body': body, 'repository': self.repository}, write, reconcile)
 
-    def close_history(self, url):
-        if not url.startswith('https://github.com/' + self.repository + '/issues/'):
+    def _history_reference(self, url):
+        prefix = 'https://github.com/' + self.repository + '/issues/'
+        if not url.startswith(prefix):
             raise Barrier('unexpected historical reference')
-        number = url.rsplit('/', 1)[1]
-        if not number.isdigit():
+        number = url[len(prefix):]
+        if not number.isdigit() or str(int(number)) != number:
             raise Barrier('invalid historical reference')
+        return number
+
+    @staticmethod
+    def _authoritative_time(value):
+        if not isinstance(value, str) or not value.strip():
+            return False
+        try:
+            parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        except ValueError:
+            return False
+        return parsed.tzinfo is not None
+
+    def _history_snapshot(self, number, url):
+        raw = command(['gh', 'issue', 'view', number, '--repo', self.repository,
+                       '--json', 'url,number,state,closedAt,updatedAt'], self.checkout)
+        snapshot = json.loads(raw)
+        if not isinstance(snapshot, dict):
+            raise Barrier('historical reference snapshot is malformed')
+        updated = snapshot.get('updatedAt')
+        closed = snapshot.get('closedAt')
+        if (snapshot.get('url') != url or str(snapshot.get('number')) != number or
+                snapshot.get('state') not in ('OPEN', 'CLOSED') or
+                not self._authoritative_time(updated) or
+                (snapshot.get('state') == 'OPEN' and closed is not None) or
+                (snapshot.get('state') == 'CLOSED' and not self._authoritative_time(closed))):
+            raise Barrier('historical reference identity or stable timestamp is not authoritative')
+        return snapshot
+
+    def close_history(self, url):
+        number = self._history_reference(url)
         def reconcile():
-            state = command(['gh', 'issue', 'view', number, '--repo', self.repository, '--json', 'state'], self.checkout)
-            return {'url': url, 'closed': True} if json.loads(state)['state'] == 'CLOSED' else None
+            state = self._history_snapshot(number, url)
+            return {'url': url, 'closed': True} if state['state'] == 'CLOSED' else None
         def close():
             if not reconcile():
                 command(['gh', 'issue', 'close', number, '--repo', self.repository, '--reason', 'completed'], self.checkout)
@@ -245,3 +277,61 @@ class GitHub:
                 raise Barrier('historical closure requires reconciliation')
             return result
         return self.gate.run('close:' + url, {'url': url, 'outcome': 'completed'}, close, reconcile)
+
+    def recover_close_history_known_not_applied(self, url, *, known_not_applied=False):
+        """Operator-only recovery for a started historical close proven absent.
+
+        ``known_not_applied`` is an intentional, audited acknowledgement; an
+        OPEN snapshot by itself is never enough.  This conservative procedure
+        accepts only an issue with no close/reopen event, stable identity and
+        stable OPEN preconditions across a complete paginated event read.
+        """
+        if known_not_applied is not True:
+            raise Barrier('operator must explicitly attest known-not-applied recovery intent')
+        number = self._history_reference(url)
+        identity = 'close:' + url
+        intent = {'url': url, 'outcome': 'completed'}
+        proof_token = {}
+
+        def reconcile():
+            state = self._history_snapshot(number, url)
+            return {'url': url, 'closed': True} if state['state'] == 'CLOSED' else None
+
+        def prove_absent():
+            before = self._history_snapshot(number, url)
+            if before['state'] == 'CLOSED':
+                return {'already_closed': True, 'number': number}
+            raw = command(['gh', 'api', '--method', 'GET', '--paginate', '--slurp',
+                           'repos/' + self.repository + '/issues/' + number + '/events?per_page=100'], self.checkout)
+            pages = json.loads(raw)
+            # --slurp returns an outer list of fetched pages. An empty outer
+            # list is unverifiable; a successfully fetched empty page is the
+            # valid never-event case and must retain that distinction.
+            if (not isinstance(pages, list) or not pages or
+                    any(not isinstance(page, list) for page in pages)):
+                raise Barrier('historical event pagination is unverifiable')
+            events = [event for page in pages for event in page]
+            if any(not isinstance(event, dict) or
+                   not isinstance(event.get('event'), str) or not event['event'] or
+                   not isinstance(event.get('id'), (str, int)) or isinstance(event.get('id'), bool) or not str(event['id']) or
+                   not self._authoritative_time(event.get('created_at')) or
+                   event['event'] in ('closed', 'reopened') for event in events):
+                raise Barrier('historical issue event evidence is malformed or includes close/reopen')
+            after = self._history_snapshot(number, url)
+            if after['state'] != 'OPEN' or after.get('updatedAt') != before['updatedAt']:
+                raise Barrier('historical issue changed during absence proof')
+            proof_token['updatedAt'] = before['updatedAt']
+            return {'number': number, 'url': url, 'updated_at': before['updatedAt'],
+                    'event_pages': len(pages), 'event_count': len(events), 'never_closed': True}
+
+        def retry():
+            # A fresh authoritative read closes the proof-to-write interval.
+            current = self._history_snapshot(number, url)
+            if current['state'] == 'CLOSED':
+                return
+            if (current['state'] != 'OPEN' or
+                    current['updatedAt'] != proof_token.get('updatedAt')):
+                raise Barrier('historical issue changed after absence proof')
+            command(['gh', 'issue', 'close', number, '--repo', self.repository, '--reason', 'completed'], self.checkout)
+
+        return self.gate.recover_known_not_applied(identity, intent, prove_absent, retry, reconcile)

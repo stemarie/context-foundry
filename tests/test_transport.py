@@ -1,6 +1,7 @@
 import importlib.util
 import contextlib
 import io
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -73,6 +74,213 @@ class TransportTests(unittest.TestCase):
                     self.assertFalse(module.write_report(report,{'new':'evidence'}))
             self.assertEqual('previous safe evidence',report.read_text())
             self.assertEqual([report],list(Path(root).iterdir()))
+
+    def test_known_not_applied_history_close_recovery_is_explicit_and_idempotent(self):
+        with tempfile.TemporaryDirectory() as root:
+            github=GitHub.__new__(GitHub)
+            github.repository='stemarie/context-foundry';github.checkout=Path(root)
+            github.gate=Gate(Journal(Path(root)/'runtime.sqlite'),'shared')
+            url='https://github.com/stemarie/context-foundry/issues/48'
+            remote={'state':'OPEN','updatedAt':'2026-11-02T00:00:00Z','events':[{'event':'labeled','id':1,'created_at':'2026-11-01T00:00:00Z'}],'closes':0,'lose_first':True}
+            def transport(argv,cwd):
+                if argv[:3]==['gh','issue','view']:
+                    return __import__('json').dumps({'url':url,'number':48,'state':remote['state'],
+                        'closedAt':None if remote['state']=='OPEN' else '2026-11-02T00:01:00Z','updatedAt':remote['updatedAt']})
+                if argv[:3]==['gh','api','--method']:
+                    return __import__('json').dumps([remote['events']])
+                if argv[:3]==['gh','issue','close']:
+                    remote['closes']+=1
+                    if remote['lose_first']:
+                        remote['lose_first']=False
+                        raise RemoteFailure('resource')
+                    remote['state']='CLOSED';remote['updatedAt']='2026-11-02T00:01:00Z'
+                    return ''
+                raise AssertionError(argv)
+            with patch('foundry_runtime.remote.command',side_effect=transport):
+                with self.assertRaises(Barrier):github.close_history(url)
+                with self.assertRaises(Barrier):github.close_history(url)
+                with self.assertRaises(Barrier):github.recover_close_history_known_not_applied(url)
+                self.assertEqual({'url':url,'closed':True},
+                                 github.recover_close_history_known_not_applied(url,known_not_applied=True))
+                self.assertEqual({'url':url,'closed':True},
+                                 github.recover_close_history_known_not_applied(url,known_not_applied=True))
+            self.assertEqual(2,remote['closes'])
+            with github.gate.journal.transaction() as db:
+                self.assertEqual('complete',db.execute('select state from remote_operations').fetchone()[0])
+                self.assertEqual(1,db.execute('select count(*) from remote_recoveries').fetchone()[0])
+                self.assertEqual([('proved',), ('complete',)],
+                                 [tuple(row) for row in db.execute('select kind from remote_recovery_events order by sequence')])
+
+    def test_history_recovery_refuses_close_reopen_and_transport_uncertainty(self):
+        with tempfile.TemporaryDirectory() as root:
+            github=GitHub.__new__(GitHub)
+            github.repository='stemarie/context-foundry';github.checkout=Path(root)
+            github.gate=Gate(Journal(Path(root)/'runtime.sqlite'),'shared')
+            url='https://github.com/stemarie/context-foundry/issues/49'
+            remote={'state':'OPEN','events':[
+                {'event':'closed','id':1,'created_at':'2026-11-01T00:00:00Z'},
+                {'event':'reopened','id':2,'created_at':'2026-11-01T00:01:00Z'},
+            ]}
+            def transport(argv,cwd):
+                if argv[:3]==['gh','issue','view']:
+                    return __import__('json').dumps({'url':url,'number':49,'state':remote['state'],
+                        'closedAt':None,'updatedAt':'2026-11-02T00:00:00Z'})
+                if argv[:3]==['gh','api','--method']:return __import__('json').dumps([remote['events']])
+                if argv[:3]==['gh','issue','close']:raise RemoteFailure('resource')
+                raise AssertionError(argv)
+            with patch('foundry_runtime.remote.command',side_effect=transport):
+                with self.assertRaises(Barrier):github.close_history(url)
+                with self.assertRaises(Barrier):github.recover_close_history_known_not_applied(url,known_not_applied=True)
+                remote['events']=[]
+                with github.gate.journal.transaction() as db:
+                    db.execute("insert into transports values('unknown','other',NULL)")
+                with self.assertRaises(Barrier):github.recover_close_history_known_not_applied(url,known_not_applied=True)
+                remote['events']=[{'event':'labeled','id':3,'created_at':'2026-11-01T00:02:00Z'}]
+                with github.gate.journal.transaction() as db:
+                    db.execute("delete from transports where identity='unknown'")
+                    db.execute("insert into transports values('live','other',?)", (os.getpid(),))
+                with self.assertRaises(Barrier):github.recover_close_history_known_not_applied(url,known_not_applied=True)
+
+    def test_history_recovery_reconciles_lost_applied_close_without_a_retry(self):
+        with tempfile.TemporaryDirectory() as root:
+            github=GitHub.__new__(GitHub)
+            github.repository='stemarie/context-foundry';github.checkout=Path(root)
+            github.gate=Gate(Journal(Path(root)/'runtime.sqlite'),'shared')
+            url='https://github.com/stemarie/context-foundry/issues/50'
+            remote={'state':'OPEN','closes':0,'updatedAt':'2026-11-02T00:00:00Z'}
+            def transport(argv,cwd):
+                if argv[:3]==['gh','issue','view']:
+                    return __import__('json').dumps({'url':url,'number':50,'state':remote['state'],
+                        'closedAt':None if remote['state']=='OPEN' else '2026-11-02T00:01:00Z','updatedAt':remote['updatedAt']})
+                if argv[:3]==['gh','api','--method']:return '[]'
+                if argv[:3]==['gh','issue','close']:
+                    remote['closes']+=1;remote['state']='CLOSED'
+                    raise RemoteFailure('resource')
+                raise AssertionError(argv)
+            with patch('foundry_runtime.remote.command',side_effect=transport):
+                with self.assertRaises(Barrier):github.close_history(url)
+                self.assertEqual({'url':url,'closed':True},
+                                 github.recover_close_history_known_not_applied(url,known_not_applied=True))
+            self.assertEqual(1,remote['closes'])
+
+    def test_history_recovery_rejects_malformed_snapshots_without_write(self):
+        with tempfile.TemporaryDirectory() as root:
+            github=GitHub.__new__(GitHub)
+            github.repository='stemarie/context-foundry';github.checkout=Path(root)
+            github.gate=Gate(Journal(Path(root)/'runtime.sqlite'),'shared')
+            url='https://github.com/stemarie/context-foundry/issues/52'
+            remote={'invalid':False,'closes':0}
+            def transport(argv,cwd):
+                if argv[:3]==['gh','issue','view']:
+                    if remote['invalid'] == 'list': return '[]'
+                    updated = None if remote['invalid'] is True else ('not-a-time' if remote['invalid'] == 'timestamp' else '2026-11-02T00:00:00Z')
+                    return __import__('json').dumps({'url':url,'number':52,'state':'OPEN',
+                        'closedAt':None,'updatedAt':updated})
+                if argv[:3]==['gh','issue','close']:
+                    remote['closes']+=1
+                    raise RemoteFailure('resource')
+                raise AssertionError(argv)
+            with patch('foundry_runtime.remote.command',side_effect=transport):
+                with self.assertRaises(Barrier): github.close_history(url)
+                for invalid in (True, 'timestamp', 'list'):
+                    remote['invalid']=invalid
+                    with self.assertRaises(Barrier):
+                        github.recover_close_history_known_not_applied(url,known_not_applied=True)
+            self.assertEqual(1,remote['closes'])
+
+    def test_history_recovery_refuses_incomplete_and_changed_absence_proof(self):
+        with tempfile.TemporaryDirectory() as root:
+            github=GitHub.__new__(GitHub)
+            github.repository='stemarie/context-foundry';github.checkout=Path(root)
+            github.gate=Gate(Journal(Path(root)/'runtime.sqlite'),'shared')
+            url='https://github.com/stemarie/context-foundry/issues/51'
+            remote={'pages':[],'views':0}
+            def transport(argv,cwd):
+                if argv[:3]==['gh','issue','view']:
+                    remote['views']+=1
+                    stamp='2026-11-02T00:00:00Z' if remote['views'] % 2 else '2026-11-02T00:01:00Z'
+                    return __import__('json').dumps({'url':url,'number':51,'state':'OPEN','closedAt':None,'updatedAt':stamp})
+                if argv[:3]==['gh','api','--method']: return __import__('json').dumps(remote['pages'])
+                if argv[:3]==['gh','issue','close']: raise RemoteFailure('resource')
+                raise AssertionError(argv)
+            with patch('foundry_runtime.remote.command',side_effect=transport):
+                with self.assertRaises(Barrier): github.close_history(url)
+                with self.assertRaises(Barrier): github.recover_close_history_known_not_applied(url,known_not_applied=True)
+
+    def test_history_recovery_accepts_complete_zero_event_page_exactly_once(self):
+        with tempfile.TemporaryDirectory() as root:
+            github=GitHub.__new__(GitHub);github.repository='stemarie/context-foundry';github.checkout=Path(root)
+            github.gate=Gate(Journal(Path(root)/'runtime.sqlite'),'shared')
+            url='https://github.com/stemarie/context-foundry/issues/55'
+            remote={'state':'OPEN','writes':0}
+            def transport(argv,cwd):
+                if argv[:3]==['gh','issue','view']:
+                    return __import__('json').dumps({'url':url,'number':55,'state':remote['state'],
+                        'closedAt':None if remote['state']=='OPEN' else '2026-11-02T00:01:00Z',
+                        'updatedAt':'2026-11-02T00:00:00Z'})
+                if argv[:3]==['gh','api','--method']: return '[[]]'
+                if argv[:3]==['gh','issue','close']:
+                    remote['writes']+=1
+                    if remote['writes']==1: raise RemoteFailure('resource')
+                    remote['state']='CLOSED';return ''
+                raise AssertionError(argv)
+            with patch('foundry_runtime.remote.command',side_effect=transport):
+                with self.assertRaises(Barrier): github.close_history(url)
+                result=github.recover_close_history_known_not_applied(url,known_not_applied=True)
+                self.assertEqual(result,github.recover_close_history_known_not_applied(url,known_not_applied=True))
+            self.assertEqual(({'url':url,'closed':True},2), (result,remote['writes']))
+
+    def test_history_recovery_rechecks_stable_snapshot_before_close(self):
+        with tempfile.TemporaryDirectory() as root:
+            github=GitHub.__new__(GitHub)
+            github.repository='stemarie/context-foundry';github.checkout=Path(root)
+            github.gate=Gate(Journal(Path(root)/'runtime.sqlite'),'shared')
+            url='https://github.com/stemarie/context-foundry/issues/53'
+            remote={'views':0,'closes':0,'first_close':True}
+            def transport(argv,cwd):
+                if argv[:3]==['gh','issue','view']:
+                    remote['views']+=1
+                    stamp='2026-11-02T00:00:00Z' if remote['views'] < 4 else '2026-11-02T00:01:00Z'
+                    return __import__('json').dumps({'url':url,'number':53,'state':'OPEN',
+                        'closedAt':None,'updatedAt':stamp})
+                if argv[:3]==['gh','api','--method']:
+                    return __import__('json').dumps([[{'event':'labeled','id':1,'created_at':'2026-11-01T00:00:00Z'}]])
+                if argv[:3]==['gh','issue','close']:
+                    remote['closes']+=1
+                    if remote['first_close']:
+                        remote['first_close']=False
+                        raise RemoteFailure('resource')
+                    raise AssertionError('changed proof must fence the close')
+                raise AssertionError(argv)
+            with patch('foundry_runtime.remote.command',side_effect=transport):
+                with self.assertRaises(Barrier): github.close_history(url)
+                with self.assertRaises(Barrier): github.recover_close_history_known_not_applied(url,known_not_applied=True)
+            self.assertEqual(1,remote['closes'])
+
+    def test_history_recovery_rejects_malformed_event_and_closed_timestamp_without_write(self):
+        with tempfile.TemporaryDirectory() as root:
+            github=GitHub.__new__(GitHub)
+            github.repository='stemarie/context-foundry';github.checkout=Path(root)
+            github.gate=Gate(Journal(Path(root)/'runtime.sqlite'),'shared')
+            url='https://github.com/stemarie/context-foundry/issues/54'
+            remote={'state':'OPEN','events':[{'event':'labeled','id':1,'created_at':'bad-time'}],
+                    'closes':0,'closed_at':'2026-11-02T00:01:00Z'}
+            def transport(argv,cwd):
+                if argv[:3]==['gh','issue','view']:
+                    return __import__('json').dumps({'url':url,'number':54,'state':remote['state'],
+                        'closedAt':None if remote['state']=='OPEN' else remote['closed_at'],
+                        'updatedAt':'2026-11-02T00:00:00Z'})
+                if argv[:3]==['gh','api','--method']: return __import__('json').dumps([remote['events']])
+                if argv[:3]==['gh','issue','close']:
+                    remote['closes']+=1
+                    raise RemoteFailure('resource')
+                raise AssertionError(argv)
+            with patch('foundry_runtime.remote.command',side_effect=transport):
+                with self.assertRaises(Barrier): github.close_history(url)
+                with self.assertRaises(Barrier): github.recover_close_history_known_not_applied(url,known_not_applied=True)
+                remote['state']='CLOSED';remote['closed_at']='bad-time'
+                with self.assertRaises(Barrier): github.recover_close_history_known_not_applied(url,known_not_applied=True)
+            self.assertEqual(1,remote['closes'])
 
     def test_target_lock_excludes_another_project_caller(self):
         with tempfile.TemporaryDirectory() as root:

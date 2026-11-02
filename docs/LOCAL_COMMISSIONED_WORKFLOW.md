@@ -77,3 +77,35 @@ python3 scripts/connection_recovery_acceptance.py \
 The script starts only disposable local bridge/SSH children against BEE1's existing service. It verifies 16-tool read-only discovery, bridge mutation rejection, matching request IDs after closing its own tunnel, suspended-own-master EOF cleanup, ordinary EOF, direct-SIGTERM, and process-group-SIGTERM cleanup, and child reaping. It retains redacted evidence before cleanup and never restarts, mutates, deploys, or otherwise changes BEE1. Do not run this proof from the restricted agent sandbox.
 
 The recorded operator preflight established the BEE1 read-only connection and separate actor identities; it is not final live proof of SIGTERM cleanup. Independent QA reviews the complete exact candidate, including commissioned connection prerequisites, and runs its own check. The operator records the actual BEE1 initialization and owned-master closure after SIGTERM, then runs the full current host suite before and after expected-head `main` delivery. The Coordinator records verified `Done` and history only after delivery. This guide claims no deployment; OpenSpec planning and AI.Contract ownership remain unchanged.
+
+## Pending historical-close recovery
+
+A failed `GitHub.close_history(url)` remains pending when its outcome cannot be
+authoritatively reconciled; workers and QA cannot recover it. The operator-only
+`recover_close_history_known_not_applied(url, known_not_applied=True)` procedure
+is available only for an explicit known-not-applied determination. It preserves
+the original close identity and journal, appends a linked recovery attempt, and
+never permits SQL surgery or alternate connections.
+
+Before invoking it, retain the operator's explicit attestation, canonical
+repository/URL/number, complete paginated issue-event evidence, and stable OPEN
+snapshots with a valid `updatedAt`; CLOSED reconciliation also requires a
+valid `closedAt`. Every returned page and event must have the expected
+authoritative shape. The shared journal serializes the original callback and
+recovery by logical close identity, including an original callback paused before
+its first transport. A dead callback owner may be reclaimed only after all
+transport groups are quiescent. Any prior close/reopen event, concurrent
+snapshot change, missing or malformed page/event, CLOSED ambiguity, live/unknown transport,
+or any unconfirmed legacy alias marked `transport_tracking=0` (including CLOSED), stale
+admission, cooldown, or lost probe blocks the write. A CLOSED legacy alias marked
+`transport_tracking=0` remains blocked until an operator has
+stopped and independently confirmed all callbacks, transport groups, and probes,
+then calls `Gate.confirm_legacy_quiescence(nonempty_evidence,
+confirmed_stopped=True)`. The API rejects nonclosed aliases and active or
+unknown ownership; it preserves breaker metadata, fences stale admissions by
+bumping generation, and appends durable confirmation evidence. Workers and QA
+cannot invoke it and operators must not alter the journal directly. The procedure reads through the shared
+gate, rechecks immediately before close, then verifies CLOSED. An already CLOSED
+issue returns its existing result; an uncertain retry remains pending for normal
+authoritative reconciliation. This is historical-record recovery only, not a
+native state transition, delivery assertion, or `Done` claim.
