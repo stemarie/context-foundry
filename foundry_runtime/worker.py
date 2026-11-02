@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 from pathlib import Path
 import sys
@@ -12,6 +13,54 @@ import time
 from .core import Barrier, Journal
 from .runtime import Tools, ServiceUnavailable, command_binding, parse_service_time
 
+
+DEFAULT_SDK_CONFIG = {'max_iterations': 12, 'max_tokens': 3000, 'run_budget_seconds': 180}
+SDK_LIMITS = {'max_iterations': (1, 48), 'max_tokens': (256, 12000), 'run_budget_seconds': (1, 1200)}
+
+def pending_transition_prompt(role):
+    return ('\nThe prior model turn ended without a native ' + ('submission' if role == 'worker' else 'verdict') +
+            '. Reinspect current assignment and authority, then perform the required native transition or report a concrete blocker; do not merely restate completion.')
+
+def turn_decision(role, result, stage):
+    """Classify a completed SDK turn using the freshly-read native stage."""
+    if (role == 'worker' and stage == 'QA') or (role == 'qa' and stage != 'QA'):
+        return 'handoff'
+    if result.get('error') or not result.get('completed'):
+        return 'retry'
+    return 'continue'
+
+def validated_invocation_seconds(config):
+    value = config.get('invocation_seconds', 600)
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 1 <= value <= 1200:
+        raise Barrier('invalid finite invocation deadline')
+    return value
+
+def remaining_turn_seconds(deadline, now=time.monotonic):
+    # Flooring prevents a SDK turn from receiving more time than the invocation owns.
+    return max(0, int(deadline - now()))
+
+def sdk_config(config):
+    """Validate public bounded model settings without permitting unbounded execution."""
+    supplied = config.get('sdk', {})
+    if not isinstance(supplied, dict):
+        raise Barrier('sdk configuration must be an object')
+    result = dict(DEFAULT_SDK_CONFIG)
+    for name, (minimum, maximum) in SDK_LIMITS.items():
+        value = supplied.get(name, result[name])
+        if type(value) is not int or not minimum <= value <= maximum:
+            raise Barrier('invalid bounded sdk setting: ' + name)
+        result[name] = int(value)
+    if set(supplied) - set(SDK_LIMITS):
+        raise Barrier('unknown sdk configuration setting')
+    return result
+
+def run_sdk_turn(agent, prompt, deadline, selected_sdk, now=time.monotonic):
+    """Run one SDK turn without allowing it to outlive its invocation."""
+    turn_seconds = remaining_turn_seconds(deadline, now)
+    if turn_seconds < 1:
+        raise Barrier('bounded invocation deadline elapsed')
+    agent.run_budget_seconds = min(selected_sdk['run_budget_seconds'], turn_seconds)
+    return agent.run_conversation(prompt), agent.run_budget_seconds
 
 def main():
     # Hermes may re-exec while preparing an isolated home's dependencies.
@@ -28,6 +77,7 @@ def main():
     journal.acknowledge(args.launch, args.nonce)  # Before reading stdin: uncertain parent starts are discoverable.
     payload = json.load(sys.stdin)
     config, runtime = payload['config'], payload['model_runtime']
+    selected_sdk = sdk_config(config)
     home = Path(config['home'])
     home.mkdir(mode=0o700, exist_ok=True)
     events = home / 'events.jsonl'
@@ -71,7 +121,7 @@ def main():
         threading.Thread(target=heartbeat, daemon=True).start()
     try:
         from tools.registry import registry
-        operations = ['assignment', 'history', 'read', 'diff', 'check'] + (['write', 'submit'] if tools.role == 'worker' else ['verdict'])
+        operations = ['assignment', 'history', 'read', 'diff', 'check'] + (['write', 'edit', 'submit'] if tools.role == 'worker' else ['verdict'])
 
         def action(values, **_kwargs):
             try:
@@ -93,16 +143,18 @@ def main():
                   'parameters': {'type': 'object', 'properties': {
                       'operation': {'type': 'string', 'enum': operations}, 'path': {'type': 'string'},
                       'content': {'type': 'string'}, 'summary': {'type': 'string'},
+                      'expected_digest': {'type': 'string'},
+                      'replacements': {'type': 'array', 'items': {'type': 'object', 'properties': {'old': {'type': 'string'}, 'new': {'type': 'string'}}, 'required': ['old', 'new'], 'additionalProperties': False}, 'minItems': 1, 'maxItems': 64},
                       'offset': {'type': 'integer', 'minimum': 0}, 'limit': {'type': 'integer', 'minimum': 1, 'maximum': 64000},
                       'after': {'type': 'integer', 'minimum': 0}, 'version': {'type': 'string'},
                       'verdict': {'type': 'string', 'enum': ['Accepted', 'Changes requested', 'Blocked']}},
                       'required': ['operation'], 'additionalProperties': False}}
         registry.register('foundry_action', 'cf_invocation', schema, action)
         agent = AIAgent(model=config['model'], provider=runtime['provider'], api_mode=runtime['api_mode'],
-                        api_key=runtime['api_key'], base_url=runtime['base_url'], max_iterations=12,
+                        api_key=runtime['api_key'], base_url=runtime['base_url'], max_iterations=selected_sdk['max_iterations'],
                         enabled_toolsets=['cf_invocation'], quiet_mode=True, skip_context_files=True,
                         skip_memory=True, skip_background_review=True, load_soul_identity=False,
-                        save_trajectories=False, side_agent=True, run_budget_seconds=180, max_tokens=3000,
+                        save_trajectories=False, side_agent=True, run_budget_seconds=selected_sdk['run_budget_seconds'], max_tokens=selected_sdk['max_tokens'],
                         cwd=str(tools.workspace))
         for name in list(registry.get_all_tool_names()):
             if name != 'foundry_action':
@@ -124,7 +176,10 @@ def main():
                 if time.monotonic() > until:
                     raise Barrier('operator start barrier timed out')
                 time.sleep(.05)
-        deadline = time.monotonic() + config.get('invocation_seconds', 600)
+        event('sdk_selected', settings=selected_sdk)
+        invocation_seconds = validated_invocation_seconds(config)
+        deadline = time.monotonic() + invocation_seconds
+        pending_transition = False
         while time.monotonic() < deadline:
             try:
                 job = tools.client.workflow('get', {'project_id': tools.binding['project_id'], 'contract_id': tools.binding['contract_id']})['job']
@@ -149,31 +204,46 @@ def main():
             if tools.role == 'worker' and job['stage'] == 'QA':
                 stop.wait(.2)
                 continue
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
             prompt = (config['role_instructions'] + '\n\nContract semantic version: ' + job['contract_version'] +
                       '\nAssigned immutable work:\n' + job['revision']['body_markdown'])
             if tools.role == 'worker':
                 prompt += '\nUse assignment/read/write/check tools. After successful checks, submit with a concise commit summary. Do not integrate, approve yourself or invoke a remote transport. If QA requested corrections, inspect current history and correct this same assignment.'
             else:
                 prompt += '\nIndependently inspect assignment, exact candidate diff and relevant files; run check yourself. Record an evidence-backed verdict with verdict/summary. Do not write, commit, integrate, or mark Done.'
-            prompt += '\nUse history continuation and read/diff next_offset/version until the required evidence is fully inspected. Assignment includes the latest QA verdict even after many heartbeats. A pending_submission identifies a prepared immutable commit; retry its original summary after revalidation. Never claim a truncated prefix is a full review.'
-            event('model_started')
-            result = agent.run_conversation(prompt)
+            prompt += '\nUse history continuation and read/diff next_offset/version until the required evidence is fully inspected. Assignment includes the latest QA verdict even after many heartbeats. A pending_submission identifies a prepared immutable commit; retry its original summary after revalidation. Never claim a truncated prefix is a full review. Focused edit: read the exact current file, then call edit with its SHA-256 version as expected_digest and a bounded list of unique literal old/new replacements; it only edits existing files and clears checks.'
+            if pending_transition:
+                prompt += pending_transition_prompt(tools.role)
+            # The helper enforces the real remaining deadline for every SDK turn.
+            try:
+                result, turn_seconds = run_sdk_turn(agent, prompt, deadline, selected_sdk)
+            except Barrier:
+                break
+            event('model_started', continuation=pending_transition, sdk_settings=selected_sdk, turn_seconds=turn_seconds)
             event('model_finished', completed=bool(result.get('completed')), api_calls=result.get('api_calls', 0))
             try:
                 refreshed = tools.client.workflow('get', {'project_id': tools.binding['project_id'], 'contract_id': tools.binding['contract_id']})['job']
             except ServiceUnavailable as exc:
                 unavailable(exc)
                 continue
-            if tools.role == 'worker' and refreshed['stage'] == 'QA':
-                # A successful service submission survives model iteration exhaustion.
-                # Keep this process and heartbeat through QA and corrections.
+            decision = turn_decision(tools.role, result, refreshed['stage'])
+            if decision == 'handoff':
+                if tools.role == 'worker':
+                    # Revalidate retained Worker authority while waiting through QA/corrections.
+                    tools.client.authority(tools.binding, tools.role)
+                    continue
+                break  # Reconcile the actual QA verdict even if the model reply was cut short.
+            # Error/iteration exhaustion and natural-language completion both require fresh authority.
+            refreshed = tools.client.authority(tools.binding, tools.role)
+            if decision == 'retry':
+                event('turn_reconciled', stage=refreshed['stage'], outcome='recoverable_turn')
                 continue
-            if tools.role == 'qa' and refreshed['stage'] != 'QA':
-                break  # Reconcile the actual verdict even if the final model reply was cut short.
-            if result.get('error') or not result.get('completed'):
-                event('turn_reconciled', stage=refreshed['stage'])
-                continue  # Current authority is checked again; bounded invocation still applies.
-            raise Barrier('actor returned without its required service transition')
+            event('turn_reconciled', stage=refreshed['stage'], continuation='pending_required_transition')
+            # Natural-language completion is not a service transition. Re-prompt while authority and deadline remain.
+            pending_transition = True
+            continue
 
         else:
             raise Barrier('bounded invocation ended; current assignment retained')

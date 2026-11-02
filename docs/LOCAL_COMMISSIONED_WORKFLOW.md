@@ -30,6 +30,14 @@ Skills read `bee1.json` privately, use `local_connection.tunnel(config)` and `cr
 
 No finished generic always-running controller exists. The operator constructs bounded configuration from the current assignment, and there is no automatic continuation after invocation exit.
 
+## Supported bounded coding settings
+
+The operator may set `config.sdk` for either Worker or QA: `max_iterations` 1–48 (default 12), `max_tokens` 256–12000 (default 3000), and `run_budget_seconds` 1–1200 (default 180). Values must be finite integral numbers, never booleans; unknown, malformed, negative, or excessive values fail closed. `invocation_seconds` is still the finite outer 1–1200 second deadline, and each SDK turn is capped to its remaining time. Before every turn and every action the runtime rechecks the assignment authority. Private invocation events retain the selected SDK settings and each actual remaining-time SDK turn cap for later stock-proof assessment. A completed natural-language turn does not invent submit/verdict: the runtime records pending continuation evidence and prompts again while authority and the deadline remain.
+
+A Worker can use public `foundry_action` operation `edit` for an existing checked workspace file: read the complete content, provide that SHA-256 version as `expected_digest`, and provide 1–64 exact `{old,new}` replacements. Every old literal must be nonempty and unique; values are capped at 32 KiB and the resulting file at 512 KiB. Validation occurs before mutation, successful edits clear checks, and stale, ambiguous, missing, traversal, symlink, metadata, and QA edits are rejected. This grants no shell, code, network, or baseline restore access; full write remains compatible.
+
+For this prerequisite delivery the Worker/QA uses the transparent task-only bootstrap supplied by the Coordinator. The larger STOCK runtime coding proof is pending its dependent contract and is not claimed here.
+
 ## Native execution and delivery
 
 Inside the human planning horizon, the Architect creates immutable bounded work. The Coordinator reconciles current jobs/pools, reserves natively, launches isolated role processes, and retains the Worker through QA. A Worker acts only on its own assignment. Separate independent QA reviews the exact candidate SHA; QA accepted is not `Done`.

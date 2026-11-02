@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 import json
 import hashlib
 import os
+import math
 import re
 from pathlib import Path
 import subprocess
@@ -258,11 +259,39 @@ class Tools:
             return text_page(path.read_text(), arguments, 'content')
         if operation == 'diff':
             return text_page(local_git(self.workspace, 'diff', self.config['base_sha'], 'HEAD'), arguments, 'diff')
+        if operation == 'edit':
+            if self.role != 'worker' or job['stage'] != 'Implementing':
+                raise Barrier('edit capability denied')
+            path = checked_path(self.workspace, arguments['path'])
+            if not path.is_file():
+                raise Barrier('focused edit requires an existing regular file')
+            expected = arguments.get('expected_digest')
+            replacements = arguments.get('replacements')
+            current = path.read_text()
+            if not isinstance(expected, str) or expected != hashlib.sha256(current.encode()).hexdigest():
+                raise Barrier('focused edit version is stale or invalid')
+            if not isinstance(replacements, list) or not 1 <= len(replacements) <= 64:
+                raise Barrier('invalid focused edit replacements')
+            updated = current
+            for replacement in replacements:
+                if not isinstance(replacement, dict) or set(replacement) != {'old', 'new'}:
+                    raise Barrier('focused edit replacements require old and new strings')
+                old, new = replacement['old'], replacement['new']
+                if not isinstance(old, str) or not isinstance(new, str) or not old or len(old.encode()) > 32768 or len(new.encode()) > 32768:
+                    raise Barrier('invalid focused edit replacement text')
+                if current.count(old) != 1 or updated.count(old) != 1:
+                    raise Barrier('focused edit old text must occur exactly once')
+                updated = updated.replace(old, new, 1)
+            if len(updated.encode()) > 512000:
+                raise Barrier('focused edit result exceeds capability bound')
+            path.write_text(updated)
+            self.checks = None
+            return {'edited': arguments['path'], 'digest': hashlib.sha256(updated.encode()).hexdigest()}
         if operation == 'write':
             if self.role != 'worker' or job['stage'] != 'Implementing':
                 raise Barrier('write capability denied')
             content = arguments['content']
-            if len(content.encode()) > 128000:
+            if not isinstance(content, str) or len(content.encode()) > 128000:
                 raise Barrier('write exceeds capability bound')
             path = checked_path(self.workspace, arguments['path'])
             path.parent.mkdir(parents=True, exist_ok=True)

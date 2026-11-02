@@ -8,6 +8,7 @@ mutates, deploys, or reconfigures BEE1.
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
@@ -80,42 +81,100 @@ def request(process: subprocess.Popen, payload: dict, timeout: float = 20) -> di
     raise RuntimeError("timed out waiting for owned bridge response")
 
 
-def master(process: subprocess.Popen) -> tuple[int, str]:
-    """Find this bridge's SSH child without putting private paths in evidence."""
+@dataclass(frozen=True)
+class OwnedSSH:
+    pid: int
+    parent: int
+    start: str
+    command: str
+    control: str
+
+def process_identity(pid: int):
+    """Read PID-reuse-resistant identity; absence is not evidence of ownership."""
+    try:
+        parent = subprocess.run(['ps', '-o', 'ppid=', '-p', str(pid)], capture_output=True, text=True, check=False).stdout.strip()
+        start = subprocess.run(['ps', '-o', 'lstart=', '-p', str(pid)], capture_output=True, text=True, check=False).stdout.strip()
+        command = subprocess.run(['ps', '-ww', '-o', 'command=', '-p', str(pid)], capture_output=True, text=True, check=False).stdout.strip()
+        return int(parent), start, command
+    except (ValueError, OSError):
+        return None
+
+def master(process: subprocess.Popen) -> OwnedSSH:
+    """Capture this bridge's SSH child identity before cleanup, never just its PID."""
     def find():
-        children = subprocess.run(["pgrep", "-P", str(process.pid)], capture_output=True, text=True, check=False)
+        if process.poll() is not None:
+            raise RuntimeError('bridge exited before owned SSH identity was captured')
+        children = subprocess.run(['pgrep', '-P', str(process.pid)], capture_output=True, text=True, check=False)
         for value in children.stdout.split():
-            command = subprocess.run(["ps", "-ww", "-o", "command=", "-p", value], capture_output=True, text=True, check=False).stdout
-            if command.lstrip().startswith("ssh "):
-                bits = command.split()
-                return int(value), bits[bits.index("-S") + 1]
+            identity = process_identity(int(value))
+            if (identity and identity[0] == process.pid and identity[2].lstrip().startswith('ssh ')
+                    and ' -S ' in (' ' + identity[2] + ' ')):
+                bits = identity[2].split()
+                return OwnedSSH(int(value), identity[0], identity[1], identity[2], bits[bits.index('-S') + 1])
         return None
     return wait_for(find)
+
+def still_owned(child: OwnedSSH, bridge: subprocess.Popen) -> bool:
+    identity = process_identity(child.pid)
+    # Require the original start identity, command, and bridge parent while it exists.
+    if identity is None:
+        return False
+    parent, start, command = identity
+    if start != child.start or command != child.command or child.control not in command:
+        return False
+    # Parentage is meaningful only while the bridge still exists; after it exits
+    # a suspended owned master is re-parented but retains its captured identity.
+    return (parent == child.parent == bridge.pid) if bridge.poll() is None else True
+
+def close_streams(process: subprocess.Popen) -> None:
+    for stream in (process.stdin, process.stdout, process.stderr):
+        if stream is not None and not stream.closed:
+            try:
+                stream.close()
+            except OSError:
+                pass
 
 
 def stopped(pid: int) -> bool:
     return wait_for(lambda: not alive(pid), 10)
 
 
-def close(process: subprocess.Popen, ssh_pid: int | None) -> None:
-    """Reap only children created by this proof, including a suspended master."""
-    if process.poll() is None:
+def close(process: subprocess.Popen, ssh: OwnedSSH | None, signal_process=os.kill) -> None:
+    """Reap only verified Popen descendants; never signal a reused raw SSH PID."""
+    try:
+        if process.poll() is None:
+            try:
+                os.killpg(process.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                # Group disappearance is not proof that this Popen was reaped.
+                pass
+            try:
+                process.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                # The bridge owns this group; retain bounded Popen reaping on races.
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                try:
+                    process.wait(timeout=15)
+                except subprocess.TimeoutExpired:
+                    pass
+        # A surviving child can only be signalled while its original bridge and identity remain.
+        if ssh is not None and still_owned(ssh, process):
+            signal_process(ssh.pid, signal.SIGKILL)
+            stopped(ssh.pid)
+    finally:
+        # Poll/reap state before closing streams even when signalling or waits failed.
         try:
-            os.killpg(process.pid, signal.SIGTERM)
-            process.wait(timeout=15)
-        except ProcessLookupError:
-            pass
-        except subprocess.TimeoutExpired:
-            os.killpg(process.pid, signal.SIGKILL)
-            process.wait()
-    if ssh_pid is not None and alive(ssh_pid):
-        os.kill(ssh_pid, signal.SIGKILL)
-        stopped(ssh_pid)
+            process.poll()
+        finally:
+            close_streams(process)
 
 
 def scenario(config: Path, kind: str, evidence: dict, checkpoint) -> dict:
     process = bridge(config)
-    ssh_pid = None
+    ssh = None
     record = {"name": kind, "bridge_pid": process.pid, "cleanup": "pending"}
     evidence["scenarios"].append(record)
     checkpoint()  # Preserve redacted owned-child identity before any teardown.
@@ -126,7 +185,8 @@ def scenario(config: Path, kind: str, evidence: dict, checkpoint) -> dict:
         assert len(discovery["result"]["tools"]) == 16
         rejected = request(process, {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "workflow_submit"}})
         assert rejected["result"]["isError"]
-        ssh_pid, control = master(process)
+        ssh = master(process)
+        ssh_pid, control = ssh.pid, ssh.control
         if kind == "disconnect":
             subprocess.run(["ssh", "-S", control, "-O", "exit", TARGET], capture_output=True, timeout=8, check=False)
             error = request(process, {"jsonrpc": "2.0", "id": 7002, "method": "ping"})
@@ -155,9 +215,9 @@ def scenario(config: Path, kind: str, evidence: dict, checkpoint) -> dict:
             stopped(ssh_pid)
         record.update({"bridge_exit": process.returncode, "ssh_reaped_before_cleanup": not alive(ssh_pid)})
     finally:
-        close(process, ssh_pid)
+        close(process, ssh)
         record["cleanup"] = "complete"
-        record["ssh_reaped_after_cleanup"] = ssh_pid is None or not alive(ssh_pid)
+        record["ssh_reaped_after_cleanup"] = ssh is None or not alive(ssh.pid)
         checkpoint()
     return record
 

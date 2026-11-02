@@ -77,6 +77,14 @@ model receives the checked version alongside the current native executable body;
 the ordinary body never substitutes for the native revision. No service schema,
 endpoint or assignment authority changes.
 
+## Bounded model configuration, continuation, and focused editing
+
+The public launch `config` may include an optional `sdk` object for both Worker and QA: `max_iterations` (integer 1–48, default 12), `max_tokens` (integer 256–12000, default 3000), and `run_budget_seconds` (integer 1–1200, default 180). Unknown keys, booleans, non-integral numbers, non-finite values, and values outside those ranges are rejected. `invocation_seconds` remains an independent finite 1–1200 second outer deadline; each model turn is capped to its remaining time. The adapter revalidates native authority before every turn and tool action. It records the selected SDK settings and each actual remaining-time turn cap in the private invocation event evidence. A model's natural-language completion without submission or verdict is recorded as a pending required transition and is re-prompted within that deadline; provider and authority failures are not converted into transitions.
+
+Workers also have an `edit` operation for bounded literal changes to an existing regular workspace file. First `read` the complete current file and retain its returned SHA-256 `version`; then supply it as `expected_digest` with 1–64 `{old, new}` string replacements. Each `old` must be nonempty and occur exactly once; each old/new value is at most 32 KiB and the result at most 512 KiB. All replacements are validated before the write, stale/ambiguous/missing values fail without mutation, and a successful edit clears prior check evidence. The same checked-path, current Implementing authority, worker role, lock, traversal/symlink/metadata restrictions apply. QA cannot edit. This is literal file editing only: it has no shell, code execution, network, or baseline-source restore path; full `write` remains available under its existing limits.
+
+This delivery uses the coordinator's transparent task-only bootstrap for the prerequisite Worker/QA execution. It is not the larger stock-runtime coding proof; that proof remains pending the dependent contract.
+
 The [command-admission/integration proof](COMMAND_ADMISSION_PROOFS_2026-11-01.md)
 adds per-command generation checks: opening/recovering the breaker invalidates an
 older callback's grant. Each command records its intent only after checking the
