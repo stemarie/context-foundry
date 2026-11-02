@@ -2,8 +2,10 @@ import math
 import unittest
 
 from foundry_runtime.core import Barrier
-from foundry_runtime.worker import (DEFAULT_SDK_CONFIG, pending_transition_prompt, remaining_turn_seconds,
-                                    run_sdk_turn, sdk_config, turn_decision, validated_invocation_seconds)
+from foundry_runtime.worker import (DEFAULT_SDK_CONFIG, pending_transition_prompt, reconcile_turn,
+                                    remaining_turn_seconds, run_sdk_turn, sdk_config, turn_decision,
+                                    validated_invocation_seconds)
+from unittest.mock import Mock
 
 
 class FakeAgent:
@@ -34,6 +36,19 @@ class WorkerConfigTests(unittest.TestCase):
         self.assertEqual('retry', turn_decision('qa', {'completed': True, 'error': 'iteration limit'}, 'QA'))
         self.assertEqual('handoff', turn_decision('worker', {'completed': True}, 'QA'))
         self.assertEqual('handoff', turn_decision('qa', {'completed': True}, 'Implementing'))
+
+    def test_runtime_reconciliation_fences_continuation_and_skips_handoff_authority(self):
+        tools = Mock()
+        tools.role = 'worker'
+        tools.binding = {'contract_id': 'contract'}
+        tools.client.authority.return_value = {'stage': 'Implementing'}
+        decision, current = reconcile_turn(tools, {'completed': True}, 'Implementing')
+        self.assertEqual(('continue', {'stage': 'Implementing'}), (decision, current))
+        tools.client.authority.assert_called_once_with(tools.binding, 'worker')
+        tools.client.authority.reset_mock()
+        decision, current = reconcile_turn(tools, {'completed': True}, 'QA')
+        self.assertEqual(('handoff', None), (decision, current))
+        tools.client.authority.assert_not_called()
 
     def test_fake_model_completion_is_reprompted_until_native_handoff(self):
         agent = FakeAgent([{'completed': True}, {'completed': True}])

@@ -62,6 +62,14 @@ def run_sdk_turn(agent, prompt, deadline, selected_sdk, now=time.monotonic):
     agent.run_budget_seconds = min(selected_sdk['run_budget_seconds'], turn_seconds)
     return agent.run_conversation(prompt), agent.run_budget_seconds
 
+
+def reconcile_turn(tools, result, stage):
+    """Fence every non-handoff model result with current native authority."""
+    decision = turn_decision(tools.role, result, stage)
+    if decision == 'handoff':
+        return decision, None
+    return decision, tools.client.authority(tools.binding, tools.role)
+
 def main():
     # Hermes may re-exec while preparing an isolated home's dependencies.
     # Import before consuming stdin or acknowledging the durable launch.
@@ -228,7 +236,7 @@ def main():
             except ServiceUnavailable as exc:
                 unavailable(exc)
                 continue
-            decision = turn_decision(tools.role, result, refreshed['stage'])
+            decision, current = reconcile_turn(tools, result, refreshed['stage'])
             if decision == 'handoff':
                 if tools.role == 'worker':
                     # Revalidate retained Worker authority while waiting through QA/corrections.
@@ -236,7 +244,7 @@ def main():
                     continue
                 break  # Reconcile the actual QA verdict even if the model reply was cut short.
             # Error/iteration exhaustion and natural-language completion both require fresh authority.
-            refreshed = tools.client.authority(tools.binding, tools.role)
+            refreshed = current
             if decision == 'retry':
                 event('turn_reconciled', stage=refreshed['stage'], outcome='recoverable_turn')
                 continue
