@@ -50,7 +50,7 @@ class FocusedEditTests(unittest.TestCase):
                     self.edit(replacements, digest)
                 self.assertEqual(original, self.path.read_text())
 
-    def test_qa_and_traversal_are_denied(self):
+    def test_qa_traversal_symlink_and_invalid_types_are_denied(self):
         self.tools.role = 'qa'
         with self.assertRaises(Barrier):
             self.edit([{'old': 'unique old text', 'new': 'x'}])
@@ -58,6 +58,15 @@ class FocusedEditTests(unittest.TestCase):
         with self.assertRaises(Barrier):
             self.tools._invoke('edit', {'path': '../outside', 'expected_digest': 'x',
                 'replacements': [{'old': 'x', 'new': 'y'}]})
+        linked = self.workspace / 'linked.txt'
+        linked.symlink_to(self.path)
+        with self.assertRaises(Barrier):
+            self.tools._invoke('edit', {'path': 'linked.txt', 'expected_digest': 'x',
+                'replacements': [{'old': 'x', 'new': 'y'}]})
+        for replacement in ({'old': 3, 'new': 'x'}, {'old': 'x', 'new': 3},
+                            {'old': 'x', 'new': 'y', 'extra': 'no'}):
+            with self.subTest(replacement=replacement), self.assertRaises(Barrier):
+                self.edit([replacement])
 
 
 if __name__ == '__main__':

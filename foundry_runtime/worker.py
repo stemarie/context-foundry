@@ -70,6 +70,14 @@ def reconcile_turn(tools, result, stage):
         return decision, None
     return decision, tools.client.authority(tools.binding, tools.role)
 
+def complete_turn(tools, agent, prompt, deadline, selected_sdk, now=time.monotonic):
+    """Run and reconcile one bounded turn against freshly-read native state."""
+    result, turn_seconds = run_sdk_turn(agent, prompt, deadline, selected_sdk, now)
+    refreshed = tools.client.workflow('get', {
+        'project_id': tools.binding['project_id'], 'contract_id': tools.binding['contract_id']})['job']
+    decision, current = reconcile_turn(tools, result, refreshed['stage'])
+    return result, turn_seconds, decision, current, refreshed
+
 def main():
     # Hermes may re-exec while preparing an isolated home's dependencies.
     # Import before consuming stdin or acknowledging the durable launch.
@@ -226,17 +234,15 @@ def main():
                 prompt += pending_transition_prompt(tools.role)
             # The helper enforces the real remaining deadline for every SDK turn.
             try:
-                result, turn_seconds = run_sdk_turn(agent, prompt, deadline, selected_sdk)
+                result, turn_seconds, decision, current, refreshed = complete_turn(
+                    tools, agent, prompt, deadline, selected_sdk)
+            except ServiceUnavailable as exc:
+                unavailable(exc)
+                continue
             except Barrier:
                 break
             event('model_started', continuation=pending_transition, sdk_settings=selected_sdk, turn_seconds=turn_seconds)
             event('model_finished', completed=bool(result.get('completed')), api_calls=result.get('api_calls', 0))
-            try:
-                refreshed = tools.client.workflow('get', {'project_id': tools.binding['project_id'], 'contract_id': tools.binding['contract_id']})['job']
-            except ServiceUnavailable as exc:
-                unavailable(exc)
-                continue
-            decision, current = reconcile_turn(tools, result, refreshed['stage'])
             if decision == 'handoff':
                 if tools.role == 'worker':
                     # Revalidate retained Worker authority while waiting through QA/corrections.

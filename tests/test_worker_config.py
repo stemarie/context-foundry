@@ -2,7 +2,7 @@ import math
 import unittest
 
 from foundry_runtime.core import Barrier
-from foundry_runtime.worker import (DEFAULT_SDK_CONFIG, pending_transition_prompt, reconcile_turn,
+from foundry_runtime.worker import (DEFAULT_SDK_CONFIG, complete_turn, pending_transition_prompt, reconcile_turn,
                                     remaining_turn_seconds, run_sdk_turn, sdk_config, turn_decision,
                                     validated_invocation_seconds)
 from unittest.mock import Mock
@@ -51,16 +51,29 @@ class WorkerConfigTests(unittest.TestCase):
         tools.client.authority.assert_not_called()
 
     def test_fake_model_completion_is_reprompted_until_native_handoff(self):
+        # complete_turn is the invocation-loop path: it runs the model, rereads
+        # native state, and fences the result before the next continuation prompt.
         agent = FakeAgent([{'completed': True}, {'completed': True}])
         settings = sdk_config({'sdk': {'run_budget_seconds': 120}})
-        first, cap = run_sdk_turn(agent, 'first', 110.9, settings, now=lambda: 10.1)
-        self.assertEqual(100, cap)
-        self.assertEqual('continue', turn_decision('worker', first, 'Implementing'))
+        tools = Mock()
+        tools.role = 'worker'
+        tools.binding = {'project_id': 'project', 'contract_id': 'contract'}
+        tools.client.workflow.side_effect = [
+            {'job': {'stage': 'Implementing'}}, {'job': {'stage': 'QA'}}]
+        tools.client.authority.return_value = {'stage': 'Implementing'}
+        first, cap, decision, current, refreshed = complete_turn(
+            tools, agent, 'first', 110.9, settings, now=lambda: 10.1)
+        self.assertEqual(({'completed': True}, 100, 'continue', {'stage': 'Implementing'}),
+                         (first, cap, decision, current))
+        self.assertEqual('Implementing', refreshed['stage'])
+        self.assertEqual('continue', decision)
         # A completed response has no service effect: the loop appends this continuation prompt.
-        second, cap = run_sdk_turn(agent, 'second' + pending_transition_prompt('worker'), 110.9, settings, now=lambda: 10.1)
+        second, cap, decision, current, refreshed = complete_turn(
+            tools, agent, 'second' + pending_transition_prompt('worker'), 110.9, settings, now=lambda: 10.1)
         self.assertEqual(100, cap)
         self.assertIn('native submission', agent.prompts[-1])
-        self.assertEqual('handoff', turn_decision('worker', second, 'QA'))
+        self.assertEqual(('handoff', None, 'QA'), (decision, current, refreshed['stage']))
+        self.assertEqual(2, tools.client.workflow.call_count)
 
     def test_fake_model_turn_is_capped_by_actual_remaining_deadline_and_expires(self):
         agent = FakeAgent([{'completed': False, 'error': 'iteration limit'}])
@@ -83,10 +96,16 @@ class WorkerConfigTests(unittest.TestCase):
         self.assertEqual(0, remaining_turn_seconds(10.1, now=lambda: 10.2))
 
     def test_sdk_rejects_boolean_nonfinite_fractional_and_excessive_values(self):
-        for value in (True, -1, 0, 1.0, 1.5, math.inf, '12', 49):
-            with self.subTest(value=value):
-                with self.assertRaises(Barrier):
-                    sdk_config({'sdk': {'max_iterations': value}})
+        invalid = {
+            'max_iterations': (True, -1, 0, 1.0, 1.5, math.inf, '12', 49),
+            'max_tokens': (True, -1, 0, 256.0, math.inf, '3000', 12001),
+            'run_budget_seconds': (True, -1, 0, 1.0, math.inf, '180', 1201),
+        }
+        for name, values in invalid.items():
+            for value in values:
+                with self.subTest(name=name, value=value):
+                    with self.assertRaises(Barrier):
+                        sdk_config({'sdk': {name: value}})
         with self.assertRaises(Barrier):
             sdk_config({'sdk': {'unknown': 1}})
         with self.assertRaises(Barrier):
