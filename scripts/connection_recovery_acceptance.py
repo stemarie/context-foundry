@@ -138,7 +138,13 @@ def scenario(config: Path, kind: str, evidence: dict, checkpoint) -> dict:
             process.stdin.close()
             process.wait(timeout=20)
             stopped(ssh_pid)
-        elif kind == "sigterm":
+        elif kind == "direct-sigterm":
+            # This targets only the owned bridge; it must reap its owned SSH child.
+            os.kill(process.pid, signal.SIGTERM)
+            process.wait(timeout=20)
+            stopped(ssh_pid)
+        elif kind == "group-sigterm":
+            # Exercise the separately documented process-group shutdown path.
             os.killpg(process.pid, signal.SIGTERM)
             process.wait(timeout=20)
             stopped(ssh_pid)
@@ -173,7 +179,7 @@ def main() -> None:
     evidence = {"proof": "connection-recovery", "service": "BEE1 existing read-only endpoint", "scenarios": []}
     checkpoint = lambda: write_evidence(output, evidence)
     try:
-        for name in ("eof", "sigterm", "disconnect", "suspended-eof"):
+        for name in ("eof", "direct-sigterm", "group-sigterm", "disconnect", "suspended-eof"):
             scenario(config, name, evidence, checkpoint)
     except Exception as exc:
         evidence["failure"] = {"category": type(exc).__name__}
