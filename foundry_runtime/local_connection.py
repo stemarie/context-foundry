@@ -9,6 +9,7 @@ import contextlib
 import json
 import os
 from pathlib import Path
+import shutil
 import signal
 import socket
 import stat
@@ -64,6 +65,35 @@ def orderly_sigterm():
         signal.signal(signal.SIGTERM, previous)
 
 
+def _stop_owned_tunnel(process, control, target):
+    """Close only this Popen child, retaining its control identity on uncertainty."""
+    try:
+        if process.poll() is None:
+            try:
+                subprocess.run(['ssh','-S',control,'-O','exit',target],capture_output=True,timeout=5)
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    try:
+                        process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        raise Barrier('owned SSH shutdown unconfirmed; reconciliation identity retained') from None
+        if process.poll() is None:
+            raise Barrier('owned SSH shutdown unconfirmed; reconciliation identity retained')
+        return True
+    except Barrier:
+        raise
+    except (OSError, subprocess.TimeoutExpired):
+        raise Barrier('owned SSH shutdown unconfirmed; reconciliation identity retained') from None
+
+
 @contextlib.contextmanager
 def tunnel(config, port=0):
     ssh=config['ssh']
@@ -71,12 +101,14 @@ def tunnel(config, port=0):
         raise Barrier('connection does not match the commissioned private service')
     if not port:
         with socket.socket() as probe:probe.bind(('127.0.0.1',0));port=probe.getsockname()[1]
-    with tempfile.TemporaryDirectory(prefix='cf-ssh-',dir='/private/tmp') as name:
-        control=str(Path(name)/'master')
-        command=['ssh','-M','-S',control,'-o','ControlPersist=no','-o','ControlMaster=yes',
-                 '-o','BatchMode=yes','-o','IdentitiesOnly=yes','-o','ExitOnForwardFailure=yes',
-                 '-o','ConnectTimeout=10','-o','ServerAliveInterval=15','-o','ServerAliveCountMax=2',
-                 '-i',ssh['identity_file'],'-N','-L',f'127.0.0.1:{port}:127.0.0.1:18080',ssh['target']]
+    name=tempfile.mkdtemp(prefix='cf-ssh-',dir='/private/tmp')
+    confirmed=False
+    control=str(Path(name)/'master')
+    command=['ssh','-M','-S',control,'-o','ControlPersist=no','-o','ControlMaster=yes',
+             '-o','BatchMode=yes','-o','IdentitiesOnly=yes','-o','ExitOnForwardFailure=yes',
+             '-o','ConnectTimeout=10','-o','ServerAliveInterval=15','-o','ServerAliveCountMax=2',
+             '-i',ssh['identity_file'],'-N','-L',f'127.0.0.1:{port}:127.0.0.1:18080',ssh['target']]
+    try:
         with orderly_sigterm(), tempfile.TemporaryFile() as log:
             process=subprocess.Popen(command,stdin=subprocess.DEVNULL,stdout=log,stderr=log)
             try:
@@ -90,24 +122,35 @@ def tunnel(config, port=0):
                 else:raise Barrier('private SSH connection readiness unknown')
                 yield 'http://127.0.0.1:'+str(port)
             finally:
-                if process.poll() is None:
-                    subprocess.run(['ssh','-S',control,'-O','exit',ssh['target']],capture_output=True,timeout=5)
-                    try:process.wait(timeout=5)
-                    except subprocess.TimeoutExpired:
-                        process.terminate();process.wait(timeout=5)
+                confirmed=_stop_owned_tunnel(process,control,ssh['target'])
+    finally:
+        if confirmed:
+            shutil.rmtree(name)
+
+
+def request_id(message):
+    value=message.get('id') if isinstance(message,dict) and 'id' in message else None
+    return value if isinstance(value,(int,str)) and not isinstance(value,bool) else None
 
 
 def rpc(client, message):
     if not isinstance(message,dict) or message.get('jsonrpc')!='2.0':
         return {'jsonrpc':'2.0','id':None,'error':{'code':-32600,'message':'invalid MCP request'}}
-    if 'id' not in message:return None
-    response={'jsonrpc':'2.0','id':message['id']}
+    if 'id' not in message:
+        return None
+    identifier=request_id(message)
+    if identifier is None:
+        return {'jsonrpc':'2.0','id':None,'error':{'code':-32600,'message':'invalid MCP request'}}
+    response={'jsonrpc':'2.0','id':identifier}
     method=message.get('method');params=message.get('params') or {}
     if method=='tools/call' and (not isinstance(params,dict) or params.get('name') not in READ_TOOLS):
         return {**response,'result':{'isError':True,'content':[{'type':'text','text':'This local connection is read-only; use actor-bound Foundry execution for mutations.'}]}}
     if method not in {'initialize','ping','tools/list','tools/call'}:
         return {**response,'error':{'code':-32601,'message':'method unavailable on read-only connection'}}
     result=client.call('/mcp',message)
+    if not isinstance(result,dict):
+        raise Barrier('private service returned invalid MCP response')
+    result['id']=identifier
     if method=='tools/list' and 'result' in result:
         result['result']['tools']=[t for t in result['result'].get('tools',[]) if t['name'] in READ_TOOLS]
     return result
@@ -129,10 +172,13 @@ def main():
             print(json.dumps(result))
         else:
             for line in sys.stdin:
+                message=None
                 try:
-                    result=rpc(client,json.loads(line))
+                    message=json.loads(line)
+                    result=rpc(client,message)
                 except Exception:
-                    result={'jsonrpc':'2.0','id':None,'error':{'code':-32603,'message':'private service request unavailable'}}
+                    identifier=request_id(message)
+                    result=None if isinstance(message,dict) and 'id' not in message else {'jsonrpc':'2.0','id':identifier,'error':{'code':-32603,'message':'private service request unavailable'}}
                 if result is not None:print(json.dumps(result),flush=True)
 
 if __name__=='__main__':

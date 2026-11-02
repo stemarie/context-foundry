@@ -148,6 +148,13 @@ def checked_path(workspace, value):
     return path
 
 
+def check_descriptor(argv, cwd, backend='macos sandbox-exec'):
+    """Return adapter-generated execution metadata that model summaries cannot replace."""
+    descriptor = {'argv': [str(value) for value in argv], 'cwd': str(Path(cwd).resolve()), 'backend': backend}
+    return {**descriptor, 'identity': hashlib.sha256(
+        json.dumps(descriptor, sort_keys=True, separators=(',', ':')).encode()).hexdigest()}
+
+
 def restricted_check(workspace, argv, scratch, timeout=90):
     if sys.platform != 'darwin' or not Path('/usr/bin/sandbox-exec').is_file():
         raise Barrier('this backend requires verified macOS sandbox-exec; no unsandboxed fallback')
@@ -166,7 +173,8 @@ def restricted_check(workspace, argv, scratch, timeout=90):
     result = subprocess.run(['/usr/bin/sandbox-exec', '-p', profile, *argv], cwd=workspace, env=env,
                             capture_output=True, text=True, timeout=timeout)
     return {'passed': result.returncode == 0, 'exit_code': result.returncode,
-            'output': (result.stdout + result.stderr)[-12000:]}
+            'output': (result.stdout + result.stderr)[-12000:],
+            'command': check_descriptor(argv, workspace)}
 
 
 def snapshot(workspace):
