@@ -100,15 +100,15 @@ class TransportTests(unittest.TestCase):
                 with self.assertRaises(Barrier):github.close_history(url)
                 with self.assertRaises(Barrier):github.close_history(url)
                 with self.assertRaises(Barrier):github.recover_close_history_known_not_applied(url)
-                self.assertEqual({'url':url,'closed':True},
-                                 github.recover_close_history_known_not_applied(url,known_not_applied=True))
-                self.assertEqual({'url':url,'closed':True},
-                                 github.recover_close_history_known_not_applied(url,known_not_applied=True))
+                self.assertEqual({'url':url,'closed':True}, github.recover_close_history_known_not_applied(
+                    url,known_not_applied=True,external_writers_excluded=True,external_writer_evidence='exclusive fixture recovery'))
+                self.assertEqual({'url':url,'closed':True}, github.recover_close_history_known_not_applied(
+                    url,known_not_applied=True,external_writers_excluded=True,external_writer_evidence='exclusive fixture recovery'))
             self.assertEqual(2,remote['closes'])
             with github.gate.journal.transaction() as db:
                 self.assertEqual('complete',db.execute('select state from remote_operations').fetchone()[0])
                 self.assertEqual(1,db.execute('select count(*) from remote_recoveries').fetchone()[0])
-                self.assertEqual([('proved',), ('complete',)],
+                self.assertEqual([('operator_assertion',), ('proved',), ('complete',)],
                                  [tuple(row) for row in db.execute('select kind from remote_recovery_events order by sequence')])
 
     def test_history_recovery_refuses_close_reopen_and_transport_uncertainty(self):
@@ -130,16 +130,19 @@ class TransportTests(unittest.TestCase):
                 raise AssertionError(argv)
             with patch('foundry_runtime.remote.command',side_effect=transport):
                 with self.assertRaises(Barrier):github.close_history(url)
-                with self.assertRaises(Barrier):github.recover_close_history_known_not_applied(url,known_not_applied=True)
+                with self.assertRaises(Barrier):github.recover_close_history_known_not_applied(url,known_not_applied=True,
+                    external_writers_excluded=True,external_writer_evidence='exclusive fixture recovery')
                 remote['events']=[]
                 with github.gate.journal.transaction() as db:
                     db.execute("insert into transports values('unknown','other',NULL)")
-                with self.assertRaises(Barrier):github.recover_close_history_known_not_applied(url,known_not_applied=True)
+                with self.assertRaises(Barrier):github.recover_close_history_known_not_applied(url,known_not_applied=True,
+                    external_writers_excluded=True,external_writer_evidence='exclusive fixture recovery')
                 remote['events']=[{'event':'labeled','id':3,'created_at':'2026-11-01T00:02:00Z'}]
                 with github.gate.journal.transaction() as db:
                     db.execute("delete from transports where identity='unknown'")
                     db.execute("insert into transports values('live','other',?)", (os.getpid(),))
-                with self.assertRaises(Barrier):github.recover_close_history_known_not_applied(url,known_not_applied=True)
+                with self.assertRaises(Barrier):github.recover_close_history_known_not_applied(url,known_not_applied=True,
+                    external_writers_excluded=True,external_writer_evidence='exclusive fixture recovery')
 
     def test_history_recovery_reconciles_lost_applied_close_without_a_retry(self):
         with tempfile.TemporaryDirectory() as root:
@@ -159,8 +162,8 @@ class TransportTests(unittest.TestCase):
                 raise AssertionError(argv)
             with patch('foundry_runtime.remote.command',side_effect=transport):
                 with self.assertRaises(Barrier):github.close_history(url)
-                self.assertEqual({'url':url,'closed':True},
-                                 github.recover_close_history_known_not_applied(url,known_not_applied=True))
+                self.assertEqual({'url':url,'closed':True}, github.recover_close_history_known_not_applied(
+                    url,known_not_applied=True,external_writers_excluded=True,external_writer_evidence='exclusive fixture recovery'))
             self.assertEqual(1,remote['closes'])
 
     def test_history_recovery_rejects_malformed_snapshots_without_write(self):
@@ -185,7 +188,8 @@ class TransportTests(unittest.TestCase):
                 for invalid in (True, 'timestamp', 'list'):
                     remote['invalid']=invalid
                     with self.assertRaises(Barrier):
-                        github.recover_close_history_known_not_applied(url,known_not_applied=True)
+                        github.recover_close_history_known_not_applied(url,known_not_applied=True,
+                            external_writers_excluded=True,external_writer_evidence='exclusive fixture recovery')
             self.assertEqual(1,remote['closes'])
 
     def test_history_recovery_refuses_incomplete_and_changed_absence_proof(self):
@@ -205,7 +209,8 @@ class TransportTests(unittest.TestCase):
                 raise AssertionError(argv)
             with patch('foundry_runtime.remote.command',side_effect=transport):
                 with self.assertRaises(Barrier): github.close_history(url)
-                with self.assertRaises(Barrier): github.recover_close_history_known_not_applied(url,known_not_applied=True)
+                with self.assertRaises(Barrier): github.recover_close_history_known_not_applied(url,known_not_applied=True,
+                    external_writers_excluded=True,external_writer_evidence='exclusive fixture recovery')
 
     def test_history_recovery_accepts_complete_zero_event_page_exactly_once(self):
         with tempfile.TemporaryDirectory() as root:
@@ -226,8 +231,10 @@ class TransportTests(unittest.TestCase):
                 raise AssertionError(argv)
             with patch('foundry_runtime.remote.command',side_effect=transport):
                 with self.assertRaises(Barrier): github.close_history(url)
-                result=github.recover_close_history_known_not_applied(url,known_not_applied=True)
-                self.assertEqual(result,github.recover_close_history_known_not_applied(url,known_not_applied=True))
+                result=github.recover_close_history_known_not_applied(
+                    url,known_not_applied=True,external_writers_excluded=True,external_writer_evidence='exclusive fixture recovery')
+                self.assertEqual(result,github.recover_close_history_known_not_applied(
+                    url,known_not_applied=True,external_writers_excluded=True,external_writer_evidence='exclusive fixture recovery'))
             self.assertEqual(({'url':url,'closed':True},2), (result,remote['writes']))
 
     def test_history_recovery_rechecks_stable_snapshot_before_close(self):
@@ -254,7 +261,8 @@ class TransportTests(unittest.TestCase):
                 raise AssertionError(argv)
             with patch('foundry_runtime.remote.command',side_effect=transport):
                 with self.assertRaises(Barrier): github.close_history(url)
-                with self.assertRaises(Barrier): github.recover_close_history_known_not_applied(url,known_not_applied=True)
+                with self.assertRaises(Barrier): github.recover_close_history_known_not_applied(url,known_not_applied=True,
+                    external_writers_excluded=True,external_writer_evidence='exclusive fixture recovery')
             self.assertEqual(1,remote['closes'])
 
     def test_history_recovery_rejects_malformed_event_and_closed_timestamp_without_write(self):
@@ -277,10 +285,42 @@ class TransportTests(unittest.TestCase):
                 raise AssertionError(argv)
             with patch('foundry_runtime.remote.command',side_effect=transport):
                 with self.assertRaises(Barrier): github.close_history(url)
-                with self.assertRaises(Barrier): github.recover_close_history_known_not_applied(url,known_not_applied=True)
+                with self.assertRaises(Barrier): github.recover_close_history_known_not_applied(url,known_not_applied=True,
+                    external_writers_excluded=True,external_writer_evidence='exclusive fixture recovery')
                 remote['state']='CLOSED';remote['closed_at']='bad-time'
-                with self.assertRaises(Barrier): github.recover_close_history_known_not_applied(url,known_not_applied=True)
+                with self.assertRaises(Barrier): github.recover_close_history_known_not_applied(url,known_not_applied=True,
+                    external_writers_excluded=True,external_writer_evidence='exclusive fixture recovery')
             self.assertEqual(1,remote['closes'])
+
+    def test_final_read_external_writer_boundary_is_operator_owned(self):
+        """A caller's exclusion assertion cannot make GitHub's final-read gap atomic."""
+        with tempfile.TemporaryDirectory() as root:
+            github=GitHub.__new__(GitHub);github.repository='stemarie/context-foundry';github.checkout=Path(root)
+            github.gate=Gate(Journal(Path(root)/'runtime.sqlite'),'shared')
+            url='https://github.com/stemarie/context-foundry/issues/56'
+            remote={'state':'OPEN','updatedAt':'2026-11-02T00:00:00Z','events':[], 'attempts':0, 'writes':0}
+            def transport(argv,cwd):
+                if argv[:3]==['gh','issue','view']:
+                    return __import__('json').dumps({'url':url,'number':56,'state':remote['state'],
+                        'closedAt':None if remote['state']=='OPEN' else '2026-11-02T00:03:00Z',
+                        'updatedAt':remote['updatedAt']})
+                if argv[:3]==['gh','api','--method']: return '[[]]'
+                if argv[:3]==['gh','issue','close']:
+                    remote['attempts']+=1
+                    if remote['attempts']==1: raise RemoteFailure('resource')
+                    # External close/reopen happens after runtime's final snapshot and before its mutation.
+                    remote['events']=[{'event':'closed','id':1,'created_at':'2026-11-02T00:01:00Z'},
+                                      {'event':'reopened','id':2,'created_at':'2026-11-02T00:02:00Z'}]
+                    remote['updatedAt']='2026-11-02T00:02:00Z'
+                    remote['writes']+=1;remote['state']='CLOSED';return ''
+                raise AssertionError(argv)
+            with patch('foundry_runtime.remote.command',side_effect=transport):
+                with self.assertRaises(Barrier): github.close_history(url)
+                self.assertEqual({'url':url,'closed':True}, github.recover_close_history_known_not_applied(
+                    url,known_not_applied=True,external_writers_excluded=True,
+                    external_writer_evidence='operator controlled fixture claims exclusion'))
+            self.assertEqual(1,remote['writes'])
+            self.assertEqual(['closed','reopened'],[event['event'] for event in remote['events']])
 
     def test_target_lock_excludes_another_project_caller(self):
         with tempfile.TemporaryDirectory() as root:

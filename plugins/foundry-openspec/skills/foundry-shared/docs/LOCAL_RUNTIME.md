@@ -77,6 +77,14 @@ model receives the checked version alongside the current native executable body;
 the ordinary body never substitutes for the native revision. No service schema,
 endpoint or assignment authority changes.
 
+## Bounded model configuration, continuation, and focused editing
+
+The public launch `config` may include an optional `sdk` object for both Worker and QA: `max_iterations` (integer 1–48, default 12), `max_tokens` (integer 256–12000, default 3000), and `run_budget_seconds` (integer 1–1200, default 180). Unknown keys, booleans, non-integral numbers, non-finite values, and values outside those ranges are rejected. `invocation_seconds` remains an independent finite 1–1200 second outer deadline; each model turn is capped to its remaining time. The adapter revalidates native authority before every turn and tool action. Immediately after selecting the actual capped turn budget and before entering the model, it records `model_started` with that cap; an exhausted deadline emits no false start. A deadline or authority `Barrier` is a blocked nonzero invocation with private actionable diagnostics and `journal.finish` cleanup, never a retired/success result or invented native transition. A model's natural-language completion without submission or verdict is recorded as a pending required transition and is re-prompted within that deadline; transient service interruptions remain fenced and resume only after current authority is revalidated.
+
+Workers also have an `edit` operation for bounded literal changes to an existing regular workspace file. First `read` the complete current file and retain its returned SHA-256 `version`; then supply it as `expected_digest` with 1–64 `{old, new}` string replacements. Each `old` must be nonempty and occur exactly once; each old/new value is at most 32 KiB and the result at most 512 KiB. All replacements are validated before the write, stale/ambiguous/missing values fail without mutation, and a successful edit clears prior check evidence. The same checked-path, current Implementing authority, worker role, lock, traversal/symlink/metadata restrictions apply. QA cannot edit. This is literal file editing only: it has no shell, code execution, network, or baseline-source restore path; full `write` remains available under its existing limits.
+
+This delivery uses the coordinator's transparent task-only bootstrap for the prerequisite Worker/QA execution. It is not the larger stock-runtime coding proof; that proof remains pending the dependent contract.
+
 The [command-admission/integration proof](COMMAND_ADMISSION_PROOFS_2026-11-01.md)
 adds per-command generation checks: opening/recovering the breaker invalidates an
 older callback's grant. Each command records its intent only after checking the
@@ -85,3 +93,51 @@ outcome; successful connection recovery does not authorize blindly replaying it.
 Target integration also waits for all recorded transport groups in the shared
 journal, across connection aliases, after acquiring the target lock. Controller
 exit releases the OS lock but cannot attest that a prior Git process stopped.
+
+## Operator-only historical close recovery
+
+`remote.GitHub.close_history(url)` remains conservative: a started close whose
+outcome reads OPEN remains uncertain and refuses another write. The operator may use `GitHub.recover_close_history_known_not_applied(url,
+known_not_applied=True, external_writers_excluded=True,
+external_writer_evidence='...')` only after explicitly determining that the original
+close is known not applied and that external lifecycle writers are operator-excluded. This API is not exposed through `foundry_action` to
+Worker or QA and operators must not edit the SQLite journal directly.
+
+The procedure preserves `close:<url>` and its original intent. Before any recovery
+remote read or write it requires the exact `True` acknowledgements and nonempty,
+at-most-1024-character evidence describing the operator-controlled exclusion. It
+persists that assertion in a linked append-only proof event. This is an operator
+assertion, not atomic exclusion enforced by GitHub: the runtime cannot lock humans,
+the GitHub UI, or independent external lifecycle writers. If it cannot be made,
+leave historical publication pending. It records an append-only recovery attempt
+linked to that identity and holds a durable per-logical-operation callback owner across both the original
+`Gate.run` callback and recovery. This blocks a recovery while an original
+callback is paused before its first transport, and blocks concurrent recoveries;
+a dead owner is reclaimable only after all transport groups are quiescent. It
+validates the authorized repository, canonical issue URL and nonzero canonical
+issue number, reads a stable OPEN issue snapshot with a valid `updatedAt`,
+and reads complete paginated GitHub issue-event history. Every page and event
+must have the expected authoritative shape; closed snapshots require a valid
+`closedAt`. It rejects any close/reopen evidence, malformed or incomplete
+pagination, identity mismatch, or a changed snapshot. Thus an OPEN read alone
+never proves absence. A CLOSED result is reconciled without a second close.
+
+All proof reads, the retry, and final reconciliation run through the existing
+shared `Gate` current admission. Before proof and again before retry, every
+recorded transport group and every alias across connection aliases must be
+quiescent and tracked; live, unknown, unobservable, or any unconfirmed legacy
+`transport_tracking=0` alias (including CLOSED) blocks recovery. A CLOSED
+legacy alias with `transport_tracking=0` is not silently trusted: only an
+operator, after stopping and independently confirming all old callbacks,
+transports, and probes, may call
+`Gate.confirm_legacy_quiescence(evidence, confirmed_stopped=True)`. It requires
+nonempty evidence, rejects active/unknown ownership, preserves breaker state and
+deadlines, bumps generation to fence stale admissions, and appends durable
+confirmation evidence. It is not exposed to Worker/QA and never permits journal
+SQL edits. A stale
+admission generation, newly opened gate, cooldown, or another probe owner blocks
+the next command. The retry performs a fresh state read immediately before the
+close and verifies CLOSED afterward. A lost second response remains a started,
+reconcilable operation; it is never blindly retried. Retain the explicit operator
+attestation and command/check evidence with the pending historical-publication
+record. This does not claim delivery, native `Done`, or post-integration checks.

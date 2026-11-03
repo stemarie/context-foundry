@@ -82,10 +82,16 @@ The recorded operator preflight established the BEE1 read-only connection and se
 
 A failed `GitHub.close_history(url)` remains pending when its outcome cannot be
 authoritatively reconciled; workers and QA cannot recover it. The operator-only
-`recover_close_history_known_not_applied(url, known_not_applied=True)` procedure
-is available only for an explicit known-not-applied determination. It preserves
-the original close identity and journal, appends a linked recovery attempt, and
-never permits SQL surgery or alternate connections.
+`recover_close_history_known_not_applied(url, known_not_applied=True,
+external_writers_excluded=True, external_writer_evidence='...')` procedure is
+available only for an explicit known-not-applied determination and a separate
+operator attestation that independent external lifecycle writers are excluded.
+The evidence must be a nonempty, at-most-1024-character string describing that
+operator-controlled exclusion. The runtime cannot verify this assertion or lock
+humans, the GitHub UI, or another GitHub actor; if exclusion cannot be
+established, leave history pending. It preserves the original close identity and
+journal, appends the asserted conditions and evidence as linked append-only
+proof events, and never permits SQL surgery or alternate connections.
 
 Before invoking it, retain the operator's explicit attestation, canonical
 repository/URL/number, complete paginated issue-event evidence, and stable OPEN
@@ -97,7 +103,8 @@ its first transport. A dead callback owner may be reclaimed only after all
 transport groups are quiescent. Any prior close/reopen event, concurrent
 snapshot change, missing or malformed page/event, CLOSED ambiguity, live/unknown transport,
 or any unconfirmed legacy alias marked `transport_tracking=0` (including CLOSED), stale
-admission, cooldown, or lost probe blocks the write. A CLOSED legacy alias marked
+admission, cooldown, lost probe, missing acknowledgement, or malformed external
+writer evidence blocks the write. A CLOSED legacy alias marked
 `transport_tracking=0` remains blocked until an operator has
 stopped and independently confirmed all callbacks, transport groups, and probes,
 then calls `Gate.confirm_legacy_quiescence(nonempty_evidence,

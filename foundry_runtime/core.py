@@ -349,13 +349,15 @@ class Gate:
         with self.journal.transaction() as db:
             db.execute('DELETE FROM operation_owners WHERE identity=? AND owner=?', (identity, owner))
 
-    def recover_known_not_applied(self, identity, intent, prove_absent, operation, reconcile):
+    def recover_known_not_applied(self, identity, intent, prove_absent, operation, reconcile, *, assertion=None):
         """Complete one explicitly proven-never-applied started operation.
 
         This is deliberately separate from ``run``: ordinary uncertain writes
         remain fail-closed.  The caller must obtain authoritative absence proof
         under the current admission before this method will issue one retry.
         """
+        if assertion is not None and not isinstance(assertion, dict):
+            raise Barrier('recovery assertion is malformed')
         hashed = digest(intent)
         with self.journal.transaction() as db:
             prior = db.execute('SELECT * FROM remote_operations WHERE identity=?', (identity,)).fetchone()
@@ -396,11 +398,18 @@ class Gate:
                     (permit is not None and row['state'] == 'half_open' and row['owner'] == permit)):
                     raise Barrier('connection admission changed before recovery retry')
                 self.quiescent(db, all_connections=True)
-                encoded_proof = json.dumps(proof, sort_keys=True)
+                recorded_proof = dict(proof)
+                if assertion is not None:
+                    recorded_proof.update(assertion)
+                encoded_proof = json.dumps(recorded_proof, sort_keys=True)
+                encoded_assertion = json.dumps(assertion, sort_keys=True) if assertion is not None else None
                 db.execute("INSERT INTO remote_recoveries VALUES(?,?,?,'proved',NULL)",
                            (attempt, identity, encoded_proof))
-                db.execute("INSERT INTO remote_recovery_events VALUES(?,1,'proved',?)",
-                           (attempt, encoded_proof))
+                if encoded_assertion is not None:
+                    db.execute("INSERT INTO remote_recovery_events VALUES(?,1,'operator_assertion',?)",
+                               (attempt, encoded_assertion))
+                db.execute("INSERT INTO remote_recovery_events VALUES(?,?, 'proved',?)",
+                           (attempt, 2 if encoded_assertion is not None else 1, encoded_proof))
             operation()
             result = reconcile()
             if result is None:
@@ -413,8 +422,8 @@ class Gate:
                     raise Barrier('remote operation changed during recovery')
                 db.execute("UPDATE remote_recoveries SET state='complete',result=? WHERE attempt=?",
                            (encoded, attempt))
-                db.execute("INSERT INTO remote_recovery_events VALUES(?,2,'complete',?)",
-                           (attempt, encoded))
+                db.execute("INSERT INTO remote_recovery_events VALUES(?,?, 'complete',?)",
+                           (attempt, 3 if assertion is not None else 2, encoded))
             self.outcome(permit)
             return result
         except RemoteFailure as exc:

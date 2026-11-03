@@ -1,5 +1,6 @@
 """Relocation and preservation tests for installed skill references."""
 import importlib.util
+import json
 from pathlib import Path
 import shutil
 import tempfile
@@ -23,7 +24,20 @@ class SkillPackagingTests(unittest.TestCase):
             shared=second/'foundry-shared/WORK_CONTRACT.md';self.assertTrue(shared.is_file());shared.unlink()
             with self.assertRaises(ValueError):PACK.verify(second)
 
-    def test_render_preserves_openspec_and_unrelated_skills(self):
+    def test_verify_rejects_stale_source_and_rendered_content(self):
+        with tempfile.TemporaryDirectory() as name:
+            root=Path(name);self.seed(root);PACK.render(root)
+            installed=root/'foundry-worker'/'SKILL.md'
+            installed.write_text(installed.read_text()+'stale installed content\n')
+            with self.assertRaisesRegex(ValueError,'installed content drift'):
+                PACK.verify(root)
+            PACK.render(root)
+            manifest=root/'foundry-shared'/'installation.json'
+            data=json.loads(manifest.read_text());source=next(iter(data['source_sha256']))
+            data['source_sha256'][source]='0'*64;manifest.write_text(json.dumps(data))
+            with self.assertRaisesRegex(ValueError,'stale source reference'):
+                PACK.verify(root)
+
         with tempfile.TemporaryDirectory() as name:
             root=Path(name);self.seed(root)
             paths=list(root.glob('openspec-*/SKILL.md'));before={p:p.read_bytes() for p in paths}

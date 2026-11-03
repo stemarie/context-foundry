@@ -27,6 +27,33 @@ class GapRegressions(unittest.TestCase):
                 'workspace':str(self.workspace),'base_sha':'base','runtime_journal':str(self.root/'runtime.sqlite')}
         return runtime.Tools(config)
 
+    def test_history_recovery_requires_external_writer_exclusion_before_any_remote_read(self):
+        from foundry_runtime.remote import GitHub
+        gate=Gate(Journal(self.root/'history.sqlite'),'shared')
+        github=GitHub.__new__(GitHub);github.gate=gate;github.repository='stemarie/context-foundry';github.checkout=self.workspace
+        url='https://github.com/stemarie/context-foundry/issues/1'
+        with patch('foundry_runtime.remote.command') as remote:
+            for kwargs in ({}, {'known_not_applied':True},
+                           {'known_not_applied':True,'external_writers_excluded':True},
+                           {'known_not_applied':True,'external_writers_excluded':True,'external_writer_evidence':'x'*1025}):
+                with self.subTest(kwargs=kwargs),self.assertRaises(Barrier):
+                    github.recover_close_history_known_not_applied(url,**kwargs)
+            remote.assert_not_called()
+
+    def test_recovery_assertion_is_durable_before_proof_and_completion(self):
+        gate=Gate(Journal(self.root/'recovery.sqlite'),'shared')
+        from foundry_runtime.core import digest
+        with gate.journal.transaction() as db:
+            db.execute("INSERT INTO remote_operations VALUES(?,?,?,'started',NULL)",('close:fixture','shared',digest({'url':'fixture'})))
+        result=gate.recover_known_not_applied('close:fixture',{'url':'fixture'},
+            lambda:{'never_closed':True},lambda:None,lambda:{'closed':True},
+            assertion={'known_not_applied':True,'external_writers_excluded':True,'external_writer_evidence':'exclusive fixture'})
+        self.assertEqual({'closed':True},result)
+        with gate.journal.transaction() as db:
+            events=[tuple(row) for row in db.execute('SELECT sequence,kind,payload FROM remote_recovery_events ORDER BY sequence')]
+        self.assertEqual(['operator_assertion','proved','complete'],[event[1] for event in events])
+        self.assertIn('exclusive fixture',events[0][2])
+
     def test_candidate_modules_never_run_during_native_startup(self):
         factory=getattr(runtime,'native_worker_command',None)
         self.assertIsNotNone(factory,'startup needs an isolated trusted import path')

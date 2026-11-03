@@ -79,7 +79,7 @@ endpoint or assignment authority changes.
 
 ## Bounded model configuration, continuation, and focused editing
 
-The public launch `config` may include an optional `sdk` object for both Worker and QA: `max_iterations` (integer 1–48, default 12), `max_tokens` (integer 256–12000, default 3000), and `run_budget_seconds` (integer 1–1200, default 180). Unknown keys, booleans, non-integral numbers, non-finite values, and values outside those ranges are rejected. `invocation_seconds` remains an independent finite 1–1200 second outer deadline; each model turn is capped to its remaining time. The adapter revalidates native authority before every turn and tool action. It records the selected SDK settings and each actual remaining-time turn cap in the private invocation event evidence. A model's natural-language completion without submission or verdict is recorded as a pending required transition and is re-prompted within that deadline; provider and authority failures are not converted into transitions.
+The public launch `config` may include an optional `sdk` object for both Worker and QA: `max_iterations` (integer 1–48, default 12), `max_tokens` (integer 256–12000, default 3000), and `run_budget_seconds` (integer 1–1200, default 180). Unknown keys, booleans, non-integral numbers, non-finite values, and values outside those ranges are rejected. `invocation_seconds` remains an independent finite 1–1200 second outer deadline; each model turn is capped to its remaining time. The adapter revalidates native authority before every turn and tool action. Immediately after selecting the actual capped turn budget and before entering the model, it records `model_started` with that cap; an exhausted deadline emits no false start. A deadline or authority `Barrier` is a blocked nonzero invocation with private actionable diagnostics and `journal.finish` cleanup, never a retired/success result or invented native transition. A model's natural-language completion without submission or verdict is recorded as a pending required transition and is re-prompted within that deadline; transient service interruptions remain fenced and resume only after current authority is revalidated.
 
 Workers also have an `edit` operation for bounded literal changes to an existing regular workspace file. First `read` the complete current file and retain its returned SHA-256 `version`; then supply it as `expected_digest` with 1–64 `{old, new}` string replacements. Each `old` must be nonempty and occur exactly once; each old/new value is at most 32 KiB and the result at most 512 KiB. All replacements are validated before the write, stale/ambiguous/missing values fail without mutation, and a successful edit clears prior check evidence. The same checked-path, current Implementing authority, worker role, lock, traversal/symlink/metadata restrictions apply. QA cannot edit. This is literal file editing only: it has no shell, code execution, network, or baseline-source restore path; full `write` remains available under its existing limits.
 
@@ -97,15 +97,20 @@ exit releases the OS lock but cannot attest that a prior Git process stopped.
 ## Operator-only historical close recovery
 
 `remote.GitHub.close_history(url)` remains conservative: a started close whose
-outcome reads OPEN remains uncertain and refuses another write. The operator may
-use `GitHub.recover_close_history_known_not_applied(url,
-known_not_applied=True)` only after explicitly determining that the original
-close is known not applied. This API is not exposed through `foundry_action` to
+outcome reads OPEN remains uncertain and refuses another write. The operator may use `GitHub.recover_close_history_known_not_applied(url,
+known_not_applied=True, external_writers_excluded=True,
+external_writer_evidence='...')` only after explicitly determining that the original
+close is known not applied and that external lifecycle writers are operator-excluded. This API is not exposed through `foundry_action` to
 Worker or QA and operators must not edit the SQLite journal directly.
 
-The procedure preserves `close:<url>` and its original intent. It records an
-append-only recovery attempt linked to that identity in the shared journal and
-holds a durable per-logical-operation callback owner across both the original
+The procedure preserves `close:<url>` and its original intent. Before any recovery
+remote read or write it requires the exact `True` acknowledgements and nonempty,
+at-most-1024-character evidence describing the operator-controlled exclusion. It
+persists that assertion in a linked append-only proof event. This is an operator
+assertion, not atomic exclusion enforced by GitHub: the runtime cannot lock humans,
+the GitHub UI, or independent external lifecycle writers. If it cannot be made,
+leave historical publication pending. It records an append-only recovery attempt
+linked to that identity and holds a durable per-logical-operation callback owner across both the original
 `Gate.run` callback and recovery. This blocks a recovery while an original
 callback is paused before its first transport, and blocks concurrent recoveries;
 a dead owner is reclaimable only after all transport groups are quiescent. It

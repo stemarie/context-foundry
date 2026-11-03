@@ -54,28 +54,43 @@ def sdk_config(config):
         raise Barrier('unknown sdk configuration setting')
     return result
 
-def run_sdk_turn(agent, prompt, deadline, selected_sdk, now=time.monotonic):
+def run_sdk_turn(agent, prompt, deadline, selected_sdk, now=time.monotonic, on_start=None):
     """Run one SDK turn without allowing it to outlive its invocation."""
     turn_seconds = remaining_turn_seconds(deadline, now)
     if turn_seconds < 1:
         raise Barrier('bounded invocation deadline elapsed')
     agent.run_budget_seconds = min(selected_sdk['run_budget_seconds'], turn_seconds)
+    if on_start is not None:
+        on_start(agent.run_budget_seconds)
     return agent.run_conversation(prompt), agent.run_budget_seconds
 
 
-def reconcile_turn(tools, result, stage):
+def matching_terminal_handoff(binding, job):
+    """A released Worker may only accept a terminal snapshot for its own execution."""
+    if job.get('stage') not in ('QA accepted', 'Integrating', 'Done', 'Cancelled', 'Blocked'):
+        return False
+    revision, attempt = job.get('revision'), job.get('attempt')
+    return (isinstance(revision, dict) and isinstance(attempt, dict) and
+            revision.get('number') == binding.get('revision') and
+            revision.get('digest') == binding.get('digest') and
+            attempt.get('id') == binding.get('attempt_id'))
+
+
+def reconcile_turn(tools, result, stage, refreshed=None):
     """Fence every non-handoff model result with current native authority."""
+    if tools.role == 'worker' and isinstance(refreshed, dict) and matching_terminal_handoff(tools.binding, refreshed):
+        return 'handoff', None
     decision = turn_decision(tools.role, result, stage)
     if decision == 'handoff':
         return decision, None
     return decision, tools.client.authority(tools.binding, tools.role)
 
-def complete_turn(tools, agent, prompt, deadline, selected_sdk, now=time.monotonic):
+def complete_turn(tools, agent, prompt, deadline, selected_sdk, now=time.monotonic, on_model_start=None):
     """Run and reconcile one bounded turn against freshly-read native state."""
-    result, turn_seconds = run_sdk_turn(agent, prompt, deadline, selected_sdk, now)
+    result, turn_seconds = run_sdk_turn(agent, prompt, deadline, selected_sdk, now, on_model_start)
     refreshed = tools.client.workflow('get', {
         'project_id': tools.binding['project_id'], 'contract_id': tools.binding['contract_id']})['job']
-    decision, current = reconcile_turn(tools, result, refreshed['stage'])
+    decision, current = reconcile_turn(tools, result, refreshed['stage'], refreshed)
     return result, turn_seconds, decision, current, refreshed
 
 def main():
@@ -200,7 +215,9 @@ def main():
             try:
                 job = tools.client.workflow('get', {'project_id': tools.binding['project_id'], 'contract_id': tools.binding['contract_id']})['job']
                 if tools.role == 'worker' and job['stage'] in ('QA accepted', 'Integrating', 'Done', 'Cancelled', 'Blocked'):
-                    break
+                    if matching_terminal_handoff(tools.binding, job):
+                        break
+                    raise Barrier('terminal snapshot does not bind this worker execution')
                 if tools.role == 'qa' and job['stage'] != 'QA':
                     break
                 job = tools.client.authority(tools.binding, tools.role)
@@ -222,7 +239,7 @@ def main():
                 continue
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                break
+                raise Barrier('bounded invocation deadline elapsed during authority reconciliation')
             prompt = (config['role_instructions'] + '\n\nContract semantic version: ' + job['contract_version'] +
                       '\nAssigned immutable work:\n' + job['revision']['body_markdown'])
             if tools.role == 'worker':
@@ -235,18 +252,30 @@ def main():
             # The helper enforces the real remaining deadline for every SDK turn.
             try:
                 result, turn_seconds, decision, current, refreshed = complete_turn(
-                    tools, agent, prompt, deadline, selected_sdk)
+                    tools, agent, prompt, deadline, selected_sdk,
+                    on_model_start=lambda cap: event('model_started', continuation=pending_transition,
+                                                     sdk_settings=selected_sdk, turn_seconds=cap))
             except ServiceUnavailable as exc:
                 unavailable(exc)
                 continue
             except Barrier:
-                break
-            event('model_started', continuation=pending_transition, sdk_settings=selected_sdk, turn_seconds=turn_seconds)
+                raise
             event('model_finished', completed=bool(result.get('completed')), api_calls=result.get('api_calls', 0))
             if decision == 'handoff':
                 if tools.role == 'worker':
-                    # Revalidate retained Worker authority while waiting through QA/corrections.
-                    tools.client.authority(tools.binding, tools.role)
+                    # Retained Worker authority is required while QA is pending. A matching
+                    # terminal stage may release that authority while the model is returning;
+                    # reconcile it read-only rather than misreporting that successful handoff.
+                    try:
+                        handoff = tools.client.authority(tools.binding, tools.role)
+                    except Barrier:
+                        handoff = tools.client.workflow('get', {
+                            'project_id': tools.binding['project_id'],
+                            'contract_id': tools.binding['contract_id']})['job']
+                        if not matching_terminal_handoff(tools.binding, handoff):
+                            raise
+                    if matching_terminal_handoff(tools.binding, handoff):
+                        break
                     continue
                 break  # Reconcile the actual QA verdict even if the model reply was cut short.
             # Error/iteration exhaustion and natural-language completion both require fresh authority.

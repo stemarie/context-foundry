@@ -278,16 +278,25 @@ class GitHub:
             return result
         return self.gate.run('close:' + url, {'url': url, 'outcome': 'completed'}, close, reconcile)
 
-    def recover_close_history_known_not_applied(self, url, *, known_not_applied=False):
+    def recover_close_history_known_not_applied(self, url, *, known_not_applied=False,
+                                                 external_writers_excluded=False,
+                                                 external_writer_evidence=None):
         """Operator-only recovery for a started historical close proven absent.
 
-        ``known_not_applied`` is an intentional, audited acknowledgement; an
-        OPEN snapshot by itself is never enough.  This conservative procedure
+        ``known_not_applied`` and external-writer exclusion are intentional,
+        audited operator acknowledgements; an OPEN snapshot by itself is never
+        enough. The runtime cannot atomically exclude GitHub UI or other
+        external lifecycle writers. This conservative procedure
         accepts only an issue with no close/reopen event, stable identity and
         stable OPEN preconditions across a complete paginated event read.
         """
         if known_not_applied is not True:
             raise Barrier('operator must explicitly attest known-not-applied recovery intent')
+        if external_writers_excluded is not True:
+            raise Barrier('operator must explicitly attest external lifecycle writers are excluded')
+        if (not isinstance(external_writer_evidence, str) or not external_writer_evidence.strip() or
+                len(external_writer_evidence) > 1024):
+            raise Barrier('external writer exclusion evidence must be a nonempty string of at most 1024 characters')
         number = self._history_reference(url)
         identity = 'close:' + url
         intent = {'url': url, 'outcome': 'completed'}
@@ -325,7 +334,9 @@ class GitHub:
                     'event_pages': len(pages), 'event_count': len(events), 'never_closed': True}
 
         def retry():
-            # A fresh authoritative read closes the proof-to-write interval.
+            # This detects a changed snapshot but cannot close the proof-to-write
+            # interval against independent GitHub lifecycle writers. The explicit
+            # operator exclusion assertion is the separate required boundary.
             current = self._history_snapshot(number, url)
             if current['state'] == 'CLOSED':
                 return
@@ -334,4 +345,8 @@ class GitHub:
                 raise Barrier('historical issue changed after absence proof')
             command(['gh', 'issue', 'close', number, '--repo', self.repository, '--reason', 'completed'], self.checkout)
 
-        return self.gate.recover_known_not_applied(identity, intent, prove_absent, retry, reconcile)
+        return self.gate.recover_known_not_applied(
+            identity, intent, prove_absent, retry, reconcile,
+            assertion={'known_not_applied': True, 'external_writers_excluded': True,
+                       'external_writer_evidence': external_writer_evidence.strip(),
+                       'boundary': 'operator assertion; GitHub external lifecycle writers are not atomically excluded'})

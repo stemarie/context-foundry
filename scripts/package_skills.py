@@ -45,9 +45,18 @@ def render(destination):
     for skill in OWN:
         for name in ['agents','assets']:
             if (skill/name).exists():shutil.copytree(skill/name,destination/skill.name/name,dirs_exist_ok=True)
-    manifest={'source_repository':'https://github.com/stemarie/context-foundry','source_sha256':hashes,'skills':[p.name for p in OWN]}
+    rendered = {}
+    for skill in OWN:
+        for path in (destination/skill.name).rglob('*'):
+            if path.is_file():
+                rendered[str(path.relative_to(destination))] = hashlib.sha256(path.read_bytes()).hexdigest()
+    for path in (destination/'foundry-shared').rglob('*'):
+        if path.is_file() and path.name != 'installation.json':
+            rendered[str(path.relative_to(destination))] = hashlib.sha256(path.read_bytes()).hexdigest()
+    manifest={'source_repository':'https://github.com/stemarie/context-foundry','source_sha256':hashes,
+              'rendered_sha256':rendered,'skills':[p.name for p in OWN]}
     (destination/'foundry-shared').mkdir(exist_ok=True)
-    (destination/'foundry-shared/installation.json').write_text(json.dumps(manifest,indent=2)+'\n')
+    (destination/'foundry-shared/installation.json').write_text(json.dumps(manifest,indent=2,sort_keys=True)+'\n')
     return manifest
 
 
@@ -63,6 +72,21 @@ def verify(destination):
             if not path.is_relative_to(allowed) or not path.is_file():raise ValueError('broken installed reference: '+str(source)+' -> '+value)
     for skill in OWN:
         if not (destination/skill.name/'SKILL.md').is_file():raise ValueError('missing installed skill')
+    manifest_path = destination/'foundry-shared/installation.json'
+    if not manifest_path.is_file():raise ValueError('missing installed manifest')
+    manifest = json.loads(manifest_path.read_text())
+    expected_sources = manifest.get('source_sha256')
+    expected_rendered = manifest.get('rendered_sha256')
+    if not isinstance(expected_sources, dict) or not isinstance(expected_rendered, dict):
+        raise ValueError('installed manifest lacks source or rendered hashes')
+    for source, expected in expected_sources.items():
+        path = ROOT/source
+        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+            raise ValueError('stale source reference: '+source)
+    for installed, expected in expected_rendered.items():
+        path = destination/installed
+        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+            raise ValueError('installed content drift: '+installed)
     return True
 
 if __name__=='__main__':
