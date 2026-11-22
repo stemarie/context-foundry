@@ -19,3 +19,18 @@ checks. No persistent profiles, scheduler, active configuration change or
 production deployment was installed. Other backends require their own proof.
 
 The earlier implementation is preserved on [archive/pre-reset-2026-10-25](https://github.com/stemarie/context-foundry/tree/archive/pre-reset-2026-10-25).
+
+## Standalone GitHub work orders
+
+[foundry-create-gh-workorder](standalone-skills/foundry-create-gh-workorder/SKILL.md)
+creates a bounded GitHub issue for a Codex handoff without AI.Contract. It lives
+outside the native skill pack and is installed separately.
+
+| Skill | Authority |
+| --- | --- |
+| `foundry-create-workorder` | AI.Contract; used by the native Foundry workflow |
+| `foundry-create-gh-workorder` | GitHub issue; standalone planning and handoff |
+
+The Foundry + OpenSpec plugin keeps its existing AI.Contract workflow names.
+Private plugin release 1.1.2 preserves that naming and distinguishes the native
+work-order architect in its display metadata.

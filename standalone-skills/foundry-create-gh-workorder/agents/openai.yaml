@@ -1,0 +1,14 @@
+interface:
+  display_name: GitHub Work Order Architect
+  short_description: Create bounded GitHub work orders for Codex
+  default_prompt: Use $foundry-create-gh-workorder to inspect the current project
+    and create the next executable work order as a GitHub issue.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

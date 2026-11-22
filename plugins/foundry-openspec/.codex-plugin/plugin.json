@@ -15,7 +15,7 @@
     "shortDescription": "Specs to verified delivery"
   },
   "name": "foundry-openspec",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "description": "Explore and specify systems with OpenSpec, then deliver bounded work orders through the Foundry workflow.",
   "author": {
     "name": "Karell Ste-Marie",

@@ -1,14 +1,9 @@
 interface:
-  display_name: Work Order Architect
+  display_name: Foundry Work Order Architect
   short_description: AI.Contract-backed Foundry workflow
   default_prompt: Author the next bounded AI.Contract milestone contract within the
     approved horizon.
   icon_small: ./assets/icon.svg
   icon_large: ./assets/icon.svg
 policy:
-  products:
-  - chatgpt
-  - codex
-  - api
-  - atlas
   allow_implicit_invocation: true

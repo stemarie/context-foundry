@@ -168,5 +168,32 @@
       }
     }
   },
-  "native_update_date": "2026-11-01"
+  "native_update_date": "2026-11-01",
+  "packaged_skill_sha256": {
+    "skills/foundry-architect/SKILL.md": "e451734d0398fb0e4d19eaead9e1de4541fda4ec783a916c360cd01446f448e4",
+    "skills/foundry-audit/SKILL.md": "a422913621743be5e2209c0548bea29c476b1dc277fea9f44bea40b887cc7c72",
+    "skills/foundry-commit/SKILL.md": "0ebc37833d6eb2c01ce11c79246482ca07ecc756bd653ae960e790473a0da61a",
+    "skills/foundry-coordinator/SKILL.md": "5f3217425aaf584ed9789d54fbeb6c67b1ecae05e12c72ee169a0f4aae01c1d3",
+    "skills/foundry-create-workorder/SKILL.md": "629ba5aedf5fb2662a354e5928684ac544b1ebf59eb5ec088770f93030a1630d",
+    "skills/foundry-explore/SKILL.md": "72c99db0bd0561995f3547f027f1ff0f432aead1ba2a265fdd3f39d434cab512",
+    "skills/foundry-implement/SKILL.md": "b7453c07db746995187b59fc155cf9906b2407a458f2b41182d5d7fb42e6525f",
+    "skills/foundry-loop/SKILL.md": "93136dc14939d93d515175ea48e65b5cc33d9426cf1f3a4060d531b930e73a65",
+    "skills/foundry-propose/SKILL.md": "dfa9623c093a776190acabda63cd689121328468000725f74acf30b03b4e47ab",
+    "skills/foundry-qa/SKILL.md": "f44b70c72f2ed119e5fbe46f7b93f18ed9ebdefe940f46970842607fabf589a5",
+    "skills/foundry-start/SKILL.md": "546f5e19e2c70130c92cd213791e67685ad233e6ac38d30d8a8cb9214aaefcae",
+    "skills/foundry-worker/SKILL.md": "cd1cc31d614216cca4a899895a10cab13cdec45cb27e8bf7924111ef982e41b1",
+    "skills/openspec-apply-change/SKILL.md": "785eeaf72cf8183bf48e77bec0400c77ed9f6bbe5bb1abb64bf9767dae069385",
+    "skills/openspec-archive-change/SKILL.md": "2d2f914f2714dbf948fc8e562e32da6677215c78f1a495c68fe01f7d26b03fcd",
+    "skills/openspec-bulk-archive-change/SKILL.md": "579c4384b8d03de80dbc87b979c9e90dff47df198abee8037362ce6adffa155e",
+    "skills/openspec-continue-change/SKILL.md": "37495f599a9301b32dcbc0ff6715a317ab06ed2e4be94ec39518d86b1f4e7265",
+    "skills/openspec-explore/SKILL.md": "98cf815beeb4e473cd1fd6ce39ea2e2b9adf0d85eee6922578cb2c634b400efd",
+    "skills/openspec-ff-change/SKILL.md": "a7108a1c3442f46cd09c02dff8fb42b85f5e82e256faac8b2d7dd142508db14e",
+    "skills/openspec-foundry/SKILL.md": "ddadfce5a73474e36ab0bbc4407046f8c7452f9fc8daf6f933de43434f2d519e",
+    "skills/openspec-new-change/SKILL.md": "ffee45c0d3e627c5d65c66a683f75f2a2e3338df863f1775da21b29357fd6105",
+    "skills/openspec-onboard/SKILL.md": "4260b249e6f930af59d87b2d224236016d26c64d341f4207de1a7217a4d84fbc",
+    "skills/openspec-propose/SKILL.md": "2761f08ff1347a7af054712891a1073d38a3cd3734aec596810eb98b37b893e7",
+    "skills/openspec-sync-specs/SKILL.md": "6c57d52939000b4904e664c93474ca3fc5d52c57ffcbe57068a1fa18a472c83e",
+    "skills/openspec-update-change/SKILL.md": "3fc19d533314078a25a92eca1979c3ce580489277b562da0e07a25b9d049208b",
+    "skills/openspec-verify-change/SKILL.md": "4236cfa901041e253157e8fc9b2706e810a64d6c77e9509a5e08dfb23c9458bf"
+  }
 }
