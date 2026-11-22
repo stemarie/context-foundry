@@ -1,10 +1,10 @@
 # Context Foundry
 
-Context Foundry is a collection of **Codex skills**, written in `SKILL.md` format, for turning an approved software goal into implemented, independently checked, and verified repository changes. The native workflow uses AI.Contract to track execution. A separate standalone skill creates GitHub issue work orders without that service.
+Context Foundry provides **shared agent skills for Codex and Hermes**, written in `SKILL.md` format, for turning an approved software goal into implemented, independently checked, and verified repository changes. The native workflow uses AI.Contract to track execution. A separate standalone skill creates GitHub issue work orders without that service.
 
-Use the skills in Codex for the planning, role, and workflow instructions described below. The same instructions are also packaged for ChatGPT and can be loaded by Hermes. The skills define responsibilities and handoffs; they are separate from the execution backend.
+Codex and Hermes reuse the same thirteen native skill definitions for planning, roles, and workflow handoffs; there is no separate duplicated Hermes skill set. The instructions are also distributed through the Foundry + OpenSpec plugin for ChatGPT. Each host still needs the dependencies and authorized capabilities required by the selected skill.
 
-`foundry_runtime/` implements the verified Worker/QA backend using Hermes processes on macOS, including workspace isolation, checks, recovery, and GitHub transport controls. Loading the skills in Codex does not by itself provide a Codex Worker/QA backend, connect a machine, or start execution.
+The shared skills are separate from the execution adapter. `foundry_runtime/` implements the tested Worker/QA backend using Hermes processes on macOS, including workspace isolation, checks, recovery, and GitHub transport controls. Skill support in Codex does not establish a tested Codex Worker/QA backend. Native execution requires a configured service, actor identities, and a supported runtime; loading skills alone starts no work.
 
 ## Choose a workflow
 
@@ -40,7 +40,7 @@ QA acceptance is not Done: completion requires integration and successful verifi
 
 ## Install and discover the skills
 
-For combined planning and native execution, install the Foundry + OpenSpec plugin in the intended host. Verify that required skills and shared references are readable. Its source is in `plugins/foundry-openspec/`; installation does not provision AI.Contract credentials, a runtime, or OpenSpec CLI.
+For Codex or ChatGPT, install the Foundry + OpenSpec plugin for the combined planning and native workflow instructions. Verify that required skills and shared references are readable. Its source is in `plugins/foundry-openspec/`; installation does not provision AI.Contract credentials, a runtime, or OpenSpec CLI.
 
 For local Hermes setup, keep a complete checkout and follow the [Hermes handoff](docs/HERMES_HANDOFF.md). Its existing `skills.external_dirs` configuration can load the source directory; preserve other configured directories. Source planning wrappers also need their OpenSpec dependencies available through the host skill loader.
 
