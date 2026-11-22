@@ -7,8 +7,11 @@ import os
 from pathlib import Path
 import re
 import shutil
+import sys
 
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from foundry_runtime import constants as settings
 OWN=sorted(p for p in (ROOT/'skills').iterdir() if p.is_dir() and (p/'SKILL.md').is_file())
 LINK=re.compile(r'\]\(([^)\s]+)\)')
 
@@ -53,7 +56,7 @@ def render(destination):
     for path in (destination/'foundry-shared').rglob('*'):
         if path.is_file() and path.name != 'installation.json':
             rendered[str(path.relative_to(destination))] = hashlib.sha256(path.read_bytes()).hexdigest()
-    manifest={'source_repository':'https://github.com/stemarie/context-foundry','source_sha256':hashes,
+    manifest={'source_repository':settings.SOURCE_REPOSITORY_URL,'source_sha256':hashes,
               'rendered_sha256':rendered,'skills':[p.name for p in OWN]}
     (destination/'foundry-shared').mkdir(exist_ok=True)
     (destination/'foundry-shared/installation.json').write_text(json.dumps(manifest,indent=2,sort_keys=True)+'\n')

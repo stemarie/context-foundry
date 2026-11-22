@@ -14,6 +14,7 @@ import sys
 import tempfile
 import uuid
 
+from . import constants as settings
 from .core import Barrier, RemoteFailure, active_gate
 from .runtime import local_git
 
@@ -75,7 +76,7 @@ def command(argv, cwd):
     try:
         gate = active_gate.get()
         if gate is None:
-            result = subprocess.run(argv, cwd=cwd, env=env, capture_output=True, text=True, timeout=90)
+            result = subprocess.run(argv, cwd=cwd, env=env, capture_output=True, text=True, timeout=settings.TRANSPORT_TIMEOUT_SECONDS)
         else:
             result = tracked_command(gate, argv, cwd, env)
     except subprocess.TimeoutExpired:
@@ -91,7 +92,7 @@ def tracked_command(gate, argv, cwd, env):
     # Before exec, this trusted isolated trampoline durably acknowledges its new
     # session/group. No argv, environment, output or credential enters the journal.
     entry = ('import os,sqlite3,sys\n'
-             'db=sqlite3.connect(sys.argv[1],timeout=15)\n'
+             'db=sqlite3.connect(sys.argv[1],timeout=' + repr(settings.SQLITE_BUSY_TIMEOUT_SECONDS) + ')\n'
              'db.execute("UPDATE transports SET pid=? WHERE identity=?",(os.getpid(),sys.argv[2]))\n'
              'db.commit(); db.close()\n'
              'try: os.execvpe(sys.argv[3],sys.argv[3:],os.environ)\n'
@@ -106,14 +107,14 @@ def tracked_command(gate, argv, cwd, env):
         raise
     try:
         try:
-            stdout, stderr = process.communicate(timeout=90)
+            stdout, stderr = process.communicate(timeout=settings.TRANSPORT_TIMEOUT_SECONDS)
         except subprocess.TimeoutExpired:
             # Only an un-reaped, still-running owned leader can be signalled safely.
             if process.poll() is not None:
                 raise Barrier('transport leader exited; descendant quiescence requires reconciliation') from None
             os.killpg(process.pid, signal.SIGKILL)
             try:
-                process.communicate(timeout=5)
+                process.communicate(timeout=settings.TRANSPORT_STOP_TIMEOUT_SECONDS)
             except subprocess.TimeoutExpired:
                 raise Barrier('transport stop not confirmed') from None
             gate.transport_finished(identity)
@@ -131,10 +132,10 @@ def tracked_command(gate, argv, cwd, env):
 class GitHub:
     def __init__(self, gate, checkout, repository):
         self.gate, self.checkout, self.repository = gate, Path(checkout), repository
-        if repository != 'stemarie/context-foundry':
+        if repository != settings.AUTHORIZED_DELIVERY_REPOSITORY:
             raise Barrier('this acceptance delivery target is not authorized')
         remote = local_git(self.checkout, 'remote', 'get-url', 'origin')
-        if remote not in ('https://github.com/' + repository + '.git', 'https://github.com/' + repository):
+        if remote not in (settings.GITHUB_ORIGIN + '/' + repository + '.git', settings.GITHUB_ORIGIN + '/' + repository):
             raise Barrier('unexpected remote transport or repository')
 
     @contextlib.contextmanager
@@ -142,9 +143,9 @@ class GitHub:
         # One shared runtime journal is mandatory across all projects on this host.
         # The lock covers ownership, target inspection, push, checks and native Done.
         from .core import digest
-        path = Path(self.gate.journal.path).parent / ('integration-' + digest(self.repository + ':main') + '.lock')
+        path = Path(self.gate.journal.path).parent / ('integration-' + digest(self.repository + ':' + settings.DELIVERY_BRANCH) + '.lock')
         with path.open('a') as stream:
-            os.chmod(path, 0o600)
+            os.chmod(path, settings.PRIVATE_FILE_MODE)
             try:
                 fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
@@ -160,7 +161,7 @@ class GitHub:
                 fcntl.flock(stream, fcntl.LOCK_UN)
 
     def _head(self):
-        output = command(['git', 'ls-remote', '--exit-code', 'origin', 'refs/heads/main'], self.checkout)
+        output = command(['git', 'ls-remote', '--exit-code', 'origin', 'refs/heads/' + settings.DELIVERY_BRANCH], self.checkout)
         return output.split()[0]
 
     def head(self):
@@ -170,7 +171,7 @@ class GitHub:
 
     def fetch(self):
         return self.gate.run('fetch:' + uuid.uuid4().hex, {'operation': 'fetch'},
-                             lambda: {'completed': command(['git', '-c', 'core.hooksPath=/dev/null', 'fetch', 'origin', 'main'], self.checkout) == ''})
+                             lambda: {'completed': command(['git', '-c', 'core.hooksPath=/dev/null', 'fetch', 'origin', settings.DELIVERY_BRANCH], self.checkout) == ''})
 
     def push(self, sha, expected, authority):
         intent = {'operation': 'push', 'repository': self.repository, 'sha': sha, 'expected': expected}
@@ -189,11 +190,11 @@ class GitHub:
             # The push itself has no force option. A receive-side race is rejected by Git.
             with tempfile.TemporaryDirectory(prefix='cf-push-', dir=Path(self.gate.journal.path).parent) as root:
                 hook = Path(root) / 'pre-push'
-                hook.write_text('#!/usr/bin/python3\nimport sys\nrows=[line.split() for line in sys.stdin]\n'
+                hook.write_text('#!' + settings.HOOK_PYTHON_EXECUTABLE + '\nimport sys\nrows=[line.split() for line in sys.stdin]\n'
                                 'assert len(rows)==1\nr=rows[0]\nassert r[1]==' + repr(sha) +
-                                ' and r[2]=="refs/heads/main" and r[3]==' + repr(expected) + '\n')
-                hook.chmod(0o700)
-                command(['git', '-c', 'core.hooksPath=' + root, 'push', 'origin', sha + ':refs/heads/main'], self.checkout)
+                                ' and r[2]==' + repr('refs/heads/' + settings.DELIVERY_BRANCH) + ' and r[3]==' + repr(expected) + '\n')
+                hook.chmod(settings.PRIVATE_DIRECTORY_MODE)
+                command(['git', '-c', 'core.hooksPath=' + root, 'push', 'origin', sha + ':refs/heads/' + settings.DELIVERY_BRANCH], self.checkout)
             if self._head() != sha:
                 raise Barrier('delivery response requires authoritative reconciliation')
             return {'sha': sha, 'expected': expected, 'non_force': True}
@@ -204,7 +205,7 @@ class GitHub:
         # A deterministic marker is used by both creation and uncertain-response recovery.
         def reconcile():
             raw = command(['gh', 'issue', 'list', '--repo', self.repository, '--state', 'all',
-                           '--limit', '1000', '--json', 'url,body'], self.checkout)
+                           '--limit', str(settings.HISTORY_SEARCH_LIMIT), '--json', 'url,body'], self.checkout)
             matches = [row['url'] for row in json.loads(raw) if marker in row['body']]
             if len(matches) > 1:
                 raise Barrier('duplicate historical records require reconciliation')
@@ -219,7 +220,7 @@ class GitHub:
                 stream.flush()
                 url = command(['gh', 'issue', 'create', '--repo', self.repository, '--title', title,
                                '--body-file', stream.name], self.checkout)
-            if not url.startswith('https://github.com/' + self.repository + '/issues/'):
+            if not url.startswith(settings.GITHUB_ORIGIN + '/' + self.repository + '/issues/'):
                 raise Barrier('historical issue response requires reconciliation')
             raw = command(['gh', 'issue', 'view', url, '--repo', self.repository, '--json', 'url,body'], self.checkout)
             verified = json.loads(raw)
@@ -230,7 +231,7 @@ class GitHub:
         return self.gate.run('history:' + marker, {'title': title, 'body': body, 'repository': self.repository}, write, reconcile)
 
     def _history_reference(self, url):
-        prefix = 'https://github.com/' + self.repository + '/issues/'
+        prefix = settings.GITHUB_ORIGIN + '/' + self.repository + '/issues/'
         if not url.startswith(prefix):
             raise Barrier('unexpected historical reference')
         number = url[len(prefix):]
@@ -295,8 +296,8 @@ class GitHub:
         if external_writers_excluded is not True:
             raise Barrier('operator must explicitly attest external lifecycle writers are excluded')
         if (not isinstance(external_writer_evidence, str) or not external_writer_evidence.strip() or
-                len(external_writer_evidence) > 1024):
-            raise Barrier('external writer exclusion evidence must be a nonempty string of at most 1024 characters')
+                len(external_writer_evidence) > settings.RECOVERY_EVIDENCE_MAX_CHARACTERS):
+            raise Barrier(f'external writer exclusion evidence must be a nonempty string of at most {settings.RECOVERY_EVIDENCE_MAX_CHARACTERS} characters')
         number = self._history_reference(url)
         identity = 'close:' + url
         intent = {'url': url, 'outcome': 'completed'}

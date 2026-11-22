@@ -19,6 +19,7 @@ import tempfile
 import threading
 import time
 
+from . import constants as settings
 from .core import Barrier
 from .runtime import Client
 
@@ -29,7 +30,7 @@ READ_TOOLS = {'contract_get','contract_list_by_status','contract_backlinks','cha
 
 def private_json(path):
     path=Path(path);info=path.lstat()
-    if not stat.S_ISREG(info.st_mode) or info.st_uid!=os.getuid() or info.st_mode & 0o077:
+    if not stat.S_ISREG(info.st_mode) or info.st_uid!=os.getuid() or info.st_mode & settings.FORBIDDEN_PRIVATE_PERMISSION_BITS:
         raise Barrier('connection/credential file must be owned, regular and private')
     return json.loads(path.read_text())
 
@@ -70,19 +71,19 @@ def _stop_owned_tunnel(process, control, target):
     try:
         if process.poll() is None:
             try:
-                subprocess.run(['ssh','-S',control,'-O','exit',target],capture_output=True,timeout=5)
+                subprocess.run(['ssh','-S',control,'-O','exit',target],capture_output=True,timeout=settings.SSH_CONTROL_TIMEOUT_SECONDS)
             except (OSError, subprocess.TimeoutExpired):
                 pass
             try:
-                process.wait(timeout=5)
+                process.wait(timeout=settings.SSH_CONTROL_TIMEOUT_SECONDS)
             except subprocess.TimeoutExpired:
                 process.terminate()
                 try:
-                    process.wait(timeout=5)
+                    process.wait(timeout=settings.SSH_CONTROL_TIMEOUT_SECONDS)
                 except subprocess.TimeoutExpired:
                     process.kill()
                     try:
-                        process.wait(timeout=5)
+                        process.wait(timeout=settings.SSH_CONTROL_TIMEOUT_SECONDS)
                     except subprocess.TimeoutExpired:
                         raise Barrier('owned SSH shutdown unconfirmed; reconciliation identity retained') from None
         if process.poll() is None:
@@ -97,30 +98,32 @@ def _stop_owned_tunnel(process, control, target):
 @contextlib.contextmanager
 def tunnel(config, port=0):
     ssh=config['ssh']
-    if ssh['target']!='karell@192.168.1.176' or ssh['remote_host']!='127.0.0.1' or ssh['remote_port']!=18080:
+    if ssh['target']!=settings.COMMISSIONED_SSH_TARGET or ssh['remote_host']!=settings.SERVICE_LOOPBACK_HOST or ssh['remote_port']!=settings.SERVICE_PORT:
         raise Barrier('connection does not match the commissioned private service')
     if not port:
-        with socket.socket() as probe:probe.bind(('127.0.0.1',0));port=probe.getsockname()[1]
-    name=tempfile.mkdtemp(prefix='cf-ssh-',dir='/private/tmp')
+        with socket.socket() as probe:probe.bind((settings.LOCAL_BIND_HOST,0));port=probe.getsockname()[1]
+    name=tempfile.mkdtemp(prefix='cf-ssh-',dir=settings.MACOS_TEMP_DIRECTORY)
     confirmed=False
     control=str(Path(name)/'master')
     command=['ssh','-M','-S',control,'-o','ControlPersist=no','-o','ControlMaster=yes',
              '-o','BatchMode=yes','-o','IdentitiesOnly=yes','-o','ExitOnForwardFailure=yes',
-             '-o','ConnectTimeout=10','-o','ServerAliveInterval=15','-o','ServerAliveCountMax=2',
-             '-i',ssh['identity_file'],'-N','-L',f'127.0.0.1:{port}:127.0.0.1:18080',ssh['target']]
+             '-o',f'ConnectTimeout={settings.SSH_CONNECT_TIMEOUT_SECONDS}',
+             '-o',f'ServerAliveInterval={settings.SSH_KEEPALIVE_INTERVAL_SECONDS}',
+             '-o',f'ServerAliveCountMax={settings.SSH_KEEPALIVE_MAX_MISSES}',
+             '-i',ssh['identity_file'],'-N','-L',f'{settings.LOCAL_BIND_HOST}:{port}:{settings.SERVICE_LOOPBACK_HOST}:{settings.SERVICE_PORT}',ssh['target']]
     try:
         with orderly_sigterm(), tempfile.TemporaryFile() as log:
             process=subprocess.Popen(command,stdin=subprocess.DEVNULL,stdout=log,stderr=log)
             try:
-                deadline=time.monotonic()+15
+                deadline=time.monotonic()+settings.SSH_READY_TIMEOUT_SECONDS
                 while time.monotonic()<deadline:
                     if process.poll() is not None:raise Barrier('private SSH connection could not start')
                     if Path(control).exists():
-                        checked=subprocess.run(['ssh','-S',control,'-O','check',ssh['target']],capture_output=True,timeout=5)
+                        checked=subprocess.run(['ssh','-S',control,'-O','check',ssh['target']],capture_output=True,timeout=settings.SSH_CONTROL_TIMEOUT_SECONDS)
                         if checked.returncode==0:break
-                    time.sleep(.05)
+                    time.sleep(settings.POLL_INTERVAL_SECONDS)
                 else:raise Barrier('private SSH connection readiness unknown')
-                yield 'http://127.0.0.1:'+str(port)
+                yield f'http://{settings.LOCAL_BIND_HOST}:{port}'
             finally:
                 confirmed=_stop_owned_tunnel(process,control,ssh['target'])
     finally:

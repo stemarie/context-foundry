@@ -14,6 +14,7 @@ import time
 import uuid
 
 
+from . import constants as settings
 active_gate = contextvars.ContextVar('active_transport_gate', default=None)
 active_admission = contextvars.ContextVar('active_transport_admission', default=None)
 
@@ -29,7 +30,7 @@ def digest(value):
 class Journal:
     def __init__(self, path):
         self.path = str(Path(path).absolute())
-        Path(self.path).parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        Path(self.path).parent.mkdir(parents=True, exist_ok=True, mode=settings.PRIVATE_DIRECTORY_MODE)
         with self.transaction() as db:
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS launches (
@@ -61,11 +62,11 @@ class Journal:
             db.execute("CREATE TABLE IF NOT EXISTS remote_recoveries (attempt TEXT PRIMARY KEY, identity TEXT NOT NULL, proof TEXT NOT NULL, state TEXT NOT NULL, result TEXT)")
             db.execute("CREATE TABLE IF NOT EXISTS remote_recovery_events (attempt TEXT NOT NULL, sequence INTEGER NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(attempt, sequence))")
             db.execute("CREATE TABLE IF NOT EXISTS legacy_quiescence_confirmations (sequence INTEGER PRIMARY KEY AUTOINCREMENT, alias TEXT NOT NULL, evidence TEXT NOT NULL, confirmed_at REAL NOT NULL)")
-        os.chmod(self.path, 0o600)
+        os.chmod(self.path, settings.PRIVATE_FILE_MODE)
 
     @contextlib.contextmanager
     def transaction(self):
-        db = sqlite3.connect(self.path, timeout=15, isolation_level=None)
+        db = sqlite3.connect(self.path, timeout=settings.SQLITE_BUSY_TIMEOUT_SECONDS, isolation_level=None)
         db.row_factory = sqlite3.Row
         try:
             db.execute("BEGIN IMMEDIATE")
@@ -112,7 +113,7 @@ class Journal:
         row = self.get(key)
         if row["pid"] is None:
             return "unknown"  # An intent is not proof that spawn did not happen.
-        probe = subprocess.run(["/bin/ps", "-p", str(row["pid"]), "-o", "lstart=,stat=,command="],
+        probe = subprocess.run([settings.PS_EXECUTABLE, "-p", str(row["pid"]), "-o", "lstart=,stat=,command="],
                                capture_output=True, text=True)
         if probe.returncode != 0:
             # An absent leader does not prove its whole process group stopped.
@@ -127,7 +128,7 @@ class Journal:
             return "unknown"  # Includes PID reuse; never signal that process.
         return "running"
 
-    def stop(self, key, timeout=10):
+    def stop(self, key, timeout=settings.PROCESS_STOP_TIMEOUT_SECONDS):
         row = self.get(key)
         state = self.inspect(key)
         if state == "unknown":
@@ -139,7 +140,7 @@ class Journal:
         while time.monotonic() < deadline:
             if self.inspect(key) == "stopped":
                 return {"key": key, "stopped_confirmed": True}
-            time.sleep(0.05)
+            time.sleep(settings.POLL_INTERVAL_SECONDS)
         # Still verify the leader identity before escalating within its own group.
         if self.inspect(key) == "running":
             os.killpg(row["pid"], signal.SIGKILL)
@@ -147,7 +148,7 @@ class Journal:
 
 
 def process_identity(pid):
-    result = subprocess.run(["/bin/ps", "-p", str(pid), "-o", "lstart="], capture_output=True, text=True, check=True)
+    result = subprocess.run([settings.PS_EXECUTABLE, "-p", str(pid), "-o", "lstart="], capture_output=True, text=True, check=True)
     return result.stdout.strip()
 
 
@@ -241,7 +242,7 @@ class Gate:
                 raise Barrier("not the shared probe owner")
             if category in self.QUALIFYING:
                 failures = row["failures"] + 1
-                delay = min(300, 30 * 2 ** min(failures - 1, 4))
+                delay = min(settings.BREAKER_MAX_DELAY_SECONDS, settings.BREAKER_INITIAL_DELAY_SECONDS * 2 ** min(failures - 1, settings.BREAKER_MAX_EXPONENT))
                 if retry_after is not None:
                     delay = max(delay, float(retry_after))
                 db.execute("UPDATE connections SET state='open',until=?,server_until=?,owner=NULL,owner_pid=NULL,failures=?,category=?,generation=generation+1 WHERE alias=?",

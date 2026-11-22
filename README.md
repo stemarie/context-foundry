@@ -19,6 +19,8 @@ The shared instructions are reusable. The bundled execution implementation is a 
 | Coordination | Role procedures and operator-invoked runtime building blocks. The operator supplies current assignment/configuration and performs bounded coordination; there is no finished generic controller or unattended continuation. |
 | Other environments | Other operating systems, less restricted build systems, and additional execution backends require implementation and their own evidence. |
 
+Deployment identities, host paths, timeouts, SDK bounds, and shared runtime limits are collected in [`foundry_runtime/constants.py`](foundry_runtime/constants.py). Runtime code and acceptance scripts use those defaults; scenario-specific proof timings have named constants in their own scripts. The values preserve the existing commissioned setup and restrictions. Adapting a target still requires an authorized source change, restarting the affected processes, and verification. Credential values remain in private configuration files.
+
 The separately installed GitHub work-order skill is a small planning/handoff utility. It does not replace AI.Contract or implement a second Foundry execution system.
 
 ## Choose a workflow

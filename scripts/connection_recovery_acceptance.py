@@ -19,7 +19,14 @@ import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGET = "karell@192.168.1.176"
+sys.path.insert(0, str(ROOT))
+from foundry_runtime import constants as settings
+
+TARGET = settings.COMMISSIONED_SSH_TARGET
+DEFAULT_WAIT_SECONDS = 20
+BRIDGE_REAP_TIMEOUT_SECONDS = 15
+SSH_EXIT_TIMEOUT_SECONDS = 8
+RESPONSE_CHUNK_BYTES = 4096
 
 
 def outside_checkout(path: Path) -> Path:
@@ -29,13 +36,13 @@ def outside_checkout(path: Path) -> Path:
     return path
 
 
-def wait_for(predicate, seconds: float = 20):
+def wait_for(predicate, seconds: float = DEFAULT_WAIT_SECONDS):
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
         value = predicate()
         if value:
             return value
-        time.sleep(0.05)
+        time.sleep(settings.POLL_INTERVAL_SECONDS)
     raise RuntimeError("timed out waiting for owned bridge state")
 
 
@@ -59,7 +66,7 @@ def bridge(config: Path) -> subprocess.Popen:
     )
 
 
-def request(process: subprocess.Popen, payload: dict, timeout: float = 20) -> dict:
+def request(process: subprocess.Popen, payload: dict, timeout: float = DEFAULT_WAIT_SECONDS) -> dict:
     """Read one response with bounded readiness and bytes, never blocking readline."""
     assert process.stdin is not None and process.stdout is not None
     process.stdin.write(json.dumps(payload) + "\n")
@@ -71,7 +78,7 @@ def request(process: subprocess.Popen, payload: dict, timeout: float = 20) -> di
         readable, _, _ = select.select([stream], [], [], max(0, deadline - time.monotonic()))
         if not readable:
             break
-        chunk = os.read(stream.fileno(), 4096)
+        chunk = os.read(stream.fileno(), RESPONSE_CHUNK_BYTES)
         if not chunk:
             raise RuntimeError("owned bridge closed before response")
         received.extend(chunk)
@@ -136,7 +143,7 @@ def close_streams(process: subprocess.Popen) -> None:
 
 
 def stopped(pid: int) -> bool:
-    return wait_for(lambda: not alive(pid), 10)
+    return wait_for(lambda: not alive(pid), settings.PROCESS_STOP_TIMEOUT_SECONDS)
 
 
 def close(process: subprocess.Popen, ssh: OwnedSSH | None, signal_process=os.kill) -> None:
@@ -149,7 +156,7 @@ def close(process: subprocess.Popen, ssh: OwnedSSH | None, signal_process=os.kil
                 # Group disappearance is not proof that this Popen was reaped.
                 pass
             try:
-                process.wait(timeout=15)
+                process.wait(timeout=BRIDGE_REAP_TIMEOUT_SECONDS)
             except subprocess.TimeoutExpired:
                 # The bridge owns this group; retain bounded Popen reaping on races.
                 try:
@@ -157,7 +164,7 @@ def close(process: subprocess.Popen, ssh: OwnedSSH | None, signal_process=os.kil
                 except ProcessLookupError:
                     pass
                 try:
-                    process.wait(timeout=15)
+                    process.wait(timeout=BRIDGE_REAP_TIMEOUT_SECONDS)
                 except subprocess.TimeoutExpired:
                     pass
         # A surviving child can only be signalled while its original bridge and identity remain.
@@ -188,7 +195,7 @@ def scenario(config: Path, kind: str, evidence: dict, checkpoint) -> dict:
         ssh = master(process)
         ssh_pid, control = ssh.pid, ssh.control
         if kind == "disconnect":
-            subprocess.run(["ssh", "-S", control, "-O", "exit", TARGET], capture_output=True, timeout=8, check=False)
+            subprocess.run(["ssh", "-S", control, "-O", "exit", TARGET], capture_output=True, timeout=SSH_EXIT_TIMEOUT_SECONDS, check=False)
             error = request(process, {"jsonrpc": "2.0", "id": 7002, "method": "ping"})
             assert error["id"] == 7002
             assert error["error"]["message"] == "private service request unavailable"
@@ -196,22 +203,22 @@ def scenario(config: Path, kind: str, evidence: dict, checkpoint) -> dict:
             os.kill(ssh_pid, signal.SIGSTOP)
             assert process.stdin is not None
             process.stdin.close()
-            process.wait(timeout=20)
+            process.wait(timeout=DEFAULT_WAIT_SECONDS)
             stopped(ssh_pid)
         elif kind == "direct-sigterm":
             # This targets only the owned bridge; it must reap its owned SSH child.
             os.kill(process.pid, signal.SIGTERM)
-            process.wait(timeout=20)
+            process.wait(timeout=DEFAULT_WAIT_SECONDS)
             stopped(ssh_pid)
         elif kind == "group-sigterm":
             # Exercise the separately documented process-group shutdown path.
             os.killpg(process.pid, signal.SIGTERM)
-            process.wait(timeout=20)
+            process.wait(timeout=DEFAULT_WAIT_SECONDS)
             stopped(ssh_pid)
         else:
             assert process.stdin is not None
             process.stdin.close()
-            process.wait(timeout=20)
+            process.wait(timeout=DEFAULT_WAIT_SECONDS)
             stopped(ssh_pid)
         record.update({"bridge_exit": process.returncode, "ssh_reaped_before_cleanup": not alive(ssh_pid)})
     finally:
@@ -225,7 +232,7 @@ def scenario(config: Path, kind: str, evidence: dict, checkpoint) -> dict:
 def write_evidence(path: Path, evidence: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(evidence, sort_keys=True, indent=2) + "\n")
-    os.chmod(path, 0o600)
+    os.chmod(path, settings.PRIVATE_FILE_MODE)
 
 
 def main() -> None:

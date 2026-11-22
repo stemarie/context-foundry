@@ -8,23 +8,32 @@ import io
 import json
 import os
 from pathlib import Path
+import sys
 import shutil
 import subprocess
 import tempfile
 import time
 import uuid
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from foundry_runtime import constants as settings
 from foundry_runtime.core import Barrier, Journal
 from foundry_runtime.runtime import Client, Launcher, local_git
 
 
+TRANSITION_TIMEOUT_SECONDS = 300
+TRANSITION_POLL_SECONDS = 0.3
+PROOF_HEARTBEAT_SECONDS = 2
+PROOF_INVOCATION_SECONDS = 360
+
+
 def run(args):
     checkout=Path(__file__).resolve().parents[1]
-    root=Path(tempfile.mkdtemp(prefix='cf-native-version-',dir='/private/tmp'));root.chmod(0o700)
+    root=Path(tempfile.mkdtemp(prefix='cf-native-version-',dir=settings.MACOS_TEMP_DIRECTORY));root.chmod(settings.PRIVATE_DIRECTORY_MODE)
     print('PRIVATE_FIXTURE',root,flush=True)
     spec=importlib.util.spec_from_file_location('native_version_mock',args.ai_contract_checkout/'scripts/mock_client.py')
     mock=importlib.util.module_from_spec(spec);spec.loader.exec_module(mock)
-    server=mock.LocalServer(str(args.service_binary),str(root),15)
+    server=mock.LocalServer(str(args.service_binary),str(root),settings.FIXTURE_SERVICE_TIMEOUT_SECONDS)
     journal=Journal(root/'runtime.sqlite');launcher=Launcher(journal,args.hermes_python,args.hermes_source)
     keys=[];trees=[];branches=[];pid=None;cid=None;work=None
     report={'scope':'Actual installed Hermes Worker and independent QA on a disposable fixture; no remote Git, native Done or deployment',
@@ -35,21 +44,21 @@ def run(args):
     def bound(job):
         return {'project_id':pid,'contract_id':cid,'revision':job['revision']['number'],'digest':job['revision']['digest'],'attempt_id':job['attempt']['id']}
     def wait(stages,key):
-        deadline=time.monotonic()+300
+        deadline=time.monotonic()+TRANSITION_TIMEOUT_SECONDS
         while time.monotonic()<deadline:
             job=work('get',{'contract_id':cid})['job']
             if job['stage'] in stages:return job
             if launcher.inspect(key)=='stopped':raise Barrier('native invocation stopped before required transition')
-            time.sleep(.3)
+            time.sleep(TRANSITION_POLL_SECONDS)
         raise Barrier('native smoke transition timeout')
     try:
         for role,scopes in [('worker','read,write,writer'),('qa','read,write,auditor'),('coordinator','read,write,coordinator')]:
             issued=subprocess.run([str(args.service_binary),'token','issue','version-'+role,scopes],env=server.env,capture_output=True,text=True,check=True)
             server.tokens[role]=next(line[6:] for line in issued.stdout.splitlines() if line.startswith('token='))
-        origin=server.start();api=mock.Client(origin,server.tokens,'http',15)
+        origin=server.start();api=mock.Client(origin,server.tokens,'http',settings.FIXTURE_SERVICE_TIMEOUT_SECONDS)
         def call(op,data,role='admin'):
             with contextlib.redirect_stdout(io.StringIO()):return api.call(op,data,role)
-        project=call('project_create',{'title':'Disposable native version smoke','repository':'stemarie/context-foundry','delivery_policy':'Disposable fixture only; no push, integration, Done or deployment.'})['project'];pid=project['id']
+        project=call('project_create',{'title':'Disposable native version smoke','repository':settings.AUTHORIZED_DELIVERY_REPOSITORY,'delivery_policy':'Disposable fixture only; no push, integration, Done or deployment.'})['project'];pid=project['id']
         milestone=call('milestone_create',{'project_id':pid,'ordinal':1,'title':'Native semantic version','goal':'Verify current installed adapter model path','scope':'Local disposable fixture','acceptance_criteria':'Worker and independent QA consume checked semantic version and native body.'})['milestone']
         call('project_planning_boundary',{'project_id':pid,'through':1,'expected_revision':0})
         def workflow(op,data=None,role='coordinator'):
@@ -70,9 +79,9 @@ Write the concise fixture, run the supplied check and submit a local candidate. 
 '''
         job=work('define',{'contract_id':cid,'expected_revision':0,'title':'Disposable version fixture','body_markdown':body,'dependencies':[],'conflicts':[]},'architect')['job']
         work('ready',{'contract_id':cid,'revision':job['revision']['number'],'digest':job['revision']['digest']},'architect')
-        job=work('reserve',{'lease_seconds':300})['job']
+        job=work('reserve',{'lease_seconds':settings.DEFAULT_LEASE_SECONDS})['job']
         resolver=('from hermes_cli.runtime_provider import resolve_runtime_provider; import json; '
-                  'r=resolve_runtime_provider(requested="openai-codex",target_model="gpt-5.6-terra"); '
+                  'r=resolve_runtime_provider(requested=' + repr(settings.ACCEPTANCE_PROVIDER) + ',target_model=' + repr(settings.ACCEPTANCE_MODEL) + '); '
                   'print(json.dumps({k:r[k] for k in ["provider","api_mode","api_key","base_url"]}))')
         result=subprocess.run([str(args.hermes_python),'-B','-c',resolver],env=dict(os.environ,PYTHONPATH=str(args.hermes_source),PYTHONDONTWRITEBYTECODE='1'),capture_output=True,text=True,check=True)
         runtime=json.loads(result.stdout)
@@ -80,16 +89,16 @@ Write the concise fixture, run the supplied check and submit a local candidate. 
         def launch(job,role,ref):
             branch='codex/version-'+role+'-'+uuid.uuid4().hex[:8];directory=root/role
             local_git(checkout,'worktree','add','-b',branch,str(directory),ref);trees.append(directory);branches.append(branch)
-            home=root/('home-'+role);home.mkdir(mode=0o700);scratch=home/'scratch';scratch.mkdir(mode=0o700)
+            home=root/('home-'+role);home.mkdir(mode=settings.PRIVATE_DIRECTORY_MODE);scratch=home/'scratch';scratch.mkdir(mode=settings.PRIVATE_DIRECTORY_MODE)
             binding=dict(bound(job),actor='version-'+role)
             if role=='qa':binding['candidate_id']=job['candidate']['id']
             instructions=(checkout/'skills'/('foundry-'+role)/'SKILL.md').read_text()
             for rel in ['skills/OPERATING_RULES.md','WORK_CONTRACT.md','docs/WORKFLOW.md']:instructions+='\n'+(checkout/rel).read_text()
-            check='from pathlib import Path; t=Path("native_version_fixture.txt").read_text(); assert "Alpha 1.0" in t and '+repr(marker)+' in t'
+            check='from pathlib import Path; t=Path("native_version_fixture.txt").read_text(); assert '+repr(settings.SUPPORTED_CONTRACT_VERSION)+' in t and '+repr(marker)+' in t'
             config={'origin':origin,'service_token':server.tokens[role],'binding':binding,'role':role,'workspace':str(directory),'base_sha':base,
-                    'candidate_sha':job.get('candidate',{}).get('sha'),'home':str(home),'scratch':str(scratch),'model':'gpt-5.6-terra',
-                    'role_instructions':instructions,'checks':['/Library/Developer/CommandLineTools/usr/bin/python3','-B','-E','-s','-c',check],
-                    'heartbeat_seconds':2,'invocation_seconds':360}
+                    'candidate_sha':job.get('candidate',{}).get('sha'),'home':str(home),'scratch':str(scratch),'model':settings.ACCEPTANCE_MODEL,
+                    'role_instructions':instructions,'checks':[settings.CHECK_PYTHON_EXECUTABLE,'-B','-E','-s','-c',check],
+                    'heartbeat_seconds':PROOF_HEARTBEAT_SECONDS,'invocation_seconds':PROOF_INVOCATION_SECONDS}
             key=launcher.ensure(config,runtime);keys.append(key)
             assert launcher.ensure(config,runtime)==key
             work('record',{**bound(job),'evidence':json.dumps({'role':role,'runtime_launch':key,'pid':journal.get(key)['pid'],'source_runtime_sha256':report['runtime_sha256']})})
@@ -104,7 +113,7 @@ Write the concise fixture, run the supplied check and submit a local candidate. 
         for key in (qa,worker):launcher.stop(key)
         assert all(launcher.inspect(key)=='stopped' for key in keys)
         current=work('cancel',{**bound(accepted),'stopped_confirmed':True,'evidence':'Actual installed Hermes Worker/QA proof complete; both owned processes stopped. Disposable fixture never delivered.'})['job']
-        report.update(status='passed',project_id=pid,contract_id=cid,attempt_id=accepted['attempt']['id'],candidate_sha=accepted['candidate']['sha'],semantic_version='Alpha 1.0',
+        report.update(status='passed',project_id=pid,contract_id=cid,attempt_id=accepted['attempt']['id'],candidate_sha=accepted['candidate']['sha'],semantic_version=settings.SUPPORTED_CONTRACT_VERSION,
                       native_marker=marker,fixture_text=(root/'worker'/'native_version_fixture.txt').read_text(),stage_before_cleanup=accepted['stage'],final_stage=current['stage'])
     except Exception as exc:
         report.update(status='failed',failure_category=type(exc).__name__)
@@ -117,10 +126,10 @@ Write the concise fixture, run the supplied check and submit a local candidate. 
         if work is not None and cid:
             history={'events':[],'revisions':[]};after=0
             while True:
-                page=work('history',{'contract_id':cid,'limit':100,'after':after},'reader')
+                page=work('history',{'contract_id':cid,'limit':settings.HISTORY_PAGE_SIZE,'after':after},'reader')
                 history['revisions']=page.get('revisions',[])
                 events=page.get('events',[]);history['events'].extend(events)
-                if len(events)<100:break
+                if len(events)<settings.HISTORY_PAGE_SIZE:break
                 assert events[-1]['id']>after
                 after=events[-1]['id']
             report['history']=history

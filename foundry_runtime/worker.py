@@ -10,12 +10,13 @@ import sys
 import threading
 import time
 
+from . import constants as settings
 from .core import Barrier, Journal
 from .runtime import Tools, ServiceUnavailable, command_binding, parse_service_time
 
 
-DEFAULT_SDK_CONFIG = {'max_iterations': 12, 'max_tokens': 3000, 'run_budget_seconds': 180}
-SDK_LIMITS = {'max_iterations': (1, 48), 'max_tokens': (256, 12000), 'run_budget_seconds': (1, 1200)}
+DEFAULT_SDK_CONFIG = settings.DEFAULT_SDK_CONFIG
+SDK_LIMITS = settings.SDK_LIMITS
 
 def pending_transition_prompt(role):
     return ('\nThe prior model turn ended without a native ' + ('submission' if role == 'worker' else 'verdict') +
@@ -30,8 +31,8 @@ def turn_decision(role, result, stage):
     return 'continue'
 
 def validated_invocation_seconds(config):
-    value = config.get('invocation_seconds', 600)
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 1 <= value <= 1200:
+    value = config.get('invocation_seconds', settings.DEFAULT_INVOCATION_SECONDS)
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not settings.INVOCATION_MIN_SECONDS <= value <= settings.INVOCATION_MAX_SECONDS:
         raise Barrier('invalid finite invocation deadline')
     return value
 
@@ -110,7 +111,7 @@ def main():
     config, runtime = payload['config'], payload['model_runtime']
     selected_sdk = sdk_config(config)
     home = Path(config['home'])
-    home.mkdir(mode=0o700, exist_ok=True)
+    home.mkdir(mode=settings.PRIVATE_DIRECTORY_MODE, exist_ok=True)
     events = home / 'events.jsonl'
 
     def event(kind, **fields):
@@ -128,14 +129,14 @@ def main():
               transport_category=getattr(exc, 'category', None), service_code=getattr(exc, 'code', None))
 
     def heartbeat():
-        while not stop.wait(config.get('heartbeat_seconds', 5)):
+        while not stop.wait(config.get('heartbeat_seconds', settings.DEFAULT_HEARTBEAT_SECONDS)):
             try:
                 job = tools.client.workflow('get', {'project_id': tools.binding['project_id'], 'contract_id': tools.binding['contract_id']})['job']
                 if job['stage'] not in ('Implementing', 'QA'):
                     return
                 tools.client.authority(tools.binding, tools.role)
                 renewed = tools.client.workflow('heartbeat', {**command_binding(tools.binding),
-                    'lease_seconds': config.get('lease_seconds', 300),
+                    'lease_seconds': config.get('lease_seconds', settings.DEFAULT_LEASE_SECONDS),
                     'idempotency_key': 'heartbeat:' + args.launch + ':' + str(time.time_ns())})['job']
                 was_unsafe = unsafe.is_set()
                 unsafe.clear()
@@ -175,8 +176,8 @@ def main():
                       'operation': {'type': 'string', 'enum': operations}, 'path': {'type': 'string'},
                       'content': {'type': 'string'}, 'summary': {'type': 'string'},
                       'expected_digest': {'type': 'string'},
-                      'replacements': {'type': 'array', 'items': {'type': 'object', 'properties': {'old': {'type': 'string'}, 'new': {'type': 'string'}}, 'required': ['old', 'new'], 'additionalProperties': False}, 'minItems': 1, 'maxItems': 64},
-                      'offset': {'type': 'integer', 'minimum': 0}, 'limit': {'type': 'integer', 'minimum': 1, 'maximum': 64000},
+                      'replacements': {'type': 'array', 'items': {'type': 'object', 'properties': {'old': {'type': 'string'}, 'new': {'type': 'string'}}, 'required': ['old', 'new'], 'additionalProperties': False}, 'minItems': 1, 'maxItems': settings.EDIT_MAX_REPLACEMENTS},
+                      'offset': {'type': 'integer', 'minimum': 0}, 'limit': {'type': 'integer', 'minimum': 1, 'maximum': settings.TEXT_PAGE_MAX_CHARACTERS},
                       'after': {'type': 'integer', 'minimum': 0}, 'version': {'type': 'string'},
                       'verdict': {'type': 'string', 'enum': ['Accepted', 'Changes requested', 'Blocked']}},
                       'required': ['operation'], 'additionalProperties': False}}
@@ -202,11 +203,11 @@ def main():
         event('capabilities', tools=sorted(exposed), actor=tools.binding['actor'], role=tools.role)
         barrier = config.get('start_barrier')
         if barrier:
-            until = time.monotonic() + config.get('start_barrier_seconds', 120)
+            until = time.monotonic() + config.get('start_barrier_seconds', settings.DEFAULT_START_BARRIER_SECONDS)
             while not Path(barrier).exists():
                 if time.monotonic() > until:
                     raise Barrier('operator start barrier timed out')
-                time.sleep(.05)
+                time.sleep(settings.POLL_INTERVAL_SECONDS)
         event('sdk_selected', settings=selected_sdk)
         invocation_seconds = validated_invocation_seconds(config)
         deadline = time.monotonic() + invocation_seconds
@@ -223,7 +224,7 @@ def main():
                 job = tools.client.authority(tools.binding, tools.role)
             except ServiceUnavailable as exc:
                 unavailable(exc)
-                stop.wait(.5)
+                stop.wait(settings.AUTHORITY_RETRY_SECONDS)
                 continue
             if terminal.is_set():
                 raise Barrier('lease expired, revoked or stale; recovery requires confirmed stop')
@@ -232,10 +233,10 @@ def main():
                     unsafe.clear()  # Full current QA authority was just revalidated.
                     event('authority_recovered', attempt=tools.binding['attempt_id'])
                 else:
-                    stop.wait(.2)  # Only a validated, successful owning heartbeat clears this fence.
+                    stop.wait(settings.OWNERSHIP_WAIT_SECONDS)  # Only a validated, successful owning heartbeat clears this fence.
                     continue
             if tools.role == 'worker' and job['stage'] == 'QA':
-                stop.wait(.2)
+                stop.wait(settings.OWNERSHIP_WAIT_SECONDS)
                 continue
             remaining = deadline - time.monotonic()
             if remaining <= 0:
@@ -294,8 +295,8 @@ def main():
     except BaseException as exc:
         event('blocked', category=type(exc).__name__)
         # This file is private operator diagnostics; never publish provider/credential details.
-        (home / 'failure.txt').write_text(type(exc).__name__ + ': ' + str(exc)[:1000])
-        os.chmod(home / 'failure.txt', 0o600)
+        (home / 'failure.txt').write_text(type(exc).__name__ + ': ' + str(exc)[:settings.FAILURE_DIAGNOSTIC_MAX_CHARACTERS])
+        os.chmod(home / 'failure.txt', settings.PRIVATE_FILE_MODE)
         raise SystemExit(2)
     finally:
         stop.set()

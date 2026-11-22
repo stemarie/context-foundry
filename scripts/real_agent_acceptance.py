@@ -16,9 +16,22 @@ import tempfile
 import time
 import uuid
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from foundry_runtime import constants as settings
 from foundry_runtime.core import Barrier, Gate, Journal
 from foundry_runtime.runtime import Client, Launcher, ServiceError, local_git
 from foundry_runtime.remote import GitHub
+
+
+TRANSITION_TIMEOUT_SECONDS = 240
+SHUTDOWN_CONFIRM_TIMEOUT_SECONDS = 15
+SERVICE_RECOVERY_TIMEOUT_SECONDS = 20
+MODEL_FINISH_TIMEOUT_SECONDS = 60
+STARTUP_EVIDENCE_TIMEOUT_SECONDS = 30
+SHORT_POLL_SECONDS = 0.1
+TRANSITION_POLL_SECONDS = 0.5
+LEASE_EXPIRY_WAIT_SECONDS = 1.2
+ARTIFACT_TAIL_MAX_CHARACTERS = 24000
 
 
 def load(name, path):
@@ -50,15 +63,15 @@ def write_report(path, report):
 
 def run(args):
     checkout = Path(__file__).resolve().parents[1]
-    root = Path(tempfile.mkdtemp(prefix='cf-real-agent-', dir='/private/tmp'))
-    root.chmod(0o700)
+    root = Path(tempfile.mkdtemp(prefix='cf-real-agent-', dir=settings.MACOS_TEMP_DIRECTORY))
+    root.chmod(settings.PRIVATE_DIRECTORY_MODE)
     print('PRIVATE_FIXTURE', root, flush=True)
     mock = load('acceptance_mock', args.ai_contract_checkout / 'scripts/mock_client.py')
     if args.docker_image:
         fixture = load('cf_docker_fixture', checkout/'scripts/docker_service_fixture.py')
         server = fixture.DockerService(args.docker_host,args.docker_image,root)
     else:
-        server = mock.LocalServer(str(args.service_binary), str(root), 15)
+        server = mock.LocalServer(str(args.service_binary), str(root), settings.FIXTURE_SERVICE_TIMEOUT_SECONDS)
     journal = Journal(root / 'runtime.sqlite')
     launcher = Launcher(journal, args.hermes_python, args.hermes_source)
     launches, worktrees, reports = [], [], []
@@ -83,9 +96,9 @@ def run(args):
                 import contextlib,io
                 with contextlib.redirect_stdout(io.StringIO()):
                     return super().call(*values, **options)
-        api = QuietClient(origin, server.tokens, 'http', 15)
+        api = QuietClient(origin, server.tokens, 'http', settings.FIXTURE_SERVICE_TIMEOUT_SECONDS)
         project = api.call('project_create', {'title': 'Disposable real Hermes acceptance',
-                          'repository': 'stemarie/context-foundry', 'delivery_policy':
+                          'repository': settings.AUTHORIZED_DELIVERY_REPOSITORY, 'delivery_policy':
                           'Direct main after independent exact-candidate QA, expected-head non-force delivery and postchecks. No deployment.'})['project']
         pid = project['id']; report['project_id'] = pid
         milestone = api.call('milestone_create', {'project_id': pid, 'ordinal': 1, 'title': 'Local real-agent acceptance',
@@ -114,13 +127,13 @@ def run(args):
             work('agent', {'agent': 'acceptance-' + actor, 'agent_role': role}, 'admin')
         # Resolve the existing configured provider only in the operator context.
         resolver = ('from hermes_cli.runtime_provider import resolve_runtime_provider; import json; '
-                    'r=resolve_runtime_provider(requested="openai-codex",target_model="gpt-5.6-terra"); '
+                    'r=resolve_runtime_provider(requested=' + repr(settings.ACCEPTANCE_PROVIDER) + ',target_model=' + repr(settings.ACCEPTANCE_MODEL) + '); '
                     'print(json.dumps({k:r[k] for k in ["provider","api_mode","api_key","base_url"]}))')
         result = subprocess.run([str(args.hermes_python), '-c', resolver], capture_output=True, text=True,
                                 env=dict(os.environ, PYTHONPATH=str(args.hermes_source), PYTHONDONTWRITEBYTECODE='1'), check=True)
         runtime = json.loads(result.stdout)
-        gate = Gate(journal, 'owner-github-context-foundry')
-        github = GitHub(gate, checkout, 'stemarie/context-foundry')
+        gate = Gate(journal, settings.GITHUB_CONNECTION_ALIAS)
+        github = GitHub(gate, checkout, settings.AUTHORIZED_DELIVERY_REPOSITORY)
         expected = github.head()
         assert local_git(checkout, 'merge-base', expected, 'HEAD') == expected
 
@@ -157,8 +170,8 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
             return directory
 
         def configuration(job, actor, directory, base, terms, path, role, barrier=None):
-            home = root / ('home-' + uuid.uuid4().hex); home.mkdir(mode=0o700)
-            scratch = home / 'scratch'; scratch.mkdir(mode=0o700)
+            home = root / ('home-' + uuid.uuid4().hex); home.mkdir(mode=settings.PRIVATE_DIRECTORY_MODE)
+            scratch = home / 'scratch'; scratch.mkdir(mode=settings.PRIVATE_DIRECTORY_MODE)
             binding = {'project_id': pid, **bound(job), 'actor': 'acceptance-' + actor}
             if role == 'worker':
                 binding.pop('candidate_id', None); binding.pop('candidate_sha', None)
@@ -174,9 +187,9 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
             return {'origin': origin, 'service_token': server.tokens[actor], 'binding': binding,
                     'role': role, 'workspace': str(directory), 'base_sha': base,
                     'candidate_sha': job.get('candidate', {}).get('sha'), 'home': str(home), 'scratch': str(scratch),
-                    'model': 'gpt-5.6-terra', 'role_instructions': roletext,
-                    'checks': ['/Library/Developer/CommandLineTools/usr/bin/python3', '-B', '-E', '-s', '-c', check],
-                    'start_barrier': str(barrier) if barrier else None, 'invocation_seconds': 600}
+                    'model': settings.ACCEPTANCE_MODEL, 'role_instructions': roletext,
+                    'checks': [settings.CHECK_PYTHON_EXECUTABLE, '-B', '-E', '-s', '-c', check],
+                    'start_barrier': str(barrier) if barrier else None, 'invocation_seconds': settings.DEFAULT_INVOCATION_SECONDS}
 
         def record_launch(config, key):
             binding=config['binding']
@@ -196,7 +209,7 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
             print('LAUNCHED', config['role'], config['binding']['actor'], key, flush=True)
             return key
 
-        def wait_stage(cid, stages, key=None, timeout=240):
+        def wait_stage(cid, stages, key=None, timeout=TRANSITION_TIMEOUT_SECONDS):
             until = time.monotonic() + timeout
             while time.monotonic() < until:
                 job = work('get', {'contract_id': cid})['job']
@@ -204,7 +217,7 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
                     return job
                 if key and launcher.inspect(key) == 'stopped':
                     raise Barrier('real invocation stopped before required stage: ' + cid)
-                time.sleep(.5)
+                time.sleep(TRANSITION_POLL_SECONDS)
             raise Barrier('bounded acceptance stage wait timed out')
 
         def review(job, path, terms, base, worker_key):
@@ -236,9 +249,9 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
                     assert launcher.inspect(worker_key) == 'running'
                     job = wait_stage(job['contract_id'], ['QA'], worker_key)
                     continue
-                until = time.monotonic() + 15
+                until = time.monotonic() + SHUTDOWN_CONFIRM_TIMEOUT_SECONDS
                 while launcher.inspect(worker_key) != 'stopped' and time.monotonic() < until:
-                    time.sleep(.1)
+                    time.sleep(SHORT_POLL_SECONDS)
                 assert launcher.inspect(worker_key) == 'stopped'
                 assert reviewed['stage'] != 'Done'
                 return reviewed
@@ -262,7 +275,7 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
             local_git(checkout, '-c', 'user.name=acceptance-coordinator', '-c', 'user.email=acceptance-coordinator@localhost', 'merge', '--no-edit', job['candidate']['sha'])
             target = local_git(checkout, 'rev-parse', 'HEAD')
             checks = subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-v'], cwd=checkout,
-                                    env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1', TMPDIR='/private/tmp'), capture_output=True, text=True)
+                                    env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1', TMPDIR=settings.MACOS_TEMP_DIRECTORY), capture_output=True, text=True)
             if checks.returncode:
                 raise Barrier('operator integration checks failed; no Done')
             pushed = github.push(target, expected, authority)
@@ -273,17 +286,17 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
             assert failed_probe.returncode == 1
             work('record', {**bound(job), 'evidence': 'Deliberate local postcheck probe exited 1; delivery is not completion.'})
             work('complete', {**bound(job), 'target_sha': target, 'checks_passed': False,
-                              'reference': 'https://github.com/stemarie/context-foundry/commit/' + target,
+                              'reference': settings.DELIVERY_REPOSITORY_URL + '/commit/' + target,
                               'evidence': 'Deliberate postcheck probe exited 1.'}, expected_error='project_conflict')
             assert work('get', {'contract_id': job['contract_id']})['job']['stage'] == 'Integrating'
             report['failed_postcheck_kept_unresolved'] = True
             post = subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-v'], cwd=checkout,
-                                 env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1', TMPDIR='/private/tmp'), capture_output=True, text=True)
+                                 env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1', TMPDIR=settings.MACOS_TEMP_DIRECTORY), capture_output=True, text=True)
             if post.returncode:
                 work('record', {**bound(job), 'evidence': 'Actual post-integration checks failed; no Done.'})
                 raise Barrier('actual post-integration checks failed')
             job = work('complete', {**bound(job), 'target_sha': target, 'checks_passed': True,
-                                   'reference': 'https://github.com/stemarie/context-foundry/commit/' + target,
+                                   'reference': settings.DELIVERY_REPOSITORY_URL + '/commit/' + target,
                                    'evidence': 'Actual non-force expected-head delivery and remote SHA read-back; host control suite passed before and after delivery.'})['job']
             assert job['stage'] == 'Done'
             marker = 'foundry-contract:' + pid + ':' + job['contract_id']
@@ -291,7 +304,7 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
                 'Completed bounded real-agent acceptance contract.\n\n'
                 'Contract: ' + job['contract_id'] + '\nRevision: ' + str(job['revision']['number']) +
                 '\nAttempt: ' + job['attempt']['id'] + '\nCandidate: ' + job['candidate']['sha'] +
-                '\nDelivered commit: https://github.com/stemarie/context-foundry/commit/' + target +
+                '\nDelivered commit: ' + settings.DELIVERY_REPOSITORY_URL + '/commit/' + target +
                 '\n\nActual installed Hermes Worker and separate QA; independent checks; expected-head non-force push and remote read-back; post-integration checks; native Done. Disposable local service. No deployment.')
             github.close_history(history['url'])
             job = work('publish_history', {**bound(job), 'reference': history['url']})['job']
@@ -302,7 +315,7 @@ Use the check capability. Coordinator integrates serially, verifies expected-hea
 
         if args.scenario == 'single':
             first = contract('Local runtime quickstart', 'docs/RUNTIME_QUICKSTART.md', ['AI.Contract', 'unknown', 'independent QA', 'no deployment', 'HERMES_DISABLE_LAZY_INSTALLS', 'runtime_launch'])
-            first_job = work('reserve', {'lease_seconds': 300})['job']
+            first_job = work('reserve', {'lease_seconds': settings.DEFAULT_LEASE_SECONDS})['job']
             directory = workspace('HEAD', 'worker-first')
             actor = first_job['attempt']['worker'].removeprefix('acceptance-')
             config = configuration(first_job, actor, directory, expected, first[2], first[1], 'worker')
@@ -329,30 +342,30 @@ Read history through all necessary pages; heartbeat/record noise is not the late
 """
             task = contract('Verified runtime recovery and correction', 'docs/RUNTIME_RECOVERY_VERIFIED.md',
                             ['AI.Contract','isolated','retry','history','paging','breaker'], extra)
-            job = work('reserve', {'lease_seconds':300})['job']
+            job = work('reserve', {'lease_seconds':settings.DEFAULT_LEASE_SECONDS})['job']
             directory = workspace('HEAD','worker-correction')
             actor = job['attempt']['worker'].removeprefix('acceptance-')
             config = configuration(job,actor,directory,expected,task[2],task[1],'worker')
             key=launch(config)
             first=wait_stage(task[0],['QA'],key)
             pid_before=journal.get(key)['pid']
-            before_history=work('history',{'contract_id':task[0],'limit':100})
-            replacement=server.replace(downtime=6)
+            before_history=work('history',{'contract_id':task[0],'limit':settings.HISTORY_PAGE_SIZE})
+            replacement=server.replace(downtime=settings.FIXTURE_REPLACEMENT_DOWNTIME_SECONDS)
             after=work('get',{'contract_id':task[0]})['job']
             assert after['attempt']['id']==first['attempt']['id'] and after['candidate']==first['candidate']
-            persisted=work('history',{'contract_id':task[0],'limit':100})
+            persisted=work('history',{'contract_id':task[0],'limit':settings.HISTORY_PAGE_SIZE})
             assert persisted['events'][:len(before_history['events'])]==before_history['events']
-            mcp=mock.Client(origin,server.tokens,'mcp',15);mcp.initialize()
+            mcp=mock.Client(origin,server.tokens,'mcp',settings.FIXTURE_SERVICE_TIMEOUT_SECONDS);mcp.initialize()
             mcp_job=mcp.call('workflow_get',{'project_id':pid,'contract_id':task[0]},'reader')['workflow']['job']
             assert mcp_job['candidate']==after['candidate'] and mcp_job['attempt']['id']==after['attempt']['id']
-            mcp_history=mcp.call('workflow_history',{'project_id':pid,'contract_id':task[0],'limit':100},'reader')['workflow']
+            mcp_history=mcp.call('workflow_history',{'project_id':pid,'contract_id':task[0],'limit':settings.HISTORY_PAGE_SIZE},'reader')['workflow']
             assert mcp_history['events'][:len(before_history['events'])]==before_history['events']
             report['http_mcp_native_restart_readback']=True
-            until=time.monotonic()+20
+            until=time.monotonic()+SERVICE_RECOVERY_TIMEOUT_SECONDS
             while time.monotonic()<until:
                 events=[json.loads(line) for line in (Path(config['home'])/'events.jsonl').read_text().splitlines()]
                 if any(e['event']=='authority_recovered' for e in events):break
-                time.sleep(.2)
+                time.sleep(settings.FIXTURE_POLL_INTERVAL_SECONDS)
             else:raise Barrier('Worker did not revalidate authority after actual image replacement')
             failures=[e for e in events if e['event']=='authority_unavailable']
             assert failures and all(e.get('transport_category') for e in failures)
@@ -380,7 +393,7 @@ Read history through all necessary pages; heartbeat/record noise is not the late
             assert journal.get(key)['pid']==pid_before and launcher.inspect(key)=='running'
             accepted=review(second,task[1],task[2]+[marker],expected,key)
             complete=deliver(accepted,expected)
-            history=work('history',{'contract_id':task[0],'limit':100})
+            history=work('history',{'contract_id':task[0],'limit':settings.HISTORY_PAGE_SIZE})
             reports.append({'job':complete,'launch':key,'first_candidate':first['candidate'],
                             'corrected_candidate':second['candidate'],'same_worker_pid':pid_before,
                             'same_attempt':first['attempt']['id'],'verification_marker':marker})
@@ -395,7 +408,7 @@ Read history through all necessary pages; heartbeat/record noise is not the late
             active = []
             baseline = expected
             for task in (first, second):
-                job = work('reserve', {'lease_seconds': 300})['job']
+                job = work('reserve', {'lease_seconds': settings.DEFAULT_LEASE_SECONDS})['job']
                 assert job['contract_id'] == task[0]
                 actor = job['attempt']['worker'].removeprefix('acceptance-')
                 directory = workspace('HEAD', actor)
@@ -413,14 +426,14 @@ Read history through all necessary pages; heartbeat/record noise is not the late
                 submissions.append((wait_stage(task[0], ['QA'], key), task, config, key))
             intervals = []
             for _, task, config, key in active:
-                until = time.monotonic() + 60
+                until = time.monotonic() + MODEL_FINISH_TIMEOUT_SECONDS
                 while True:
                     events = [json.loads(line) for line in (Path(config['home'])/'events.jsonl').read_text().splitlines()]
                     if any(e['event']=='model_finished' for e in events):
                         break
                     if time.monotonic()>until:
                         raise Barrier('real model turn completion still pending')
-                    time.sleep(.2)
+                    time.sleep(settings.FIXTURE_POLL_INTERVAL_SECONDS)
                 intervals.append((next(e['time'] for e in events if e['event']=='model_started'),
                                   next(e['time'] for e in events if e['event']=='model_finished')))
             assert max(i[0] for i in intervals) < min(i[1] for i in intervals)
@@ -443,7 +456,7 @@ Read history through all necessary pages; heartbeat/record noise is not the late
             # documentation assignment on current main and require an actual fresh QA.
             work('recover', {**bound(two), 'stopped_confirmed': True,
                              'evidence': 'Old accepted Worker process group confirmed stopped. Target advanced; renew attempt and exact-candidate QA on current main.'})
-            renewed = work('reserve', {'lease_seconds': 300})['job']
+            renewed = work('reserve', {'lease_seconds': settings.DEFAULT_LEASE_SECONDS})['job']
             assert renewed['contract_id'] == task_two[0] and renewed['attempt']['id'] != two['attempt']['id']
             directory = workspace('HEAD', 'worker-after-drift')
             actor = renewed['attempt']['worker'].removeprefix('acceptance-')
@@ -458,7 +471,7 @@ Read history through all necessary pages; heartbeat/record noise is not the late
         elif args.scenario == 'recovery':
             from foundry_runtime.runtime import Tools
             task = contract('Disposable recovery probe', 'docs/NOT_DELIVERED_PROBE.md', ['lease', 'unknown'])
-            job = work('reserve', {'lease_seconds': 300})['job']
+            job = work('reserve', {'lease_seconds': settings.DEFAULT_LEASE_SECONDS})['job']
             directory = workspace('HEAD', 'recovery-worker')
             actor = job['attempt']['worker'].removeprefix('acceptance-')
             config = configuration(job, actor, directory, expected, task[2], task[1], 'worker', root/'never-release')
@@ -478,7 +491,7 @@ os._exit(0)
                 str(args.hermes_python),str(args.hermes_source)],stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,
                 env={'PATH':os.environ['PATH'],'PYTHONPATH':str(checkout),'PYTHONDONTWRITEBYTECODE':'1'})
-            output,error=predecessor.communicate(json.dumps({'config':config,'runtime':runtime}),timeout=90)
+            output,error=predecessor.communicate(json.dumps({'config':config,'runtime':runtime}),timeout=settings.LAUNCH_ACK_TIMEOUT_SECONDS)
             if predecessor.returncode:
                 raise Barrier('disposable predecessor launcher failed')
             binding={'origin':config['origin'],'role':config['role'],**config['binding']}
@@ -492,12 +505,12 @@ os._exit(0)
                 'successor_pid':os.getpid(),'native_pid':journal.get(key)['pid'],'launch':key,
                 'no_replacement_spawned':True}
             # The installed AIAgent has initialized and is alive at its start barrier.
-            until = time.monotonic()+30
+            until = time.monotonic()+STARTUP_EVIDENCE_TIMEOUT_SECONDS
             while not (Path(config['home'])/'events.jsonl').exists() and time.monotonic()<until:
-                time.sleep(.1)
+                time.sleep(SHORT_POLL_SECONDS)
             assert launcher.inspect(key)=='running'
             work('heartbeat', {**bound(job), 'lease_seconds': 1}, actor)
-            time.sleep(1.2)
+            time.sleep(LEASE_EXPIRY_WAIT_SECONDS)
             assert launcher.inspect(key)=='running'
             assert work('reserve', {'worker': job['attempt']['worker']})['idle']
             try: Tools(config).invoke('write', {'path':task[1], 'content':'stale write'})
@@ -552,16 +565,16 @@ os._exit(0)
                 report['all_history'] = []
                 queued, cursor = [], 0
                 while True:
-                    page = work('list', {'after':cursor,'limit':100}).get('jobs',[])
+                    page = work('list', {'after':cursor,'limit':settings.HISTORY_PAGE_SIZE}).get('jobs',[])
                     queued.extend(page)
-                    if len(page)<100:break
+                    if len(page)<settings.HISTORY_PAGE_SIZE:break
                     cursor=page[-1]['queue_sequence']
                 for job in queued:
                     events, cursor, revisions = [], 0, []
                     while True:
-                        page = work('history', {'contract_id':job['contract_id'],'after':cursor,'limit':100})
+                        page = work('history', {'contract_id':job['contract_id'],'after':cursor,'limit':settings.HISTORY_PAGE_SIZE})
                         rows=page.get('events',[]);events.extend(rows);revisions=page.get('revisions',[])
-                        if len(rows)<100:break
+                        if len(rows)<settings.HISTORY_PAGE_SIZE:break
                         cursor=rows[-1]['id']
                     report['all_history'].append({'events':events,'revisions':revisions})
             diagnostics = []
@@ -570,7 +583,7 @@ os._exit(0)
                 for name in ('failure.txt', 'events.jsonl', 'invocation.log'):
                     path = home / name
                     if path.exists():
-                        value = path.read_text(errors='replace')[-24000:]
+                        value = path.read_text(errors='replace')[-ARTIFACT_TAIL_MAX_CHARACTERS:]
                         for secret in list(server.tokens.values()) + ([runtime.get('api_key', '')] if 'runtime' in locals() else []):
                             if secret:
                                 value = value.replace(secret, '[REDACTED]')
@@ -607,7 +620,7 @@ def main():
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--scenario',choices=['single','parallel','recovery','correction'],default='single')
     parser.add_argument('--docker-image')
-    parser.add_argument('--docker-host',default=os.environ.get('DOCKER_HOST','unix:///var/run/docker.sock'))
+    parser.add_argument('--docker-host',default=os.environ.get('DOCKER_HOST', settings.FIXTURE_DOCKER_HOST))
     run(parser.parse_args())
 
 if __name__ == '__main__':

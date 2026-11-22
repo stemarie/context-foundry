@@ -21,6 +21,7 @@ import http.client
 import urllib.error
 import urllib.request
 
+from . import constants as settings
 from .core import Barrier, Journal
 
 
@@ -52,8 +53,8 @@ def native_worker_command(python, source, adapter_root):
 
 
 def text_page(text, arguments, field):
-    offset, limit = arguments.get('offset', 0), arguments.get('limit', 64000)
-    if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 64000:
+    offset, limit = arguments.get('offset', 0), arguments.get('limit', settings.TEXT_PAGE_MAX_CHARACTERS)
+    if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= settings.TEXT_PAGE_MAX_CHARACTERS:
         raise Barrier('invalid page bounds')
     version = hashlib.sha256(text.encode()).hexdigest()
     if arguments.get('version') and arguments['version'] != version:
@@ -78,7 +79,7 @@ class Client:
         request = urllib.request.Request(self.origin + path, raw,
                                         {'Authorization': 'Bearer ' + self.token, 'Content-Type': 'application/json'}, method=method)
         try:
-            with self.opener.open(request, timeout=10) as response:
+            with self.opener.open(request, timeout=settings.SERVICE_REQUEST_TIMEOUT_SECONDS) as response:
                 return json.load(response)
         except urllib.error.HTTPError as exc:
             try:
@@ -104,7 +105,7 @@ class Client:
 
     def authority(self, binding, role):
         contract = self.call('/api/v1/contracts/' + binding['contract_id'], method='GET').get('contract', {})
-        if contract.get('id') != binding['contract_id'] or contract.get('contract_version') != 'Alpha 1.0':
+        if contract.get('id') != binding['contract_id'] or contract.get('contract_version') != settings.SUPPORTED_CONTRACT_VERSION:
             raise Barrier('unsupported or missing semantic contract version')
         job = self.workflow('get', {'project_id': binding['project_id'], 'contract_id': binding['contract_id']})['job']
         revision, attempt = job['revision'], job.get('attempt')
@@ -149,19 +150,18 @@ def checked_path(workspace, value):
     return path
 
 
-def check_descriptor(argv, cwd, backend='macos sandbox-exec'):
+def check_descriptor(argv, cwd, backend=settings.SANDBOX_BACKEND_NAME):
     """Return adapter-generated execution metadata that model summaries cannot replace."""
     descriptor = {'argv': [str(value) for value in argv], 'cwd': str(Path(cwd).resolve()), 'backend': backend}
     return {**descriptor, 'identity': hashlib.sha256(
         json.dumps(descriptor, sort_keys=True, separators=(',', ':')).encode()).hexdigest()}
 
 
-def restricted_check(workspace, argv, scratch, timeout=90):
-    if sys.platform != 'darwin' or not Path('/usr/bin/sandbox-exec').is_file():
+def restricted_check(workspace, argv, scratch, timeout=settings.CHECK_TIMEOUT_SECONDS):
+    if sys.platform != 'darwin' or not Path(settings.SANDBOX_EXECUTABLE).is_file():
         raise Barrier('this backend requires verified macOS sandbox-exec; no unsandboxed fallback')
     # JSON quoting is also valid for sandbox path strings. No user shell string.
-    read_roots = ['/System', '/usr', '/bin', '/sbin', '/Library/Developer/CommandLineTools',
-                  '/Library/Frameworks/Python3.framework', str(workspace), str(scratch)]
+    read_roots = [*settings.SANDBOX_READ_ROOTS, str(workspace), str(scratch)]
     allowed = '(literal "/") ' + ' '.join('(subpath ' + json.dumps(r) + ')' for r in read_roots)
     writable = ' '.join('(subpath ' + json.dumps(str(r)) + ')' for r in (workspace, scratch))
     profile = ('(version 1)(allow default)(deny network*)(deny process-fork)'
@@ -170,11 +170,11 @@ def restricted_check(workspace, argv, scratch, timeout=90):
                '(deny file-write* (require-not (require-any ' + writable +
                ' (literal "/dev/null"))))'
                '(deny file-write* (subpath ' + json.dumps(str(workspace / '.git')) + '))')
-    env = {'PATH': '/usr/bin:/bin', 'HOME': str(scratch), 'TMPDIR': str(scratch), 'PYTHONDONTWRITEBYTECODE': '1'}
-    result = subprocess.run(['/usr/bin/sandbox-exec', '-p', profile, *argv], cwd=workspace, env=env,
+    env = {'PATH': settings.RESTRICTED_PATH, 'HOME': str(scratch), 'TMPDIR': str(scratch), 'PYTHONDONTWRITEBYTECODE': '1'}
+    result = subprocess.run([settings.SANDBOX_EXECUTABLE, '-p', profile, *argv], cwd=workspace, env=env,
                             capture_output=True, text=True, timeout=timeout)
     return {'passed': result.returncode == 0, 'exit_code': result.returncode,
-            'output': (result.stdout + result.stderr)[-12000:],
+            'output': (result.stdout + result.stderr)[-settings.CHECK_OUTPUT_MAX_CHARACTERS:],
             'command': check_descriptor(argv, workspace)}
 
 
@@ -232,23 +232,23 @@ class Tools:
             events, after = [], 0
             while True:
                 page = self.client.workflow('history', {'project_id': self.binding['project_id'],
-                    'contract_id': self.binding['contract_id'], 'after': after, 'limit': 100}).get('events', [])
+                    'contract_id': self.binding['contract_id'], 'after': after, 'limit': settings.HISTORY_PAGE_SIZE}).get('events', [])
                 events.extend(page)
-                if len(page) < 100:
+                if len(page) < settings.HISTORY_PAGE_SIZE:
                     break
                 if page[-1]['id'] <= after:
                     raise Barrier('history continuation did not advance')
                 after = page[-1]['id']
-            return {'job': job, 'pending_submission': self.pending_submission(), 'history': events[-10:], 'history_total': len(events),
+            return {'job': job, 'pending_submission': self.pending_submission(), 'history': events[-settings.ASSIGNMENT_HISTORY_LIMIT:], 'history_total': len(events),
                     'latest_review': next((e for e in reversed(events) if e['operation'] == 'verdict'
                         and e.get('job', {}).get('revision', {}).get('number') == self.binding['revision']
                         and e.get('job', {}).get('revision', {}).get('digest') == self.binding['digest']
                         and e.get('job', {}).get('attempt', {}).get('id') == self.binding['attempt_id']), None),
                     'files': sorted(str(p.relative_to(self.workspace)) for p in self.workspace.rglob('*')
-                        if p.is_file() and not any(x.startswith('.git') for x in p.relative_to(self.workspace).parts))[:200]}
+                        if p.is_file() and not any(x.startswith('.git') for x in p.relative_to(self.workspace).parts))[:settings.ASSIGNMENT_FILE_LIMIT]}
         if operation == 'history':
-            after, limit = arguments.get('after', 0), arguments.get('limit', 100)
-            if type(after) is not int or after < 0 or type(limit) is not int or not 1 <= limit <= 100:
+            after, limit = arguments.get('after', 0), arguments.get('limit', settings.HISTORY_PAGE_SIZE)
+            if type(after) is not int or after < 0 or type(limit) is not int or not 1 <= limit <= settings.HISTORY_PAGE_SIZE:
                 raise Barrier('invalid history page bounds')
             result = self.client.workflow('history', {'project_id': self.binding['project_id'],
                 'contract_id': self.binding['contract_id'], 'after': after, 'limit': limit})
@@ -270,19 +270,19 @@ class Tools:
             current = path.read_text()
             if not isinstance(expected, str) or expected != hashlib.sha256(current.encode()).hexdigest():
                 raise Barrier('focused edit version is stale or invalid')
-            if not isinstance(replacements, list) or not 1 <= len(replacements) <= 64:
+            if not isinstance(replacements, list) or not 1 <= len(replacements) <= settings.EDIT_MAX_REPLACEMENTS:
                 raise Barrier('invalid focused edit replacements')
             updated = current
             for replacement in replacements:
                 if not isinstance(replacement, dict) or set(replacement) != {'old', 'new'}:
                     raise Barrier('focused edit replacements require old and new strings')
                 old, new = replacement['old'], replacement['new']
-                if not isinstance(old, str) or not isinstance(new, str) or not old or len(old.encode()) > 32768 or len(new.encode()) > 32768:
+                if not isinstance(old, str) or not isinstance(new, str) or not old or len(old.encode()) > settings.EDIT_LITERAL_MAX_BYTES or len(new.encode()) > settings.EDIT_LITERAL_MAX_BYTES:
                     raise Barrier('invalid focused edit replacement text')
                 if current.count(old) != 1 or updated.count(old) != 1:
                     raise Barrier('focused edit old text must occur exactly once')
                 updated = updated.replace(old, new, 1)
-            if len(updated.encode()) > 512000:
+            if len(updated.encode()) > settings.EDIT_FILE_MAX_BYTES:
                 raise Barrier('focused edit result exceeds capability bound')
             path.write_text(updated)
             self.checks = None
@@ -291,7 +291,7 @@ class Tools:
             if self.role != 'worker' or job['stage'] != 'Implementing':
                 raise Barrier('write capability denied')
             content = arguments['content']
-            if not isinstance(content, str) or len(content.encode()) > 128000:
+            if not isinstance(content, str) or len(content.encode()) > settings.WRITE_MAX_BYTES:
                 raise Barrier('write exceeds capability bound')
             path = checked_path(self.workspace, arguments['path'])
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -392,14 +392,14 @@ class Launcher:
         if not created:
             return row['key']
         home = Path(config['home'])
-        home.mkdir(mode=0o700, exist_ok=True)
-        Path(config['scratch']).mkdir(mode=0o700, exist_ok=True)
+        home.mkdir(mode=settings.PRIVATE_DIRECTORY_MODE, exist_ok=True)
+        Path(config['scratch']).mkdir(mode=settings.PRIVATE_DIRECTORY_MODE, exist_ok=True)
         (home / 'config.yaml').write_text(json.dumps({'model': {'provider': model_runtime['provider'], 'default': config['model']},
                                                      'memory': {'enabled': False}, 'plugins': {'enabled': []},
                                                      'tools': {'tool_search': {'enabled': 'off'}}}))
         if Path(self.source).resolve().is_relative_to(Path(config['workspace']).resolve()) or Path(__file__).resolve().parent.parent.is_relative_to(Path(config['workspace']).resolve()):
             raise Barrier('trusted runtime source must be outside the candidate workspace')
-        env = {'PATH': os.environ.get('PATH', '/usr/bin:/bin'), 'HOME': config['home'],
+        env = {'PATH': os.environ.get('PATH', settings.RESTRICTED_PATH), 'HOME': config['home'],
                'HERMES_HOME': config['home'],
                'PYTHONDONTWRITEBYTECODE': '1', 'TMPDIR': config['scratch'],
                'HERMES_DISABLE_LAZY_INSTALLS': '1'}
@@ -412,11 +412,11 @@ class Launcher:
         stream.close()
         process.stdin.write(json.dumps({'config': dict(config, runtime_journal=self.journal.path), 'model_runtime': model_runtime}))
         process.stdin.close()
-        deadline = time.monotonic() + 90
+        deadline = time.monotonic() + settings.LAUNCH_ACK_TIMEOUT_SECONDS
         while self.journal.get(row['key'])['pid'] is None and time.monotonic() < deadline:
             if process.poll() is not None:
                 raise Barrier('invocation exited before launch acknowledgement')
-            time.sleep(0.03)
+            time.sleep(settings.LAUNCH_POLL_INTERVAL_SECONDS)
         if self.journal.get(row['key'])['pid'] is None:
             raise Barrier('launch response unknown; do not spawn a replacement')
         return row['key']
@@ -426,7 +426,7 @@ class Launcher:
             self.children[key].poll()  # Reap an owned completed child before probing group identity.
         return self.journal.inspect(key)
 
-    def stop(self, key, timeout=10):
+    def stop(self, key, timeout=settings.PROCESS_STOP_TIMEOUT_SECONDS):
         row = self.journal.get(key)
         state = self.inspect(key)
         if state == 'unknown':
@@ -438,5 +438,5 @@ class Launcher:
         while time.monotonic() < deadline:
             if self.inspect(key) == 'stopped':
                 return {'stopped_confirmed': True, 'launch': key}
-            time.sleep(.05)
+            time.sleep(settings.POLL_INTERVAL_SECONDS)
         raise Barrier('termination not yet confirmed')

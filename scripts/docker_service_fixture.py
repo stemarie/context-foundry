@@ -2,12 +2,16 @@
 import json
 import os
 from pathlib import Path
+import sys
 import socket
+import shlex
 import subprocess
 import time
 import urllib.request
 import uuid
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from foundry_runtime import constants as settings
 from foundry_runtime.core import Barrier
 
 
@@ -20,44 +24,44 @@ class DockerService:
         self.tokens, self.current, self.generation = {}, None, 0
         self.events = []
         info = json.loads(self.docker('image', 'inspect', image))[0]
-        if info['Config']['User'] != '65532':
+        if info['Config']['User'] != settings.FIXTURE_CONTAINER_UID:
             raise Barrier('actual service proof requires the existing non-root image')
         self.image = info['Id']
         self.docker('volume', 'create', '--label', self.label, self.volume)
-        self.mount = 'type=volume,src=' + self.volume + ',dst=/var/lib/ai-contract'
-        self.docker('run', '--rm', '--label', self.label, '--mount', self.mount, 'busybox:1.36',
-                    'sh', '-c', 'chown 65532:65532 /var/lib/ai-contract && chmod 700 /var/lib/ai-contract')
+        self.mount = 'type=volume,src=' + self.volume + ',dst=' + settings.FIXTURE_STATE_DIRECTORY
+        self.docker('run', '--rm', '--label', self.label, '--mount', self.mount, settings.FIXTURE_HELPER_IMAGE,
+                    'sh', '-c', f'chown {shlex.quote(settings.FIXTURE_CONTAINER_USER)} {shlex.quote(settings.FIXTURE_STATE_DIRECTORY)} && chmod {settings.PRIVATE_DIRECTORY_MODE:o} {shlex.quote(settings.FIXTURE_STATE_DIRECTORY)}')
         with socket.socket() as listener:
-            listener.bind(('127.0.0.1', 0)); self.port = listener.getsockname()[1]
-        self.url = 'http://127.0.0.1:' + str(self.port)
+            listener.bind((settings.LOCAL_BIND_HOST, 0)); self.port = listener.getsockname()[1]
+        self.url = f'http://{settings.LOCAL_BIND_HOST}:{self.port}'
         for role, scope in [('admin','admin'),('architect','read,write,architect'),('reader','read')]:
             self.tokens[role] = self.issue_token('mock-' + role, scope)
 
     def docker(self, *args):
-        result = subprocess.run(['docker', '--host', self.host, *args], capture_output=True, text=True, timeout=120)
+        result = subprocess.run(['docker', '--host', self.host, *args], capture_output=True, text=True, timeout=settings.FIXTURE_DOCKER_TIMEOUT_SECONDS)
         if result.returncode:
             raise Barrier('owned Docker fixture operation failed')
         return ((result.stdout + result.stderr) if args[0]=='logs' else result.stdout).strip()
 
     def issue_token(self, actor, scopes):
-        result = self.docker('run','--rm','--label',self.label,'--user','65532:65532',
+        result = self.docker('run','--rm','--label',self.label,'--user',settings.FIXTURE_CONTAINER_USER,
                              '--mount',self.mount,self.image,'token','issue',actor,scopes)
         return next(line[6:] for line in result.splitlines() if line.startswith('token='))
 
     def start(self):
         self.generation += 1
         self.current = self.name + '-' + str(self.generation)
-        container = self.docker('run','-d','--name',self.current,'--label',self.label,'--user','65532:65532',
-            '--mount',self.mount,'-p','127.0.0.1:'+str(self.port)+':8080',self.image)
-        deadline = time.monotonic()+30
+        container = self.docker('run','-d','--name',self.current,'--label',self.label,'--user',settings.FIXTURE_CONTAINER_USER,
+            '--mount',self.mount,'-p',f'{settings.LOCAL_BIND_HOST}:{self.port}:{settings.FIXTURE_CONTAINER_PORT}',self.image)
+        deadline = time.monotonic()+settings.FIXTURE_READY_TIMEOUT_SECONDS
         while time.monotonic()<deadline:
             try:
-                with urllib.request.urlopen(self.url+'/readyz',timeout=1) as response:
+                with urllib.request.urlopen(self.url+'/readyz',timeout=settings.FIXTURE_READY_REQUEST_TIMEOUT_SECONDS) as response:
                     if response.status==200:break
-            except OSError:time.sleep(.2)
+            except OSError:time.sleep(settings.FIXTURE_POLL_INTERVAL_SECONDS)
         else:raise Barrier('owned Docker service not ready')
         actual=json.loads(self.docker('inspect',self.current))[0]
-        if actual['Image'] != self.image or actual['Config']['User'] != '65532:65532':
+        if actual['Image'] != self.image or actual['Config']['User'] != settings.FIXTURE_CONTAINER_USER:
             raise Barrier('service image/identity changed')
         self.events.append({'container':container,'image':self.image,'generation':self.generation,
                             'user':actual['Config']['User'],'origin':self.url})
@@ -70,7 +74,7 @@ class DockerService:
                 raise Barrier('fixture log contains a credential')
             self.docker('rm','-f',self.current);self.current=None
 
-    def replace(self, downtime=6):
+    def replace(self, downtime=settings.FIXTURE_REPLACEMENT_DOWNTIME_SECONDS):
         before=self.events[-1]
         self.stop()
         time.sleep(downtime)  # Bounded deliberate local outage; no production networking affected.

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Available prerequisites only: never starts an agent or asserts native Done."""
-import argparse,importlib.util,json,os,pathlib,subprocess,tempfile,shutil
+import argparse,importlib.util,json,os,pathlib,subprocess,tempfile,shutil,sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from foundry_runtime import constants as settings
 parser=argparse.ArgumentParser(description="Run disposable service/skill prerequisites only; this is not real-agent acceptance.")
 parser.add_argument('--ai-contract-checkout',required=True,type=pathlib.Path)
 parser.add_argument('--service-binary',required=True,type=pathlib.Path)
@@ -19,16 +21,16 @@ def load(name,path):
  spec=importlib.util.spec_from_file_location(name,path);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
 mock=load('cf_mock',AIC/'scripts/mock_client.py')
 native=load('cf_native',AIC/'cmd/aicontract/hermes_native_mcp_container_proof.py')
-fixture=pathlib.Path(tempfile.mkdtemp(prefix='cf-service-preflight-',dir='/private/tmp'))
+fixture=pathlib.Path(tempfile.mkdtemp(prefix='cf-service-preflight-',dir=settings.MACOS_TEMP_DIRECTORY))
 server=None
 try:
- server=mock.LocalServer(str(BINARY),str(fixture),15)
+ server=mock.LocalServer(str(BINARY),str(fixture),settings.FIXTURE_SERVICE_TIMEOUT_SECONDS)
  tokens=server.tokens
  for actor,scopes in [('coordinator','read,write,coordinator'),('worker','read,write,writer'),('qa','read,write,auditor')]:
   result=subprocess.run([str(BINARY),'token','issue','acceptance-'+actor,scopes],env=server.env,text=True,capture_output=True,check=True)
   tokens[actor]=next(line[6:] for line in result.stdout.splitlines() if line.startswith('token='))
- url=server.start();client=mock.Client(url,tokens,'http',10)
- project=client.call('project_create',{'title':'Disposable real-agent acceptance','repository':'stemarie/context-foundry','delivery_policy':'Direct main only after actual independent QA and verified non-force delivery; no deployment.'})['project']
+ url=server.start();client=mock.Client(url,tokens,'http',settings.SERVICE_REQUEST_TIMEOUT_SECONDS)
+ project=client.call('project_create',{'title':'Disposable real-agent acceptance','repository':settings.AUTHORIZED_DELIVERY_REPOSITORY,'delivery_policy':'Direct main only after actual independent QA and verified non-force delivery; no deployment.'})['project']
  pid=project['id']
  milestone=client.call('milestone_create',{'project_id':pid,'ordinal':1,'title':'Real-agent acceptance','goal':'Verify the existing service and identify required external runtime prerequisites.','scope':'Disposable local acceptance; do not fabricate runtime assignment or completion.','acceptance_criteria':'Current skill and native service discovery; subsequent runtime/real-Git gates require their actual adapter implementation.'})['milestone']
  client.call('project_planning_boundary',{'project_id':pid,'through':1,'expected_revision':0})
@@ -36,9 +38,9 @@ try:
  for actor,role in [('worker','worker'),('qa','qa')]:
   client.call('workflow_agent',{'project_id':pid,'agent':'acceptance-'+actor,'agent_role':role,'idempotency_key':'preflight-agent-'+actor})
  for actor in ['coordinator','worker','qa']:
-  home=fixture/('home-'+actor);home.mkdir(mode=0o700)
+  home=fixture/('home-'+actor);home.mkdir(mode=settings.PRIVATE_DIRECTORY_MODE)
   native.write_native_home(home,url,tokens[actor])
-  config=json.loads((home/'config.yaml').read_text());config['skills']={'external_dirs':[str(FOUNDRY/'skills')]};(home/'config.yaml').write_text(json.dumps(config));(home/'config.yaml').chmod(0o600)
+  config=json.loads((home/'config.yaml').read_text());config['skills']={'external_dirs':[str(FOUNDRY/'skills')]};(home/'config.yaml').write_text(json.dumps(config));(home/'config.yaml').chmod(settings.PRIVATE_FILE_MODE)
   result=native.native_call(HERMES,PYTHON,home,'mcp__ai_contract_test__workflow_agents',{'project_id':pid})
   assert {(a['actor'],a['role']) for a in result['workflow']['agents']}=={('acceptance-worker','worker'),('acceptance-qa','qa')}
   print('PASS native Hermes workflow_agents:',actor)
