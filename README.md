@@ -1,10 +1,25 @@
 # Context Foundry
 
-Context Foundry provides **shared agent skills for Codex and Hermes**, written in `SKILL.md` format, for turning an approved software goal into implemented, independently checked, and verified repository changes. The native workflow uses AI.Contract to track execution. A separate standalone skill creates GitHub issue work orders without that service.
+Context Foundry defines and implements an **AI.Contract-backed workflow for coordinated software delivery**. A human sets the goal and scope; Architect, Coordinator, Worker, and independent QA roles turn that scope into bounded work contracts, isolated implementation, checked candidates, and verified repository delivery. The workflow supports parallel work where dependencies and declared conflicts permit it.
 
-Codex and Hermes reuse the same thirteen native skill definitions for planning, roles, and workflow handoffs; there is no separate duplicated Hermes skill set. The instructions are also distributed through the Foundry + OpenSpec plugin for ChatGPT. Each host still needs the dependencies and authorized capabilities required by the selected skill.
+The workflow is expressed through thirteen shared `SKILL.md` skills usable by Codex and Hermes. AI.Contract owns execution state; OpenSpec supplies planning and requirement mapping. The same instructions are packaged with OpenSpec skills for ChatGPT. The skills describe the process and its responsibilities; `foundry_runtime/` supplies the exercised process, workspace, check, recovery, and GitHub delivery controls.
 
-The shared skills are separate from the execution adapter. `foundry_runtime/` implements the tested Worker/QA backend using Hermes processes on macOS, including workspace isolation, checks, recovery, and GitHub transport controls. Skill support in Codex does not establish a tested Codex Worker/QA backend. Native execution requires a configured service, actor identities, and a supported runtime; loading skills alone starts no work.
+The central requirement is evidence-backed completion: an agent's summary, a passing review, or a pushed branch is insufficient. Independent QA must apply to the exact candidate, delivery must preserve intervening work, and required checks must succeed before AI.Contract records Done. Recovery must reconcile uncertain operations and prevent competing writers.
+
+## Current implementation and limits
+
+The shared instructions are reusable. The bundled execution implementation is a bounded, operator-driven Hermes/macOS setup with specific target restrictions. It is not yet a general-purpose controller that can be installed and pointed at any repository.
+
+| Area | What the repository currently provides |
+| --- | --- |
+| Skills | Thirteen shared native definitions; recorded discovery in Codex and Hermes. Loading them does not provision execution capabilities. |
+| Worker/QA runtime | Tested Hermes processes on macOS with isolated workspaces, actor-bound access, independent QA, and restricted operator-selected checks. A Codex Worker/QA execution backend is not demonstrated here. |
+| Repository delivery | The bundled [GitHub adapter](foundry_runtime/remote.py) explicitly permits only `stemarie/context-foundry`. Another target requires an authorized code change and verification, not just a different configuration value. |
+| Service connection | The [commissioned connection adapter](foundry_runtime/local_connection.py) enforces the private BEE1 SSH endpoint. It is not a generic connection installer. |
+| Coordination | Role procedures and operator-invoked runtime building blocks. The operator supplies current assignment/configuration and performs bounded coordination; there is no finished generic controller or unattended continuation. |
+| Other environments | Other operating systems, less restricted build systems, and additional execution backends require implementation and their own evidence. |
+
+The separately installed GitHub work-order skill is a small planning/handoff utility. It does not replace AI.Contract or implement a second Foundry execution system.
 
 ## Choose a workflow
 
@@ -13,8 +28,8 @@ The shared skills are separate from the execution adapter. `foundry_runtime/` im
 | Explore requirements or design | `foundry-explore` | Installed OpenSpec exploration skill; returns analysis without starting implementation. |
 | Create a proposal | `foundry-propose` | Installed OpenSpec proposal skill and its CLI prerequisites; produces planning artifacts. |
 | Create one native work contract | `foundry-create-workorder` | AI.Contract project and approved milestone horizon; authors or reuses a bounded revision without dispatching it. |
-| Execute one native cycle | `foundry-loop` | Configured service, actors, runtime, and delivery access; proceeds through implementation, independent QA, and verified delivery. |
-| Progress toward an approved goal | `foundry-start` | Same execution prerequisites; resumes existing work and repeats bounded cycles, at most five by default. |
+| Execute one native cycle | `foundry-loop` | Directs one implementation/QA/delivery cycle through supported operator/runtime capabilities; the bundled implementation has the restrictions above. |
+| Progress toward an approved goal | `foundry-start` | Directs bounded repetition through the same supported capabilities; resumes existing work and allows at most five cycles by default. |
 | Create a GitHub issue for Codex | [foundry-create-gh-workorder](standalone-skills/foundry-create-gh-workorder/SKILL.md) | Target repository and GitHub access; creates an issue or returns a draft. Does not implement or dispatch. |
 
 The native pack contains thirteen Foundry roles, entry points, and the OpenSpec adapter. The [Foundry + OpenSpec plugin](https://chatgpt.com/plugins/plugins_6ae66b5a7f38819197cb595683297669), release **1.1.3**, combines these with twelve OpenSpec planning skills: 25 discoverable skills in total. The GitHub work-order skill is installed separately, outside native-pack discovery. See the [complete native skill index](skills/README.md).
@@ -40,7 +55,7 @@ QA acceptance is not Done: completion requires integration and successful verifi
 
 ## Install and discover the skills
 
-For Codex or ChatGPT, install the Foundry + OpenSpec plugin for the combined planning and native workflow instructions. Verify that required skills and shared references are readable. Its source is in `plugins/foundry-openspec/`; installation does not provision AI.Contract credentials, a runtime, or OpenSpec CLI.
+For Codex or ChatGPT accounts with access, the Foundry + OpenSpec plugin supplies the combined planning and native workflow instructions. The linked account plugin is private, not a public installation available to every repository reader. Its source bundle is in `plugins/foundry-openspec/` for local packaging and installation through a supported host mechanism. Verify that skills and references are readable. Installing instructions does not provision AI.Contract credentials, a runtime, or OpenSpec CLI.
 
 For local Hermes setup, keep a complete checkout and follow the [Hermes handoff](docs/HERMES_HANDOFF.md). Its existing `skills.external_dirs` configuration can load the source directory; preserve other configured directories. Source planning wrappers also need their OpenSpec dependencies available through the host skill loader.
 
@@ -60,7 +75,7 @@ For GitHub-only handoffs, install the complete `standalone-skills/foundry-create
 
 ## Configure native execution
 
-Resolve the following from the intended service and operator host before requesting a run:
+For the existing supported operator route, resolve the following from the service and host before requesting a run. For a different repository or connection, first adapt and verify the relevant bundled adapters; these prerequisites alone do not remove their code-enforced restrictions.
 
 - A reachable AI.Contract deployment supporting the [native workflow interface](skills/AI_CONTRACT_INTERFACE.md), with read access and required role mutations.
 - A project bound to one repository, approved milestones and planning horizon, an explicit queue target, and registered Worker and separate QA pools.
@@ -76,7 +91,7 @@ The exercised Worker/QA backend uses macOS `sandbox-exec`, a prepared Hermes env
 
 ## Request work
 
-These prompts are examples for a host with the named skills loaded. Replace placeholders with verified project, repository, and goal context.
+These prompts select skill procedures; they are not executable CLI commands or a substitute for runtime setup. Replace placeholders with verified project, repository, and goal context. Planning and the standalone GitHub handoff can be used independently of the native execution adapter.
 
 **Plan:**
 
@@ -85,6 +100,8 @@ These prompts are examples for a host with the named skills loaded. Replace plac
 > Use foundry-propose to prepare an OpenSpec proposal for <goal> in the selected project/store. Stop after planning artifacts.
 
 **Execute after native setup:**
+
+Use the existing supported operator route and delivery target, or an independently implemented and verified replacement. Changing the repository placeholder alone does not extend the bundled adapter's allowlist.
 
 > Use foundry-start for <AI.Contract project> and <repository> to reach <approved goal>. Stay within the existing milestone horizon, resume unfinished work first, and use at most three cycles. Follow repository delivery policy. No deployment.
 
