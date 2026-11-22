@@ -8,12 +8,14 @@ This is the entry point to give Hermes. Read both repositories' AGENTS.md first.
 | --- | --- |
 | AI.Contract projects/milestones and native workflow | Implemented, merged, tested over HTTP/MCP |
 | Architect, Coordinator, Worker, QA skill source | Available with shared rules and API mapping |
-| Installed Hermes connection on this host | Native discovery and actor isolation verified in disposable homes; active config unchanged |
+| Connection setup | Disposable native discovery/actor isolation and a later commissioned BEE1 read-only bridge are documented; verify the selected host and current credentials |
 | Runtime launch/stop/identity/workspace adapter | Implemented and verified for bounded local macOS execution |
 | Shared GitHub circuit breaker | Implemented; shared-project simulation and real gated delivery verified |
 | Real one-contract and parallel-agent acceptance | Passed; [report and boundaries](HERMES_ACCEPTANCE_2026-11-01.md) |
 
 The service mock clients use mock execution attestations. They are not evidence that Hermes workers ran. This guide authorizes no production deployment by itself; use the actual operator task and existing permissions.
+
+For the subsequently commissioned operator host, start with [the BEE1 operating guide](LOCAL_COMMISSIONED_WORKFLOW.md) before making configuration changes. Its global MCP view is read-only; native writes use separate role-bound operator/runtime clients. Reuse the existing setup where verified rather than exposing a Coordinator mutation credential globally. Historical setup and acceptance do not establish today's access or credential validity.
 
 ## Required inputs
 
@@ -59,13 +61,13 @@ skills:
 
 Merge this entry with existing external_dirs. Do not replace the rest of config.yaml or move only the four SKILL.md files: they reference shared files and the repository-root contract. If a skill-view interface restricts parent traversal, read those shared documents through an authorized filesystem tool at the verified checkout path.
 
-Start a fresh Hermes session, or use that installed version's supported refresh. Verify that all four foundry-* skills are discovered and resolve to this checkout, with no shadowing copies. Read each skill and its shared references successfully. Record the source revision.
+Start a fresh Hermes session, or use that installed version's supported refresh. Verify that all thirteen native skills, including the four roles, are discovered and resolve to the intended source or rendered pack, with no shadowing copies. Read each required skill and shared reference successfully. The explore/propose wrappers additionally require their installed OpenSpec dependencies. Record the source revision.
 
 If external_dirs is unsupported, use the installed version's documented installation mechanism while preserving the entire dependency layout, and verify discovery/readability. Do not create persistent role profiles to work around packaging. Updating skill files is a source change subject to the repository's delivery rules.
 
 ## Connect the Coordinator, then isolate child actors
 
-Follow service setup for the real origin, scoped tokens, project, milestones, horizon, and pools. Add only the Coordinator's service credential to its MCP context. Verify actual tool discovery and a native read.
+For a new setup, follow service setup for the real origin, scoped tokens, project, milestones, horizon, and pools. Bind the Coordinator's authorized client privately to its own context rather than exposing all role credentials globally. Verify actual tool discovery and a native read. On the commissioned BEE1 setup, keep the documented global MCP connection read-only and use the existing private role-bound operator route for mutations.
 
 The Worker and QA contexts must receive their own actor-bound API/MCP clients through the runtime adapter. Merely loading a different skill or setting a prompt role does not change the bearer identity. Do not expose all roles' credentials/connections to every child.
 

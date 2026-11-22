@@ -83,7 +83,7 @@ The public launch `config` may include an optional `sdk` object for both Worker 
 
 Workers also have an `edit` operation for bounded literal changes to an existing regular workspace file. First `read` the complete current file and retain its returned SHA-256 `version`; then supply it as `expected_digest` with 1–64 `{old, new}` string replacements. Each `old` must be nonempty and occur exactly once; each old/new value is at most 32 KiB and the result at most 512 KiB. All replacements are validated before the write, stale/ambiguous/missing values fail without mutation, and a successful edit clears prior check evidence. The same checked-path, current Implementing authority, worker role, lock, traversal/symlink/metadata restrictions apply. QA cannot edit. This is literal file editing only: it has no shell, code execution, network, or baseline-source restore path; full `write` remains available under its existing limits.
 
-This delivery uses the coordinator's transparent task-only bootstrap for the prerequisite Worker/QA execution. It is not the larger stock-runtime coding proof; that proof remains pending the dependent contract.
+The prerequisite delivery used a transparent task-only bootstrap. The later stock-runtime coding delivery and final verification are recorded separately in historical issues [#49](https://github.com/stemarie/context-foundry/issues/49) and [#50](https://github.com/stemarie/context-foundry/issues/50). Keep those source/host-specific outcomes distinct from the earlier bootstrap and from current live service health.
 
 The [command-admission/integration proof](COMMAND_ADMISSION_PROOFS_2026-11-01.md)
 adds per-command generation checks: opening/recovering the breaker invalidates an

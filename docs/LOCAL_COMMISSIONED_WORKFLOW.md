@@ -36,7 +36,7 @@ The operator may set `config.sdk` for either Worker or QA: `max_iterations` 1–
 
 A Worker can use public `foundry_action` operation `edit` for an existing checked workspace file: read the complete content, provide that SHA-256 version as `expected_digest`, and provide 1–64 exact `{old,new}` replacements. Every old literal must be nonempty and unique; values are capped at 32 KiB and the resulting file at 512 KiB. Validation occurs before mutation, successful edits clear checks, and stale, ambiguous, missing, traversal, symlink, metadata, and QA edits are rejected. This grants no shell, code, network, or baseline restore access; full write remains compatible.
 
-For this prerequisite delivery the Worker/QA uses the transparent task-only bootstrap supplied by the Coordinator. The larger STOCK runtime coding proof is pending its dependent contract and is not claimed here.
+The prerequisite delivery used a transparent task-only bootstrap supplied by the Coordinator. The subsequent stock-runtime coding delivery and final verification are recorded in historical issues [#49](https://github.com/stemarie/context-foundry/issues/49) and [#50](https://github.com/stemarie/context-foundry/issues/50). Their completed proofs retain their stated revisions and host scope; they do not prove current credential validity or service availability.
 
 ## Native execution and delivery
 

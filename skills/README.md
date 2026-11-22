@@ -1,40 +1,67 @@
-# Foundry skills
+# Native Foundry skills
 
-Version 0.4: runtime-neutral instructions. Source files exist; they are not automatically installed into this chat or any runtime. The [native service interface](https://github.com/stemarie/AI.Contract/blob/main/docs/native-workflow.md) is merged and tested; the bounded local macOS adapter and [real-agent acceptance](../docs/HERMES_ACCEPTANCE_2026-11-01.md) are available. Live project configuration and deployment remain separate.
+This directory contains thirteen native Foundry skills: four roles, eight entry points, and one OpenSpec adapter. They use AI.Contract for execution authority and evidence. The standalone `foundry-create-gh-workorder` skill lives under `standalone-skills/` in the owning repository and is installed separately.
 
-- [Architect](foundry-architect/SKILL.md): author and reassess bounded contracts.
-- [Coordinator](foundry-coordinator/SKILL.md): reserve, dispatch, recover, integrate, and record history.
-- [Worker](foundry-worker/SKILL.md): implement assigned contracts and submit evidence.
-- [QA](foundry-qa/SKILL.md): independently verify candidates and route corrections.
+## Choose an entry point
 
-Every skill first reads the [AI.Contract interface mapping](AI_CONTRACT_INTERFACE.md), [shared operating rules](OPERATING_RULES.md), the [work contract](../WORK_CONTRACT.md), and [agreed workflow](../docs/WORKFLOW.md). Package these referenced files together when installing or copying the skills. Relative paths refer to this repository, not the target project.
+| Skill | Purpose and stopping point |
+| --- | --- |
+| [foundry-explore](foundry-explore/SKILL.md) | Invoke installed OpenSpec exploration; stop at analysis. |
+| [foundry-propose](foundry-propose/SKILL.md) | Invoke installed OpenSpec proposal creation; stop at planning artifacts. |
+| [foundry-create-workorder](foundry-create-workorder/SKILL.md) | Author or reuse a bounded native milestone contract/revision; verify readiness without dispatch. |
+| [foundry-loop](foundry-loop/SKILL.md) | Complete exactly one authorized native cycle through verified delivery and history. |
+| [foundry-start](foundry-start/SKILL.md) | Resume and repeat cycles toward an approved goal; at most five by default unless the user sets another limit. |
+| [foundry-implement](foundry-implement/SKILL.md) | Implement an existing actor-bound Worker assignment and submit evidence. |
+| [foundry-audit](foundry-audit/SKILL.md) | Independently review an assigned candidate; also supports explicitly read-only repository/history audits. |
+| [foundry-commit](foundry-commit/SKILL.md) | Deliver an exact QA-accepted candidate, verify it, record native Done, and publish history. |
+| [openspec-foundry](openspec-foundry/SKILL.md) | Map OpenSpec requirements/tasks to native contracts and evidence without creating another executor. |
 
-For Hermes installation, actor isolation, runtime implementation, and real-agent proof, follow the [Hermes handoff](../docs/HERMES_HANDOFF.md).
+## Roles
 
-## Invocation and capability boundary
+| Role | Responsibility |
+| --- | --- |
+| [Architect](foundry-architect/SKILL.md) | Inspect evidence, author bounded contracts within human scope, declare dependencies/conflicts, and reassess material changes. |
+| [Coordinator](foundry-coordinator/SKILL.md) | Reserve eligible work, launch configured actors, recover executions, assign independent QA, serialize integration, and record outcomes. |
+| [Worker](foundry-worker/SKILL.md) | Implement its assigned revision in isolation, verify behavior, submit evidence, and address corrections. |
+| [QA](foundry-qa/SKILL.md) | Review the exact candidate independently and return acceptance, reproducible corrections, or a concrete blocker. |
 
-Provide the AI.Contract connection reference, project identifier or verified project lookup, target repository context, and authenticated actor identity. Coordinator invocation additionally needs configured Worker/QA pools and launch/stop/health and integration adapters. Workers and QA discover their assignment in the service using their runtime-bound identity. The verified local identity/bootstrap interface is documented in [LOCAL_RUNTIME.md](../docs/LOCAL_RUNTIME.md).
+Loading a role skill does not create an actor identity. Workers cannot self-claim or self-approve; QA cannot patch the candidate it judges. Coordinator delivery follows the target repository's authority and policy.
 
-Use the documented native workflow interface only after checking live capabilities and authorization. Existing serial-chain PASS-to-Done semantics remain incompatible; native workflow enrollment provides a separate state machine.
+## Shared instructions and installation
 
-Preparation can inspect source and return clearly marked drafts without service writes. Live work must use AI.Contract for authority and ownership. Missing capabilities produce a concrete blocker, not local JSON state, issue labels, Markdown projections, or an improvised queue.
+Native execution skills use the [AI.Contract interface mapping](AI_CONTRACT_INTERFACE.md), [operating rules](OPERATING_RULES.md), [work contract](../WORK_CONTRACT.md), and [workflow decisions](../docs/WORKFLOW.md). Read the references required by the selected skill. The explore/propose wrappers preserve OpenSpec planning boundaries.
 
-## Manual review exercises
+Keep the complete reference layout. From the owning repository root, `scripts/package_skills.py --destination <directory>` renders native skills and shared references; `--verify-only` checks source/rendered hashes and links. Install the OpenSpec planning dependencies before rendering a new destination: bundled copies are under `plugins/foundry-openspec/skills/openspec-*`. The renderer preserves those official skills and unrelated files.
 
-These are instruction walkthroughs, not runtime tests or proof of service behavior. See [review scenarios](../docs/SKILL_REVIEW.md). Actual one-contract and concurrent operation are recorded separately in the acceptance report.
+Source paths refer to the repository. Rendered paths refer to the generated pack, including `foundry-shared/`. Copying only SKILL.md files breaks shared references. Refresh the host and verify each skill resolves to the intended copy without shadowing.
 
-## Native execution entry points
+The combined plugin contains these thirteen native skills plus twelve official OpenSpec planning skills. It supplies instructions, not a machine connection or credentials. Reinstall through the owning source/release workflow rather than editing a versioned cache. Follow the [Hermes setup guide](../docs/HERMES_HANDOFF.md) for local discovery and actor setup.
 
-The installed `foundry-start` and `foundry-loop` entry points use AI.Contract for
-live work. `foundry-create-workorder`, `foundry-implement`, `foundry-audit` and
-`foundry-commit` cover bounded native stages; the four role skills provide their
-role procedures. GitHub issues record final outcomes only. `foundry-explore`,
-`foundry-propose` and the OpenSpec skills retain planning boundaries;
-`openspec-foundry` maps requirements/tasks without becoming another queue.
+## Execution prerequisites
 
-`scripts/package_skills.py` renders portable local/plugin copies with a complete
-shared-reference closure. Source role references are preserved semantically and
-rewritten only for the installed layout. The four roles and nine entry/adapter
-skills are maintained here. Official OpenSpec planning skills remain separate
-unchanged dependencies. Reinstall from the owning source rather than editing a
-versioned plugin cache.
+Resolve the approved goal, repository/delivery policy, AI.Contract connection/project, milestone horizon, queue target, Worker/QA pools, and actor-bound credential references before a live run. Verify the deployed native interface. Generic contract status updates and serial-chain PASS-to-Done behavior do not replace native revisions, attempts, or integration.
+
+Execution also needs a supported launch/stop/health adapter, isolated workspaces, independent QA snapshots, required check commands, and a shared GitHub gate. The exercised backend is the bounded local macOS Hermes adapter in [LOCAL_RUNTIME.md](../docs/LOCAL_RUNTIME.md). Its restricted checks do not support every build system; other backends require their own verification.
+
+The [commissioned BEE1 guide](../docs/LOCAL_COMMISSIONED_WORKFLOW.md) describes an existing host-specific read-only MCP connection and private operator setup. Verify current access and credential validity. A globally exposed reader connection cannot perform role mutations. Historical setup evidence is distinct from current live capability.
+
+## Requests and outcomes
+
+Use `foundry-propose` for planning, `foundry-create-workorder` for native authorship only, `foundry-loop` for one cycle, or `foundry-start` for bounded progress. Include project/repository, approved goal, cycle limit when needed, and existing policy references. OpenSpec-backed work also identifies the selected change/store.
+
+The sequence is Draft → Ready → Implementing → QA → QA accepted → Integrating → Done. Ready is distinct from dispatch eligibility. Corrections remain within the current cycle; changed candidates need fresh QA. Done requires integration and successful verification. Expiry never proves the old process stopped. Reconcile uncertain launch, submission, and remote outcomes before retrying.
+
+Report actual project/contract/revision/attempt and candidate identities, stage, checks, delivery/history references, and blockers. Distinguish drafts, local implementation, QA acceptance, delivery, and native Done. A returned bounded invocation is not a background scheduler.
+
+Missing service/runtime capabilities produce a specific blocker. They do not authorize a GitHub issue queue, local shadow state, new actors, extra scope, or deployment. Standalone issue handoffs use the separately named skill and still follow target-project instructions.
+
+## Verification
+
+From the repository root:
+
+```sh
+python3 scripts/package_skills.py --destination plugins/foundry-openspec/skills
+python3 -m unittest discover -s tests -p test_skill_packaging.py -v
+```
+
+Review generated changes and hash manifests. Packaging proves reference integrity and preservation, not runtime behavior. See [manual review scenarios](../docs/SKILL_REVIEW.md), [real-agent acceptance](../docs/HERMES_ACCEPTANCE_2026-11-01.md), [connection receipt acceptance](../docs/CONNECTION_RECOVERY_ACCEPTANCE_2026-11-02.md), and the [operator quickstart](../docs/RUNTIME_QUICKSTART.md) for their verification scopes. Historical reports retain their original sources and boundaries.

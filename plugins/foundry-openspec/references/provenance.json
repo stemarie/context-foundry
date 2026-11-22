@@ -6,7 +6,8 @@
     "Shared runtime and skill-loading guidance",
     "Removed CLI-specific allowed-tools restriction in plugin copies",
     "Normalized unsupported legacy product metadata without restricting products",
-    "Resized bundled skill icon to 128 pixels"
+    "Resized bundled skill icon to 128 pixels",
+    "Expanded native README setup, role and invocation instructions; refreshed generated shared references against the repository source."
   ],
   "native_foundry_source": "https://github.com/stemarie/context-foundry",
   "native_foundry_content": {

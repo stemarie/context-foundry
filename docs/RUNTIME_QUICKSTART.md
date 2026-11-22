@@ -8,7 +8,7 @@ This guide is for an operator using the bounded local Hermes adapter. It covers 
 
 The operator provides a disposable native Hermes home, scratch directory, isolated workspace, role credential, and immutable binding to `Launcher.ensure(config, model_runtime)`. Use a prepared Hermes virtualenv. The child sets `HERMES_DISABLE_LAZY_INSTALLS=1`, so an isolated home does not provision dependency copies; missing dependencies fail closed. Provider credentials are supplied through private stdin and are not placed in the launch journal or model tool arguments. The agent receives only `foundry_action`; it has no shell, remote Git, or generic network capability.
 
-Worker tools are limited to assignment/read/diff/check/write/submit. QA tools are limited to assignment/read/diff/check/verdict. Each tool operation revalidates current service authority. Checks run under the verified macOS `sandbox-exec` backend, which denies network access, process forks, foreign data reads, foreign writes, and Git metadata writes. There is no unsandboxed fallback.
+Worker tools include assignment/read/diff/check/write/edit/submit. The bounded literal `edit` operation requires the current file digest and exact replacements; it grants no shell or code execution. QA tools include assignment/read/diff/check/verdict and cannot edit the candidate. Each operation revalidates current service authority. Checks run under the verified macOS `sandbox-exec` backend, which denies network access, process forks, foreign data reads, foreign writes, and Git metadata writes. There is no unsandboxed fallback.
 
 ## Start and observe an invocation
 
