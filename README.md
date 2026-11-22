@@ -1,8 +1,10 @@
 # Context Foundry
 
-Context Foundry provides agent skills and a bounded runtime for turning an approved software goal into implemented, independently checked, and verified repository changes. The native workflow uses AI.Contract to track execution. A separate standalone skill creates GitHub issue work orders without that service.
+Context Foundry is a collection of **Codex skills**, written in `SKILL.md` format, for turning an approved software goal into implemented, independently checked, and verified repository changes. The native workflow uses AI.Contract to track execution. A separate standalone skill creates GitHub issue work orders without that service.
 
-The skills define responsibilities and handoffs. `foundry_runtime/` implements the exercised local Hermes process, workspace, check, recovery, and GitHub transport controls. Installing skills alone does not connect a machine or start execution.
+Use the skills in Codex for the planning, role, and workflow instructions described below. The same instructions are also packaged for ChatGPT and can be loaded by Hermes. The skills define responsibilities and handoffs; they are separate from the execution backend.
+
+`foundry_runtime/` implements the verified Worker/QA backend using Hermes processes on macOS, including workspace isolation, checks, recovery, and GitHub transport controls. Loading the skills in Codex does not by itself provide a Codex Worker/QA backend, connect a machine, or start execution.
 
 ## Choose a workflow
 
