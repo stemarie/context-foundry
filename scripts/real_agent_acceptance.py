@@ -16,12 +16,12 @@ import tempfile
 import time
 import uuid
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from foundry_runtime import constants as settings
+from foundry_runtime.checkout import resolve_checkout
 from foundry_runtime.core import Barrier, Gate, Journal
 from foundry_runtime.runtime import Client, Launcher, ServiceError, local_git
 from foundry_runtime.remote import GitHub
-from scripts.acceptance_support import (load_module as load, issue_actor_tokens, resolve_provider,
+from .acceptance_support import (load_module as load, issue_actor_tokens, resolve_provider,
                                         quiet_call, workflow_call, job_binding, workflow_pages, history_snapshot)
 
 
@@ -57,7 +57,7 @@ def write_report(path, report):
 
 
 def run(args):
-    checkout = Path(__file__).resolve().parents[1]
+    checkout = resolve_checkout(getattr(args, 'foundry_checkout', None), match_runtime=True)
     root = Path(tempfile.mkdtemp(prefix='cf-real-agent-', dir=settings.MACOS_TEMP_DIRECTORY))
     root.chmod(settings.PRIVATE_DIRECTORY_MODE)
     print('PRIVATE_FIXTURE', root, flush=True)
@@ -578,12 +578,16 @@ os._exit(0)
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--foundry-checkout', type=Path)
     for name in ('ai-contract-checkout', 'service-binary', 'hermes-source', 'hermes-python', 'report'):
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--scenario',choices=['single','parallel','recovery','correction'],default='single')
     parser.add_argument('--docker-image')
     parser.add_argument('--docker-host',default=os.environ.get('DOCKER_HOST', settings.FIXTURE_DOCKER_HOST))
-    run(parser.parse_args())
+    args = parser.parse_args()
+    try:args.foundry_checkout = resolve_checkout(args.foundry_checkout, match_runtime=True)
+    except ValueError as exc:parser.error(str(exc))
+    run(args)
 
 if __name__ == '__main__':
     main()

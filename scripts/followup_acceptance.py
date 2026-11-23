@@ -5,13 +5,11 @@ import hashlib
 from functools import partial
 import json
 from pathlib import Path
-import sys
 import tempfile
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from foundry_runtime import constants as settings
 from foundry_runtime.runtime import Client, command_binding, local_git
-from scripts.acceptance_support import load_module, issue_actor_tokens, quiet_call, workflow_call, job_binding
+from .acceptance_support import load_module, issue_actor_tokens, quiet_call, workflow_call, job_binding
 
 
 def run(args):
@@ -66,7 +64,11 @@ def run(args):
     args.report.write_text(json.dumps(report,indent=2)+'\n')
     print('PASS actual service Worker/QA semantic-version reads; canonical native body retained; owned state removed')
 
-if __name__ == '__main__':
+def main():
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ('ai-contract-checkout','service-binary','report'):parser.add_argument('--'+name,type=Path,required=True)
     run(parser.parse_args())
+
+
+if __name__ == '__main__':
+    main()

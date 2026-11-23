@@ -1,4 +1,3 @@
-import importlib.util
 import contextlib
 import io
 import os
@@ -64,9 +63,7 @@ class TransportTests(unittest.TestCase):
             self.assertEqual(1,remote['pushes'])
 
     def test_report_capacity_error_preserves_previous_evidence(self):
-        path=Path(__file__).resolve().parents[1]/'scripts/real_agent_acceptance.py'
-        spec=importlib.util.spec_from_file_location('acceptance_runner_test',path)
-        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        from scripts import real_agent_acceptance as module
         with tempfile.TemporaryDirectory() as root:
             report=Path(root)/'report.json';report.write_text('previous safe evidence')
             with patch.object(module.json,'dump',side_effect=OSError('fixture capacity failure')):

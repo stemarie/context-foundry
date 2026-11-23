@@ -19,8 +19,8 @@ import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
 from foundry_runtime import constants as settings
+from foundry_runtime.checkout import resolve_checkout
 
 TARGET = settings.COMMISSIONED_SSH_TARGET
 DEFAULT_WAIT_SECONDS = 20
@@ -236,10 +236,14 @@ def write_evidence(path: Path, evidence: dict) -> None:
 
 
 def main() -> None:
+    global ROOT
     parser = argparse.ArgumentParser()
+    parser.add_argument("--foundry-checkout", type=Path)
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    try:ROOT = resolve_checkout(args.foundry_checkout, match_runtime=True)
+    except ValueError as exc:parser.error(str(exc))
     config, output = outside_checkout(args.config), outside_checkout(args.output)
     if not config.is_file():
         raise SystemExit("private config does not exist")

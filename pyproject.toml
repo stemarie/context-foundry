@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "context-foundry"
+version = "0.4.0"
+description = "AI.Contract-backed workflow skills and bounded operator utilities"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+context-foundry-package-skills = "context_foundry_cli.package_skills:main"
+context-foundry-preflight = "context_foundry_cli.acceptance_preflight:main"
+context-foundry-acceptance = "context_foundry_cli.real_agent_acceptance:main"
+context-foundry-native-version = "context_foundry_cli.native_version_acceptance:main"
+context-foundry-followup = "context_foundry_cli.followup_acceptance:main"
+context-foundry-breaker = "context_foundry_cli.breaker_acceptance:main"
+context-foundry-connection-proof = "context_foundry_cli.connection_recovery_acceptance:main"
+context-foundry-connection = "foundry_runtime.local_connection:cli"
+
+[tool.setuptools]
+packages = ["foundry_runtime", "context_foundry_cli"]
+include-package-data = false
+
+[tool.setuptools.package-dir]
+context_foundry_cli = "scripts"

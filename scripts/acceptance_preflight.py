@@ -1,50 +1,55 @@
 #!/usr/bin/env python3
 """Available prerequisites only: never starts an agent or asserts native Done."""
-import argparse,json,os,pathlib,subprocess,tempfile,shutil,sys
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+import argparse,json,os,pathlib,subprocess,tempfile,shutil
 from foundry_runtime import constants as settings
-from scripts.acceptance_support import load_module as load, issue_actor_tokens
-parser=argparse.ArgumentParser(description="Run disposable service/skill prerequisites only; this is not real-agent acceptance.")
-parser.add_argument('--ai-contract-checkout',required=True,type=pathlib.Path)
-parser.add_argument('--service-binary',required=True,type=pathlib.Path)
-parser.add_argument('--hermes-source',required=True,type=pathlib.Path)
-parser.add_argument('--hermes-python',required=True,type=pathlib.Path)
-args=parser.parse_args()
-AIC=args.ai_contract_checkout.resolve()
-BINARY=args.service_binary.resolve()
-FOUNDRY=pathlib.Path(__file__).resolve().parents[1]
-HERMES=args.hermes_source.resolve()
-# Preserve the virtualenv launcher path; resolving its symlink loses that environment.
-PYTHON=args.hermes_python.absolute()
-for path in [BINARY,PYTHON,AIC/'scripts/mock_client.py',AIC/'cmd/aicontract/hermes_native_mcp_container_proof.py',HERMES/'tools/mcp_tool.py']:
- if not path.is_file():parser.error('required local acceptance prerequisite is absent')
-mock=load('cf_mock',AIC/'scripts/mock_client.py')
-native=load('cf_native',AIC/'cmd/aicontract/hermes_native_mcp_container_proof.py')
-fixture=pathlib.Path(tempfile.mkdtemp(prefix='cf-service-preflight-',dir=settings.MACOS_TEMP_DIRECTORY))
-server=None
-try:
- server=mock.LocalServer(str(BINARY),str(fixture),settings.FIXTURE_SERVICE_TIMEOUT_SECONDS)
- tokens=server.tokens
- issue_actor_tokens(server, BINARY,
-                    [('coordinator','read,write,coordinator'), ('worker','read,write,writer'),
-                     ('qa','read,write,auditor')], prefix='acceptance-')
- url=server.start();client=mock.Client(url,tokens,'http',settings.SERVICE_REQUEST_TIMEOUT_SECONDS)
- project=client.call('project_create',{'title':'Disposable real-agent acceptance','repository':settings.AUTHORIZED_DELIVERY_REPOSITORY,'delivery_policy':'Direct main only after actual independent QA and verified non-force delivery; no deployment.'})['project']
- pid=project['id']
- milestone=client.call('milestone_create',{'project_id':pid,'ordinal':1,'title':'Real-agent acceptance','goal':'Verify the existing service and identify required external runtime prerequisites.','scope':'Disposable local acceptance; do not fabricate runtime assignment or completion.','acceptance_criteria':'Current skill and native service discovery; subsequent runtime/real-Git gates require their actual adapter implementation.'})['milestone']
- client.call('project_planning_boundary',{'project_id':pid,'through':1,'expected_revision':0})
- client.call('workflow_configure',{'project_id':pid,'queue_target':2,'idempotency_key':'preflight-config'})
- for actor,role in [('worker','worker'),('qa','qa')]:
-  client.call('workflow_agent',{'project_id':pid,'agent':'acceptance-'+actor,'agent_role':role,'idempotency_key':'preflight-agent-'+actor})
- for actor in ['coordinator','worker','qa']:
-  home=fixture/('home-'+actor);home.mkdir(mode=settings.PRIVATE_DIRECTORY_MODE)
-  native.write_native_home(home,url,tokens[actor])
-  config=json.loads((home/'config.yaml').read_text());config['skills']={'external_dirs':[str(FOUNDRY/'skills')]};(home/'config.yaml').write_text(json.dumps(config));(home/'config.yaml').chmod(settings.PRIVATE_FILE_MODE)
-  result=native.native_call(HERMES,PYTHON,home,'mcp__ai_contract_test__workflow_agents',{'project_id':pid})
-  assert {(a['actor'],a['role']) for a in result['workflow']['agents']}=={('acceptance-worker','worker'),('acceptance-qa','qa')}
-  print('PASS native Hermes workflow_agents:',actor)
-  if actor!='coordinator':
-   denial_script=r"""
+from .acceptance_support import load_module as load, issue_actor_tokens
+from foundry_runtime.checkout import resolve_checkout
+
+
+def main():
+    parser=argparse.ArgumentParser(description="Run disposable service/skill prerequisites only; this is not real-agent acceptance.")
+    parser.add_argument('--foundry-checkout',type=pathlib.Path)
+    parser.add_argument('--ai-contract-checkout',required=True,type=pathlib.Path)
+    parser.add_argument('--service-binary',required=True,type=pathlib.Path)
+    parser.add_argument('--hermes-source',required=True,type=pathlib.Path)
+    parser.add_argument('--hermes-python',required=True,type=pathlib.Path)
+    args=parser.parse_args()
+    AIC=args.ai_contract_checkout.resolve()
+    BINARY=args.service_binary.resolve()
+    try:FOUNDRY=resolve_checkout(args.foundry_checkout, match_runtime=True)
+    except ValueError as exc:parser.error(str(exc))
+    HERMES=args.hermes_source.resolve()
+    # Preserve the virtualenv launcher path; resolving its symlink loses that environment.
+    PYTHON=args.hermes_python.absolute()
+    for path in [BINARY,PYTHON,AIC/'scripts/mock_client.py',AIC/'cmd/aicontract/hermes_native_mcp_container_proof.py',HERMES/'tools/mcp_tool.py']:
+     if not path.is_file():parser.error('required local acceptance prerequisite is absent')
+    mock=load('cf_mock',AIC/'scripts/mock_client.py')
+    native=load('cf_native',AIC/'cmd/aicontract/hermes_native_mcp_container_proof.py')
+    fixture=pathlib.Path(tempfile.mkdtemp(prefix='cf-service-preflight-',dir=settings.MACOS_TEMP_DIRECTORY))
+    server=None
+    try:
+     server=mock.LocalServer(str(BINARY),str(fixture),settings.FIXTURE_SERVICE_TIMEOUT_SECONDS)
+     tokens=server.tokens
+     issue_actor_tokens(server, BINARY,
+                        [('coordinator','read,write,coordinator'), ('worker','read,write,writer'),
+                         ('qa','read,write,auditor')], prefix='acceptance-')
+     url=server.start();client=mock.Client(url,tokens,'http',settings.SERVICE_REQUEST_TIMEOUT_SECONDS)
+     project=client.call('project_create',{'title':'Disposable real-agent acceptance','repository':settings.AUTHORIZED_DELIVERY_REPOSITORY,'delivery_policy':'Direct main only after actual independent QA and verified non-force delivery; no deployment.'})['project']
+     pid=project['id']
+     milestone=client.call('milestone_create',{'project_id':pid,'ordinal':1,'title':'Real-agent acceptance','goal':'Verify the existing service and identify required external runtime prerequisites.','scope':'Disposable local acceptance; do not fabricate runtime assignment or completion.','acceptance_criteria':'Current skill and native service discovery; subsequent runtime/real-Git gates require their actual adapter implementation.'})['milestone']
+     client.call('project_planning_boundary',{'project_id':pid,'through':1,'expected_revision':0})
+     client.call('workflow_configure',{'project_id':pid,'queue_target':2,'idempotency_key':'preflight-config'})
+     for actor,role in [('worker','worker'),('qa','qa')]:
+      client.call('workflow_agent',{'project_id':pid,'agent':'acceptance-'+actor,'agent_role':role,'idempotency_key':'preflight-agent-'+actor})
+     for actor in ['coordinator','worker','qa']:
+      home=fixture/('home-'+actor);home.mkdir(mode=settings.PRIVATE_DIRECTORY_MODE)
+      native.write_native_home(home,url,tokens[actor])
+      config=json.loads((home/'config.yaml').read_text());config['skills']={'external_dirs':[str(FOUNDRY/'skills')]};(home/'config.yaml').write_text(json.dumps(config));(home/'config.yaml').chmod(settings.PRIVATE_FILE_MODE)
+      result=native.native_call(HERMES,PYTHON,home,'mcp__ai_contract_test__workflow_agents',{'project_id':pid})
+      assert {(a['actor'],a['role']) for a in result['workflow']['agents']}=={('acceptance-worker','worker'),('acceptance-qa','qa')}
+      print('PASS native Hermes workflow_agents:',actor)
+      if actor!='coordinator':
+       denial_script=r"""
 import json
 from tools.mcp_tool_discovery import discover_mcp_tools
 from tools.mcp_tool_lifecycle import shutdown_mcp_servers
@@ -59,14 +64,14 @@ try:
  print('PASS actual native Hermes prohibited Coordinator action')
 finally:shutdown_mcp_servers()
 """
-   denial_env={k:v for k,v in os.environ.items() if not k.startswith('HERMES_')};denial_env.update(HERMES_HOME=str(home),PYTHONPATH=str(HERMES),PYTHONDONTWRITEBYTECODE='1')
-   subprocess.run([str(PYTHON),'-c',denial_script,json.dumps({'project_id':pid,'idempotency_key':'prohibited-'+actor})],env=denial_env,check=True)
-   assignments=native.native_call(HERMES,PYTHON,home,'mcp__ai_contract_test__workflow_assignments',{'project_id':pid})
-   assert not assignments['workflow'].get('jobs')
-   print('PASS actor-bound empty assignments and prohibited Coordinator action:',actor)
- home=fixture/'home-worker'
- env={k:v for k,v in os.environ.items() if not k.startswith('HERMES_')};env.update(HERMES_HOME=str(home),PYTHONPATH=str(HERMES),PYTHONDONTWRITEBYTECODE='1')
- script=r'''
+       denial_env={k:v for k,v in os.environ.items() if not k.startswith('HERMES_')};denial_env.update(HERMES_HOME=str(home),PYTHONPATH=str(HERMES),PYTHONDONTWRITEBYTECODE='1')
+       subprocess.run([str(PYTHON),'-c',denial_script,json.dumps({'project_id':pid,'idempotency_key':'prohibited-'+actor})],env=denial_env,check=True)
+       assignments=native.native_call(HERMES,PYTHON,home,'mcp__ai_contract_test__workflow_assignments',{'project_id':pid})
+       assert not assignments['workflow'].get('jobs')
+       print('PASS actor-bound empty assignments and prohibited Coordinator action:',actor)
+     home=fixture/'home-worker'
+     env={k:v for k,v in os.environ.items() if not k.startswith('HERMES_')};env.update(HERMES_HOME=str(home),PYTHONPATH=str(HERMES),PYTHONDONTWRITEBYTECODE='1')
+     script=r'''
 import json,sys
 from pathlib import Path
 from tools.skills_tool import _skill_catalog,skill_view
@@ -87,13 +92,17 @@ for rel in ['WORK_CONTRACT.md','docs/WORKFLOW.md','skills/OPERATING_RULES.md','s
  assert (root/rel).read_text().strip()
 print('PASS all shared references readable in owning checkout')
 '''
- subprocess.run([str(PYTHON),'-c',script,str(FOUNDRY)],env=env,check=True)
- print('PASS disposable preflight; no contract reserved, no agent/model launched, no Done or Git delivery asserted')
-finally:
- if server is not None:server.stop()
- if fixture.exists():
-  logs=(fixture/'server.log').read_text(errors='replace') if (fixture/'server.log').exists() else ''
-  if server is not None:assert all(t not in logs for t in server.tokens.values())
-  shutil.rmtree(fixture)
- assert not fixture.exists()
- print('PASS service process, local credentials, native homes and SQLite fixture removed')
+     subprocess.run([str(PYTHON),'-c',script,str(FOUNDRY)],env=env,check=True)
+     print('PASS disposable preflight; no contract reserved, no agent/model launched, no Done or Git delivery asserted')
+    finally:
+     if server is not None:server.stop()
+     if fixture.exists():
+      logs=(fixture/'server.log').read_text(errors='replace') if (fixture/'server.log').exists() else ''
+      if server is not None:assert all(t not in logs for t in server.tokens.values())
+      shutil.rmtree(fixture)
+     assert not fixture.exists()
+     print('PASS service process, local credentials, native homes and SQLite fixture removed')
+
+
+if __name__ == '__main__':
+    main()

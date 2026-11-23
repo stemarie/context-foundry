@@ -2,7 +2,6 @@
 import json
 import os
 from pathlib import Path
-import sys
 import socket
 import shlex
 import subprocess
@@ -10,7 +9,6 @@ import time
 import urllib.request
 import uuid
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from foundry_runtime import constants as settings
 from foundry_runtime.core import Barrier
 

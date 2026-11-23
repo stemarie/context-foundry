@@ -184,7 +184,11 @@ def main():
                     result=None if isinstance(message,dict) and 'id' not in message else {'jsonrpc':'2.0','id':identifier,'error':{'code':-32603,'message':'private service request unavailable'}}
                 if result is not None:print(json.dumps(result),flush=True)
 
-if __name__=='__main__':
+def cli():
     try:main()
     except Exception as exc:
         print('Local Foundry connection failed: '+type(exc).__name__,file=sys.stderr);raise SystemExit(2)
+
+
+if __name__=='__main__':
+    cli()

@@ -5,17 +5,16 @@ import hashlib
 from functools import partial
 import json
 from pathlib import Path
-import sys
 import shutil
 import tempfile
 import time
 import uuid
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from foundry_runtime import constants as settings
+from foundry_runtime.checkout import resolve_checkout
 from foundry_runtime.core import Barrier, Journal
 from foundry_runtime.runtime import Launcher, local_git
-from scripts.acceptance_support import (load_module, issue_actor_tokens, resolve_provider,
+from .acceptance_support import (load_module, issue_actor_tokens, resolve_provider,
                                         quiet_call, workflow_call, job_binding, history_snapshot)
 
 
@@ -26,7 +25,7 @@ PROOF_INVOCATION_SECONDS = 360
 
 
 def run(args):
-    checkout=Path(__file__).resolve().parents[1]
+    checkout=resolve_checkout(getattr(args, 'foundry_checkout', None), match_runtime=True)
     root=Path(tempfile.mkdtemp(prefix='cf-native-version-',dir=settings.MACOS_TEMP_DIRECTORY));root.chmod(settings.PRIVATE_DIRECTORY_MODE)
     print('PRIVATE_FIXTURE',root,flush=True)
     mock=load_module('native_version_mock', args.ai_contract_checkout/'scripts/mock_client.py')
@@ -125,7 +124,15 @@ Write the concise fixture, run the supplied check and submit a local candidate. 
         assert stopped and report['runtime_hashes_unchanged']
     print('PASS actual Hermes Worker/QA version/native-body fixture; no delivery; owned state removed',flush=True)
 
-if __name__=='__main__':
+def main():
     parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--foundry-checkout', type=Path)
     for name in ('ai-contract-checkout','service-binary','hermes-source','hermes-python','report'):parser.add_argument('--'+name,type=Path,required=True)
-    run(parser.parse_args())
+    args = parser.parse_args()
+    try:args.foundry_checkout = resolve_checkout(args.foundry_checkout, match_runtime=True)
+    except ValueError as exc:parser.error(str(exc))
+    run(args)
+
+
+if __name__ == '__main__':
+    main()

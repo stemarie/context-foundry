@@ -3,26 +3,28 @@
 import argparse
 import json
 from pathlib import Path
-import sys
 import shutil
 import tempfile
 import threading
 import time
 from urllib.parse import urlparse
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from foundry_runtime import constants as settings
+from foundry_runtime.checkout import resolve_checkout
 from foundry_runtime.core import Barrier, Gate, Journal, RemoteFailure
 from foundry_runtime.runtime import local_git, restricted_check
-from scripts.acceptance_support import load_module
+from .acceptance_support import load_module
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--foundry-checkout', type=Path)
     parser.add_argument('--ai-contract-checkout', type=Path, required=True)
     parser.add_argument('--service-binary', type=Path, required=True)
     parser.add_argument('--report', type=Path, required=True)
     args = parser.parse_args()
+    try:checkout = resolve_checkout(args.foundry_checkout, match_runtime=True)
+    except ValueError as exc:parser.error(str(exc))
     mock = load_module('breaker_mock', args.ai_contract_checkout/'scripts/mock_client.py')
     root = Path(tempfile.mkdtemp(prefix='cf-breaker-', dir=settings.MACOS_TEMP_DIRECTORY))
     servers, projects = [], []
@@ -44,7 +46,7 @@ def main():
             try:gate.run('blocked:'+project['project']['id'],{},lambda: (_ for _ in ()).throw(AssertionError('transport bypass')))
             except Barrier:pass
             else:raise AssertionError('project bypassed open gate')
-        local_git(Path(__file__).resolve().parents[1], 'diff', '--check')
+        local_git(checkout, 'diff', '--check')
         permits=[];lock=threading.Lock()
         def race(gate):
             try:

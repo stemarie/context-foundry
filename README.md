@@ -55,6 +55,36 @@ The native pack contains thirteen Foundry roles, entry points, and the OpenSpec 
 
 QA acceptance is not Done: completion requires integration and successful verification. Lease expiry is not proof a process stopped; recovery must reconcile or stop the old execution before assigning another writer. Read the [work contract](WORK_CONTRACT.md), [workflow decisions](docs/WORKFLOW.md), and [operating rules](skills/OPERATING_RULES.md) for the full handoffs.
 
+## Install the Python utilities
+
+Use Python 3.9 or newer and install from a trusted checkout. For development and the source-dependent acceptance tools, use an editable installation:
+
+```sh
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e .
+context-foundry-package-skills --help
+```
+
+The distribution installs `foundry_runtime` and the distinct `context_foundry_cli` namespace; it does not install a generic `scripts` package. The operator utilities use the standard library. Hermes, OpenSpec CLI, AI.Contract, model access, and private credentials remain separately prepared prerequisites.
+
+| Installed command | Purpose |
+| --- | --- |
+| `context-foundry-package-skills` | Render or verify a native skill pack. |
+| `context-foundry-preflight` | Check explicit disposable service/Hermes prerequisites. |
+| `context-foundry-acceptance` | Run a selected real-agent acceptance scenario under its existing authority. |
+| `context-foundry-native-version` | Run the disposable installed-Hermes version/body proof. |
+| `context-foundry-followup` | Run the disposable service/version transport proof. |
+| `context-foundry-breaker` | Run the disposable shared-breaker proof. |
+| `context-foundry-connection-proof` | Check the commissioned host's bridge and owned-process cleanup. |
+| `context-foundry-connection` | Read service status or start the read-only MCP bridge. |
+
+Run each command with `--help` for its required inputs. Help and module imports do not start work. Acceptance commands can perform the scenario's model calls and authorized delivery when invoked with real inputs.
+
+A wheel installation also works for imports and commands. Commands that need repository skills, docs, tests, or Git context require `--foundry-checkout /absolute/path/to/context-foundry` when the source is not discoverable from an editable installation. Acceptance checks require that checkout's runtime source to match the installed runtime, so a report cannot silently fingerprint different code. The Python wheel does not bundle the repository's skill assets or historical evidence.
+
+From the checkout root, `python -m scripts.<module>` remains available as a source invocation; installed modules use `python -m context_foundry_cli.<module>`. Use those module forms or the installed commands rather than relying on direct file execution and ad hoc `PYTHONPATH` settings. Explicit trusted import roots inside isolated Worker/bridge subprocesses remain part of their isolation mechanism.
+
 ## Install and discover the skills
 
 For Codex or ChatGPT accounts with access, the Foundry + OpenSpec plugin supplies the combined planning and native workflow instructions. The linked account plugin is private, not a public installation available to every repository reader. Its source bundle is in `plugins/foundry-openspec/` for local packaging and installation through a supported host mechanism. Verify that skills and references are readable. Installing instructions does not provision AI.Contract credentials, a runtime, or OpenSpec CLI.
@@ -67,8 +97,8 @@ To prepare a portable directory containing the bundled OpenSpec dependencies, ru
 foundry_pack_dir=/absolute/path/to/staging/foundry-skills
 mkdir -p "$foundry_pack_dir"
 cp -R plugins/foundry-openspec/skills/openspec-* "$foundry_pack_dir/"
-python3 scripts/package_skills.py --destination "$foundry_pack_dir"
-python3 scripts/package_skills.py --destination "$foundry_pack_dir" --verify-only
+python3 -m scripts.package_skills --destination "$foundry_pack_dir"
+python3 -m scripts.package_skills --destination "$foundry_pack_dir" --verify-only
 ```
 
 Load the whole generated directory through the host's supported installation mechanism. For Hermes, add its absolute path to the existing `skills.external_dirs` list. Preserve `foundry-shared/`: copying individual native SKILL.md files breaks references. Refresh the host and check for duplicate or shadowing names. Edit owning source rather than a versioned plugin cache.
@@ -120,7 +150,7 @@ For a draft, request “draft only; do not publish.” This skill does not assig
 For packaging changes, run from the repository root:
 
 ```sh
-python3 scripts/package_skills.py --destination plugins/foundry-openspec/skills
+python3 -m scripts.package_skills --destination plugins/foundry-openspec/skills
 python3 -m unittest discover -s tests -p test_skill_packaging.py -v
 ```
 
