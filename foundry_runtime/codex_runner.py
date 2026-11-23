@@ -11,6 +11,7 @@ import subprocess
 import threading
 import uuid
 
+from .codex_delivery import Delivery
 from .codex_session import CodexSessions
 from .core import Barrier, Journal, digest
 from .events import workflow_events
@@ -45,6 +46,9 @@ class Coordinator:
         if len(set(homes)) != len(homes):
             raise Barrier("each Codex actor requires a separate configuration home")
         self.active = {}
+        self.wake = lambda: None
+        delivery = config.get("delivery")
+        self.delivery = Delivery(self, delivery) if delivery else None
         for key, binding in self.sessions.recorded(self.project_id):
             state = self.sessions.inspect(key)
             if state == "unknown":
@@ -186,6 +190,10 @@ class Coordinator:
         if target is None:
             raise Barrier("AI.Contract queue target must be configured")
         jobs = self.jobs()
+        if self.delivery:
+            if project["repository"] != self.delivery.repository:
+                raise Barrier("delivery configuration does not match project authority")
+            self.delivery.schedule(jobs)
         for job in jobs:
             self.handle_job(job)
         busy = {actor for _, _, actor, _ in self.active.values()}
@@ -263,6 +271,7 @@ class Coordinator:
                     pending.put(exc)
                     return
 
+        self.wake = wake
         threading.Thread(target=subscribe, daemon=True).start()
         try:
             while True:
@@ -279,6 +288,8 @@ class Coordinator:
                 self.reconcile()
         finally:
             stop.set()
+            if self.delivery:
+                self.delivery.join()
 
 
 def cli():

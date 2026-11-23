@@ -22,6 +22,7 @@ checkout. The private JSON configuration contains:
 | coordinator | Object containing a private `credential` JSON path |
 | architect | Object containing a private `credential` JSON path and a role-specific `codex_home` |
 | workers, reviewers | Arrays of role objects with distinct actor identities and Codex homes |
+| delivery | Optional object with explicitly authorized `repository`, shared `connection_alias`, and `checks` as an array of argv arrays |
 
 Each credential file contains `name`, `scopes`, and `token`. Use files with mode
 0600. The coordinator, architect, writer and auditor need read, write and their
@@ -39,6 +40,13 @@ persisted its handoff before the runner advances that assignment. Resolve
 uncertain execution and expired attempts through the core Coordinator recovery
 procedure. Use the same journal when restarting the runner.
 
-This stage covers Architect, Worker and QA dispatch. Automated integration,
-history publication and live multi-role Codex acceptance are tracked as follow-up
-work for the full §5D harness.
+With a delivery block, the runner integrates exact QA-accepted candidates
+under the shared GitHub gate and the project target lock. Use the same journal
+and connection alias across projects sharing GitHub access. The local
+integration intent binds the candidate, expected remote main and target commit.
+The runner verifies the intended target, runs the configured checks on that
+target, records Done and publishes the deduplicated historical issue. The
+operator can use the delivery wrapper skill to drive the same core delivery
+procedure when resolving a blocked handoff. A failed check, target drift, or
+a merge requiring manual conflict resolution stops automated delivery.
+Use only authorized check commands and a trusted checkout on this host.

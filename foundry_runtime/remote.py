@@ -130,9 +130,10 @@ def tracked_command(gate, argv, cwd, env):
 
 
 class GitHub:
-    def __init__(self, gate, checkout, repository):
+    def __init__(self, gate, checkout, repository, *, authorized_repository=None):
         self.gate, self.checkout, self.repository = gate, Path(checkout), repository
-        if repository != settings.AUTHORIZED_DELIVERY_REPOSITORY:
+        allowed = settings.AUTHORIZED_DELIVERY_REPOSITORY if authorized_repository is None else authorized_repository
+        if repository != allowed:
             raise Barrier('this acceptance delivery target is not authorized')
         remote = local_git(self.checkout, 'remote', 'get-url', 'origin')
         if remote not in (settings.GITHUB_ORIGIN + '/' + repository + '.git', settings.GITHUB_ORIGIN + '/' + repository):

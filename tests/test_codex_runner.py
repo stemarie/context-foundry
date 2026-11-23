@@ -36,6 +36,7 @@ class CodexCoordinatorTest(unittest.TestCase):
         c.checkout = Path("/checkout")
         c.sessions = Mock()
         c.active = {}
+        c.delivery = None
         c.architect = actor("architect")
         c.workers = {name: actor(name) for name in ("worker-a", "worker-b")}
         c.reviewers = {"qa-a": actor("qa-a")}
