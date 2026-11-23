@@ -70,6 +70,14 @@ class CodexSessions:
             time.sleep(0.02)
         raise Barrier("Codex launch acknowledgement is missing")
 
+    def recorded(self, project_id):
+        with self.journal.transaction() as db:
+            rows = db.execute("SELECT key,binding FROM launches WHERE finished IS NULL").fetchall()
+        for row in rows:
+            binding = json.loads(row["binding"])
+            if binding.get("adapter") == "codex" and binding.get("project_id") == project_id:
+                yield row["key"], binding
+
     def _root(self, key):
         return Path(self.journal.path).parent / "codex-sessions" / key
 

@@ -19,6 +19,7 @@ context-foundry-followup = "context_foundry_cli.followup_acceptance:main"
 context-foundry-breaker = "context_foundry_cli.breaker_acceptance:main"
 context-foundry-connection-proof = "context_foundry_cli.connection_recovery_acceptance:main"
 context-foundry-connection = "foundry_runtime.local_connection:cli"
+context-foundry-codex-runner = "foundry_runtime.codex_runner:cli"
 
 [tool.setuptools]
 packages = ["foundry_runtime", "context_foundry_cli"]
