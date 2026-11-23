@@ -30,6 +30,18 @@ Record actual checks, outcomes, acceptance evidence, candidate identity, failure
 
 Separate QA actors from implementers, even if they share a GitHub login. The service/runtime must establish actor and attempt identity; do not infer independence from a role label alone.
 
+## Repair and stop decisions
+
+During authorized execution, diagnose and repair ordinary in-scope implementation, local setup and test failures by default, then rerun relevant verification within the current stage/cycle. No separate repair permission is required. Follow any stricter user stop policy and existing runtime/time/cycle limits. Audit-only and planning-only requests retain their boundaries.
+
+A failed required check blocks the dependent submission, acceptance, delivery or completion transition until it is genuinely satisfied; keep that gate closed while repair proceeds. Preserve the failure evidence and criteria. Worker repairs product code; QA records findings independently and reviews each changed candidate afresh. Coordinator routes corrections and retains current ownership; no role gains another role's powers from a failure.
+
+For uncertain launch, submission, push or other mutation outcomes, reconcile authoritative identity/state before retrying. Reuse the original operation identity for the same uncertain operation and honor durable intents, shared transport gates, cooldowns and stopped-process proofs. A timeout does not prove a write failed or a process stopped. A breaker may pause remote work while permitted local diagnosis continues.
+
+After an unsuccessful attempt, use the observed result to choose a useful next diagnostic or correction. Repeated failure without new evidence or a plausible different approach triggers reassessment through the existing roles, not blind retries or an arbitrary correction-round limit. Reassess routine technical approaches within scope without another user approval; return material requirement/architecture changes to Architect through Coordinator. If no useful authorized next action remains, report the concrete blocker and attempts/evidence instead of claiming completion.
+
+Stop affected writes/transitions when current authority is missing, expired or revoked, execution identity cannot be reconciled, or a required capability/prerequisite cannot be restored within existing permissions. Escalate a genuine unresolved product decision or missing authority precisely. At a runtime limit, return a truthful checkpoint with remaining work and safe resume conditions; do not extend the limit, launch an implicit replacement or start a successor from an incomplete cycle. After failed post-integration checks, preserve the actual delivered state, withhold Done and follow supported authorized recovery; rollback, destructive changes and deployment need their existing authority.
+
 ## Autonomous work selection
 
 For discretionary audits and successor work, assess value against the approved goal before creating a contract. Identify a realistic trigger, concrete consequence, supporting evidence and uncertainty, exposure through supported workflows, credible misuse or operational conditions, and proportionate implementation/verification cost. Keep the assessment brief and qualitative; do not invent probabilities or precise effort estimates. Use bounded investigation when missing evidence can cheaply resolve the decision. A reproducer proves possibility; assess its practical relevance separately. Rare failures with severe consequences can justify action without observed incidents or an unsafe live reproduction.

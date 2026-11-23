@@ -39,6 +39,8 @@ FIFO must skip currently ineligible contracts, rather than stall independent wor
 
 ## Identity, recovery, and revisions
 
+Use the shared [repair and stop decisions](../skills/OPERATING_RULES.md). During authorized execution, repair ordinary in-scope implementation/setup/test failures and rerun relevant verification within the same stage/cycle by default. Failed checks block dependent transitions while correction proceeds through the existing roles. Respect stricter user stop policies and runtime limits, reassess repeated attempts without useful progress, and report genuine unresolved blockers. Uncertain writes or execution identities require authoritative reconciliation before retries; ordinary repair authority never waives independent QA, completion checks or delivery permissions.
+
 Reservations and evidence need distinct execution-attempt identities even if agents share a GitHub account. The bounded local macOS adapter supplies actor-bound clients, isolated native homes/worktrees and launch/stop identity reconciliation. Verify actual service credentials/pools and host capabilities before execution; additional backends require their own implementation and proof.
 
 On expired execution ownership, the Coordinator confirms termination or stops the old execution before reassignment. Reject stale submissions and prevent stale integration. Expiry alone cannot guarantee the old process stopped.

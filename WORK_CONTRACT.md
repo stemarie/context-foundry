@@ -93,6 +93,8 @@ Append evidence in AI.Contract identifying:
 
 Read the current authorized revision and repository instructions before acting. Recover routine failures within scope. Return material discrepancies to the Architect rather than silently broadening the contract.
 
+Apply the [repair and stop decisions](skills/OPERATING_RULES.md) throughout the cycle. Ordinary in-scope implementation, setup and test failures trigger diagnosis, correction and relevant rechecks without another repair approval. Failed gates continue to block dependent transitions. Preserve role separation, exact-candidate QA, explicit user/runtime limits and uncertain-outcome reconciliation. Reassess stalled attempts using evidence; report genuine unresolved authority, product or prerequisite blockers precisely.
+
 ## Independent QA
 
 A separate QA pool is assigned by the Coordinator. Initial reviews are FIFO by candidate submission. Retain the reviewer for corrections when available; correction priority and fallback timing remain implementation details to specify.

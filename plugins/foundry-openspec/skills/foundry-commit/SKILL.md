@@ -13,6 +13,8 @@ Follow the repository's actual delivery policy. AI.Contract and Context Foundry 
 
 Verify remote target SHA and required post-integration checks. Only then record `workflow_complete` with matching candidate/SHA, actual target, checks_passed=true and evidence. Failed checks or uncertain writes remain unresolved; do not unlock dependencies or erase successful delivery because publication is pending.
 
+Apply the shared repair rules to failed postchecks: diagnose permitted causes and route in-scope corrections through the owning roles and supported recovery. Preserve actual delivered state, require renewed QA for candidate changes, and withhold Done until verification succeeds. Reconcile uncertain writes before retrying; no automatic rollback, force push or deployment is authorized by a failed check.
+
 After Done or authorized stopped-confirmed cancellation, create/reconcile one final historical GitHub issue, verify it, close it under repository policy and record its reference using `workflow_publish_history`. Preserve a pending publication obligation during an outage without bypassing the gate. No pre-execution issue is required or created.
 
 Report native bindings/stage, candidate/target SHA, checks, historical reference and any outstanding obligation. This skill does not deploy, force-push, discard unrelated work or create a scheduler.
