@@ -1,9 +1,11 @@
 ---
 name: openspec-foundry
-description: Map OpenSpec requirements and task tracking into AI.Contract-backed Foundry cycles. Preserve OpenSpec as planning authority without creating another execution queue or loop.
+description: Map OpenSpec requirements and tasks into an explicitly selected or established AI.Contract-native Foundry run. Use for OpenSpec-backed native execution, not standalone OpenSpec planning or apply. Creates no second execution queue or loop.
 ---
 
 # OpenSpec adapter for Foundry
+
+Apply [request routing](../foundry-shared/skills/ROUTING.md). OpenSpec artifacts alone do not select native execution. Preserve explicit standalone OpenSpec workflows outside a Foundry cycle; within a native cycle, retain its executor and use this adapter only for planning/evidence mapping.
 
 [foundry-start](../foundry-start/SKILL.md) owns repetition/limits; [foundry-loop](../foundry-loop/SKILL.md) owns one native cycle. AI.Contract owns contracts, revisions, reservations, attempts, candidates and lifecycle. OpenSpec owns requirements, design and task tracking. GitHub issues are historical delivery/cancellation records. Editing or installing this adapter starts no work.
 

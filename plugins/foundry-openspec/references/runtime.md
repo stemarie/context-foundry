@@ -6,6 +6,8 @@ host's available skill-loading mechanism. Relative SKILL.md links are filesystem
 fallbacks inside this package; do not require the author's personal skill folder.
 If a required skill cannot be loaded, identify it and stop the affected workflow.
 
+Apply [request routing](../skills/foundry-shared/skills/ROUTING.md) before choosing an entry point. Explicit current user intent and scope win; otherwise retain verified project policy and the established stage. A generic "continue," "implement" or "work order" request must not switch executors based on tool availability. Missing native service/runtime access remains a prerequisite. The standalone GitHub issue handoff is installed separately and is never an automatic native fallback.
+
 A ChatGPT project is not automatically a code checkout or a connected machine.
 Resolve the user's target repository and execution host from the request and
 available tools. Use existing connected GitHub and document tools for their

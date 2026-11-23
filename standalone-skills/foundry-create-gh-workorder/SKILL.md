@@ -1,11 +1,17 @@
 ---
 name: foundry-create-gh-workorder
-description: Turn a project goal, specification, bug, or next-step request into a bounded work order for a Codex agent, published as a GitHub issue in that project's repository. Use when asked to architect or define a unit of work, write a work contract, or create an executable development issue. Supports draft-only requests; does not implement or dispatch the work.
+description: Create a bounded Codex work-order handoff as a GitHub issue. Use for explicitly requested GitHub issue work orders or work-order requests under a verified issue-based project policy. Native AI.Contract contracts use foundry-create-workorder. Supports unpublished drafts; does not implement or dispatch.
 ---
 
 # GitHub Work Order Architect
 
 Create one self-contained, executable unit of work. Use the project's GitHub issue as the work contract and handoff. Require no separate contract service, Hermes configuration, orchestration board, or agent-role infrastructure.
+
+## Select the handoff
+
+Honor explicit current user intent and read-only/draft-only limits first; otherwise inspect the target project's instructions, established execution policy and current activity. A generic "create a work order" request under AI.Contract-native policy belongs to `foundry-create-workorder`, not this handoff. Missing native credentials, service access or runtime never selects GitHub issues as a fallback. Load the named native skill through the host if selected; if unavailable, report that prerequisite without publishing an issue.
+
+Use this skill when the user explicitly selects a GitHub issue work order or verified project policy selects an issue-based handoff. An explicit draft request creates no issue, and read-only discussion starts no publication workflow. Preserve active assignments when a user deliberately selects a different handoff; do not silently migrate work or bypass acceptance. For "continue," retain the established activity and stage. If the route is still materially ambiguous after available inspection, ask one focused question before writing. Do not ask when existing intent and policy already decide. Keep this skill self-contained; no native service or shared Foundry files are needed for an authorized GitHub handoff.
 
 ## Ground the work
 

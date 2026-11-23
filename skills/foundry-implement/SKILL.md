@@ -1,9 +1,11 @@
 ---
 name: foundry-implement
-description: Implement one current AI.Contract Worker assignment in isolation, verify it and submit candidate evidence. Use for native contract implementation; historical issues are context, not execution authority.
+description: Implement or continue one current actor-bound AI.Contract Worker assignment in isolation and submit verified candidate evidence. Use within established native Foundry execution. Generic GitHub issues or standalone OpenSpec tasks do not supply native assignment authority.
 ---
 
 # Foundry Implement
+
+Apply [request routing](../ROUTING.md) and verify the current native assignment. For a native run without an assignment, Coordinator through `foundry-start` owns reservation/launch; do not self-claim or switch to another executor. Ordinary implementation outside native Foundry follows the selected project's workflow.
 
 Read [Worker](../foundry-worker/SKILL.md), the [native interface](../AI_CONTRACT_INTERFACE.md) and [operating rules](../OPERATING_RULES.md). Resolve the project/contract from the request and current service state. An old issue number alone supplies no native attempt or permission to execute.
 

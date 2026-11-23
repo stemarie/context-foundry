@@ -5,6 +5,8 @@ description: Explore a system, feature or specification through the installed op
 
 # Foundry Explore
 
+Apply [request routing](../ROUTING.md); honor read-only scope and retain the selected planning context. Exploration alone does not select an executor.
+
 Invoke [openspec-explore](../openspec-explore/SKILL.md) for the user's request.
 Read that skill in full and follow its workflow rather than duplicating it here.
 Resolve it from the session catalog or sibling directory; if missing, report the

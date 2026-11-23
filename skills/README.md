@@ -4,6 +4,8 @@ This directory contains thirteen native Foundry skills: four roles, eight entry 
 
 ## Choose an entry point
 
+Use [request routing](ROUTING.md) first: explicit current user intent and scope, then verified project workflow and current stage. Inspect before asking about genuine ambiguity. Installed tools or unavailable native access never select an alternate executor. Native work-order authorship and standalone GitHub issue handoffs are distinct.
+
 | Skill | Purpose and stopping point |
 | --- | --- |
 | [foundry-explore](foundry-explore/SKILL.md) | Invoke installed OpenSpec exploration; stop at analysis. |

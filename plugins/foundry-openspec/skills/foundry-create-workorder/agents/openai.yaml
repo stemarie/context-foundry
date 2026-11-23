@@ -1,6 +1,6 @@
 interface:
   display_name: Foundry Work Order Architect
-  short_description: AI.Contract-backed Foundry workflow
+  short_description: Author native AI.Contract work orders
   default_prompt: Author the next bounded AI.Contract milestone contract within the
     approved horizon.
   icon_small: ./assets/icon.svg

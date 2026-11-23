@@ -4,6 +4,8 @@ Read these rules, [WORK_CONTRACT.md](../WORK_CONTRACT.md), [WORKFLOW.md](../docs
 
 Also read the [AI.Contract interface mapping](AI_CONTRACT_INTERFACE.md). Verify the deployed interface before using its operations; the mapping identifies a tested source candidate, not an installed service.
 
+Apply [request routing](ROUTING.md) before selecting an entry point. Explicit current user scope comes first; otherwise retain verified project policy and the current stage. Missing native access never selects a fallback executor.
+
 ## Source and capability checks
 
 1. Resolve AI.Contract project identity, its one repository binding, target branch, scope, current executable revision, resolved delivery policy, and actor authorization from authoritative sources.

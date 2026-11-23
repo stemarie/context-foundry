@@ -5,6 +5,8 @@ description: Create an OpenSpec proposal and its schema-defined planning artifac
 
 # Foundry Propose
 
+Apply [request routing](../foundry-shared/skills/ROUTING.md). Preserve the planning stage on "continue"; a later implementation request follows verified project policy. This wrapper's execution handoff remains `foundry-start`.
+
 Invoke [openspec-propose](../openspec-propose/SKILL.md) for the user's request.
 Read that skill in full and follow its workflow rather than duplicating it here.
 Resolve it from the session catalog or sibling directory; if missing, report the

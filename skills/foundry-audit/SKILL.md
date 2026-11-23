@@ -1,9 +1,11 @@
 ---
 name: foundry-audit
-description: Independently verify a current AI.Contract candidate against its executable revision and evidence, using the assigned QA role. Also supports explicitly read-only repository or historical-outcome audits without service mutation.
+description: Review an assigned AI.Contract candidate through independent native QA, or perform an explicitly read-only repository, skill or historical-outcome audit. Audit-only requests never authorize fixes, native assignments, verdict writes or publication.
 ---
 
 # Foundry Audit
+
+Apply [request routing](../ROUTING.md) first. For "audit only" or "change nothing," take the read-only path below without requiring native execution setup. For an assigned native acceptance review, retain its exact binding and independent QA role.
 
 For native acceptance, read [QA](../foundry-qa/SKILL.md), the [native interface](../AI_CONTRACT_INTERFACE.md) and [operating rules](../OPERATING_RULES.md). Require Coordinator-assigned independent QA identity and the exact current revision/digest/attempt/candidate. Use an isolated exact-candidate snapshot; Worker self-review is forbidden.
 

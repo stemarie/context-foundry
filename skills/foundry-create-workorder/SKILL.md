@@ -1,9 +1,11 @@
 ---
 name: foundry-create-workorder
-description: Author a bounded AI.Contract milestone contract and immutable native revision within the authorized planning horizon. Use for creating executable work; draft-only requests stay planning-only.
+description: Author a bounded AI.Contract milestone contract and native revision. Use for explicit native contract requests or work-order requests in verified AI.Contract-native projects. GitHub issue handoffs use foundry-create-gh-workorder. Does not dispatch or implement; draft-only stays unpublished.
 ---
 
 # Foundry Create Work Order
+
+Apply [request routing](../ROUTING.md) first. A generic work-order request follows verified project policy; do not select native authorship solely because this skill is installed. Missing native access is a prerequisite, never a switch to GitHub issues.
 
 Read [the native interface](../AI_CONTRACT_INTERFACE.md), [operating rules](../OPERATING_RULES.md), [work-contract convention](../../WORK_CONTRACT.md) and applicable AGENTS.md. Use [Architect](../foundry-architect/SKILL.md) for authorship.
 

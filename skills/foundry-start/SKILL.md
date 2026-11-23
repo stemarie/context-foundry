@@ -1,9 +1,11 @@
 ---
 name: foundry-start
-description: Repeat authorized AI.Contract-backed Foundry cycles toward a project goal, respecting the milestone horizon, native ownership, independent QA and verified delivery. Stop on completion, blocker or the user cycle limit.
+description: Start or resume bounded delivery in an explicitly requested or verified AI.Contract-native Foundry workflow. Reconcile existing work and repeat native cycles with independent QA. Not a standalone GitHub issue or OpenSpec apply executor; stop on completion, blocker or cycle limit.
 ---
 
 # Foundry Start
+
+Apply [request routing](../ROUTING.md): "continue" retains the established workflow/stage. Use this outer run for authorized native delivery; a current Worker assignment uses `foundry-implement`. Missing service/runtime access remains a prerequisite, never an alternate executor.
 
 Own the outer repetition around [foundry-loop](../foundry-loop/SKILL.md). Resolve the concrete goal, repository, AI.Contract connection/project, milestone horizon, pools, runtime adapters and completion evidence. Read applicable AGENTS.md and [operating rules](../OPERATING_RULES.md). Keep AI.Contract authoritative for live work; GitHub issues record final outcomes only.
 
