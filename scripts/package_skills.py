@@ -85,6 +85,24 @@ def verify(destination, *, checkout=None):
     expected_rendered = manifest.get('rendered_sha256')
     if not isinstance(expected_sources, dict) or not isinstance(expected_rendered, dict):
         raise ValueError('installed manifest lacks source or rendered hashes')
+    # Checking only remaining entries lets a truncated manifest hide changed files.
+    source_paths = {str((skill/'SKILL.md').relative_to(source_root)) for skill in own}
+    source_paths.update(str(path.relative_to(destination/'foundry-shared'))
+                        for path in (destination/'foundry-shared').rglob('*.md'))
+    rendered_paths = {str(path.relative_to(destination)) for skill in own
+                      for path in (destination/skill.name).rglob('*') if path.is_file()}
+    # Source-owned metadata/assets remain required even if both file and hash vanish.
+    rendered_paths.update(str(Path(skill.name)/path.relative_to(skill)) for skill in own
+                          for folder in ('agents', 'assets')
+                          for path in (skill/folder).rglob('*') if path.is_file())
+    rendered_paths.update(str(path.relative_to(destination))
+                          for path in (destination/'foundry-shared').rglob('*')
+                          if path.is_file() and path != manifest_path)
+    if set(expected_sources) != source_paths or set(expected_rendered) != rendered_paths:
+        raise ValueError('installed manifest hash coverage is incomplete or unexpected')
+    skills = manifest.get('skills')
+    if not isinstance(skills, list) or skills != [skill.name for skill in own]:
+        raise ValueError('installed manifest skill roster does not match source')
     for source, expected in expected_sources.items():
         path = source_root/source
         if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != expected:

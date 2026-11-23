@@ -57,9 +57,13 @@ def quiet_call(api, operation, values, actor='admin', expected_error=None):
 
 
 def workflow_call(api, project_id, operation, values=None, actor='coordinator', expected_error=None):
+    """Preserve an explicit retry identity; generate keys only for new operations."""
     command = dict(values or {}, project_id=project_id)
     if operation not in READ_ONLY_WORKFLOW_OPERATIONS:
-        command['idempotency_key'] = uuid.uuid4().hex
+        if 'idempotency_key' not in command:
+            command['idempotency_key'] = uuid.uuid4().hex
+        elif not isinstance(command['idempotency_key'], str) or not command['idempotency_key'].strip():
+            raise ValueError('mutation idempotency_key must be a nonempty string')
     result = quiet_call(api, 'workflow_' + operation, command, actor, expected_error)
     return result if expected_error else result['workflow']
 

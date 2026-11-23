@@ -115,6 +115,33 @@ class AcceptanceSupportTests(unittest.TestCase):
         worker['revision'] = 99
         self.assertEqual(2, job['revision']['number'])
 
+    def test_explicit_mutation_identity_survives_a_retry(self):
+        api = Mock()
+        api.call.return_value = {'workflow': {'ok': True}}
+        values = {'idempotency_key': 'original-operation', 'contract_id': 'contract'}
+        for _ in range(2):
+            workflow_call(api, 'project', 'submit', values, 'worker')
+        self.assertEqual(['original-operation', 'original-operation'],
+                         [call.args[1]['idempotency_key'] for call in api.call.call_args_list])
+        self.assertEqual('original-operation', values['idempotency_key'])
+
+    def test_invalid_explicit_mutation_identity_never_reaches_service(self):
+        for key in (None, '', '   ', False, 7, []):
+            with self.subTest(key=key):
+                api = Mock()
+                with self.assertRaisesRegex(ValueError, 'idempotency_key'):
+                    workflow_call(api, 'project', 'submit', {'idempotency_key': key})
+                api.call.assert_not_called()
+
+    def test_new_mutations_get_independent_keys_when_none_was_supplied(self):
+        api = Mock()
+        api.call.return_value = {'workflow': {'ok': True}}
+        workflow_call(api, 'project', 'record')
+        workflow_call(api, 'project', 'record')
+        keys = [call.args[1]['idempotency_key'] for call in api.call.call_args_list]
+        self.assertTrue(all(keys))
+        self.assertNotEqual(keys[0], keys[1])
+
     def test_history_keeps_all_pages_and_the_final_revision_snapshot(self):
         calls = []
 
