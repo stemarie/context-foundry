@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Two actual disposable service projects; simulated GitHub failures, never a live outage."""
 import argparse
-import importlib.util
 import json
 from pathlib import Path
 import sys
@@ -15,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from foundry_runtime import constants as settings
 from foundry_runtime.core import Barrier, Gate, Journal, RemoteFailure
 from foundry_runtime.runtime import local_git, restricted_check
+from scripts.acceptance_support import load_module
 
 
 def main():
@@ -23,8 +23,7 @@ def main():
     parser.add_argument('--service-binary', type=Path, required=True)
     parser.add_argument('--report', type=Path, required=True)
     args = parser.parse_args()
-    spec = importlib.util.spec_from_file_location('breaker_mock', args.ai_contract_checkout/'scripts/mock_client.py')
-    mock = importlib.util.module_from_spec(spec); spec.loader.exec_module(mock)
+    mock = load_module('breaker_mock', args.ai_contract_checkout/'scripts/mock_client.py')
     root = Path(tempfile.mkdtemp(prefix='cf-breaker-', dir=settings.MACOS_TEMP_DIRECTORY))
     servers, projects = [], []
     report = {'scope':'Actual local service projects and durable gate; simulated GitHub transport/clock. No production failure injection.'}

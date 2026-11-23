@@ -1,26 +1,21 @@
 #!/usr/bin/env python3
 """Disposable real-service semantic-version proof; no model, delivery or deployment."""
 import argparse
-import contextlib
 import hashlib
-import importlib.util
-import io
+from functools import partial
 import json
-import os
 from pathlib import Path
 import sys
-import subprocess
 import tempfile
-import uuid
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from foundry_runtime import constants as settings
 from foundry_runtime.runtime import Client, command_binding, local_git
+from scripts.acceptance_support import load_module, issue_actor_tokens, quiet_call, workflow_call, job_binding
 
 
 def run(args):
-    spec = importlib.util.spec_from_file_location('followup_mock', args.ai_contract_checkout/'scripts/mock_client.py')
-    mock = importlib.util.module_from_spec(spec); spec.loader.exec_module(mock)
+    mock = load_module('followup_mock', args.ai_contract_checkout/'scripts/mock_client.py')
     report = {'scope':'Actual local service and actor-bound adapter reads; no model/QA execution, remote delivery or deployment',
               'ai_contract_revision':local_git(args.ai_contract_checkout,'rev-parse','HEAD'),
               'service_binary_sha256':hashlib.sha256(args.service_binary.read_bytes()).hexdigest()}
@@ -28,22 +23,17 @@ def run(args):
         root = Path(fixture); root.chmod(settings.PRIVATE_DIRECTORY_MODE)
         server = mock.LocalServer(str(args.service_binary), str(root), settings.FIXTURE_SERVICE_TIMEOUT_SECONDS)
         try:
-            for role, scopes in [('worker','read,write,writer'),('qa','read,write,auditor'),('coordinator','read,write,coordinator')]:
-                result = subprocess.run([str(args.service_binary),'token','issue','followup-'+role,scopes],
-                                        env=server.env,capture_output=True,text=True,check=True)
-                server.tokens[role] = next(line[6:] for line in result.stdout.splitlines() if line.startswith('token='))
+            issue_actor_tokens(server, args.service_binary,
+                               [('worker','read,write,writer'), ('qa','read,write,auditor'),
+                                ('coordinator','read,write,coordinator')], prefix='followup-')
             origin = server.start()
             api = mock.Client(origin,server.tokens,'http',settings.FIXTURE_SERVICE_TIMEOUT_SECONDS)
-            def call(name, body, role='admin'):
-                with contextlib.redirect_stdout(io.StringIO()): return api.call(name,body,role)
+            call = partial(quiet_call, api)
             project = call('project_create',{'title':'Disposable version proof','repository':settings.AUTHORIZED_DELIVERY_REPOSITORY,'delivery_policy':'No delivery or deployment.'})['project']
             pid = project['id']
             milestone = call('milestone_create',{'project_id':pid,'ordinal':1,'title':'Version reads','goal':'Verify semantic interpretation','scope':'Disposable local authority reads','acceptance_criteria':f'Worker and QA read {settings.SUPPORTED_CONTRACT_VERSION} independently of native revision.'})['milestone']
             call('project_planning_boundary',{'project_id':pid,'through':1,'expected_revision':0})
-            def work(op, values=None, role='coordinator'):
-                data = dict(values or {},project_id=pid)
-                if op not in ('get','history'):data['idempotency_key']=uuid.uuid4().hex
-                return call('workflow_'+op,data,role)['workflow']
+            work = partial(workflow_call, api, pid)
             work('configure',{'queue_target':1},'admin')
             for role in ('worker','qa'):work('agent',{'agent':'followup-'+role,'agent_role':role},'admin')
             ordinary = call('milestone_contract_create',{'project_id':pid,'milestone_id':milestone['id'],'title':'Version authority fixture','body_markdown':'Ordinary original body; not native executable instructions.'},'architect')['contract']
@@ -51,7 +41,7 @@ def run(args):
             job = work('define',{'contract_id':cid,'expected_revision':0,'title':'Version authority fixture','body_markdown':'Native current body; read this separately from semantic version.','dependencies':[],'conflicts':[]},'architect')['job']
             work('ready',{'contract_id':cid,'revision':job['revision']['number'],'digest':job['revision']['digest']},'architect')
             job = work('reserve',{'lease_seconds':settings.DEFAULT_LEASE_SECONDS})['job']
-            binding = {'project_id':pid,'contract_id':cid,'revision':job['revision']['number'],'digest':job['revision']['digest'],'attempt_id':job['attempt']['id'],'actor':'followup-worker'}
+            binding = dict(job_binding(job, project_id=pid), actor='followup-worker')
             worker = Client(origin,server.tokens['worker'])
             actual = worker.authority(binding,'worker')
             assert actual['contract_version']==settings.SUPPORTED_CONTRACT_VERSION and actual['revision']['body_markdown']!=ordinary['body_markdown']

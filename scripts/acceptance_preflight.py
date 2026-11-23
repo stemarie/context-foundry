@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Available prerequisites only: never starts an agent or asserts native Done."""
-import argparse,importlib.util,json,os,pathlib,subprocess,tempfile,shutil,sys
+import argparse,json,os,pathlib,subprocess,tempfile,shutil,sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from foundry_runtime import constants as settings
+from scripts.acceptance_support import load_module as load, issue_actor_tokens
 parser=argparse.ArgumentParser(description="Run disposable service/skill prerequisites only; this is not real-agent acceptance.")
 parser.add_argument('--ai-contract-checkout',required=True,type=pathlib.Path)
 parser.add_argument('--service-binary',required=True,type=pathlib.Path)
@@ -17,8 +18,6 @@ HERMES=args.hermes_source.resolve()
 PYTHON=args.hermes_python.absolute()
 for path in [BINARY,PYTHON,AIC/'scripts/mock_client.py',AIC/'cmd/aicontract/hermes_native_mcp_container_proof.py',HERMES/'tools/mcp_tool.py']:
  if not path.is_file():parser.error('required local acceptance prerequisite is absent')
-def load(name,path):
- spec=importlib.util.spec_from_file_location(name,path);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
 mock=load('cf_mock',AIC/'scripts/mock_client.py')
 native=load('cf_native',AIC/'cmd/aicontract/hermes_native_mcp_container_proof.py')
 fixture=pathlib.Path(tempfile.mkdtemp(prefix='cf-service-preflight-',dir=settings.MACOS_TEMP_DIRECTORY))
@@ -26,9 +25,9 @@ server=None
 try:
  server=mock.LocalServer(str(BINARY),str(fixture),settings.FIXTURE_SERVICE_TIMEOUT_SECONDS)
  tokens=server.tokens
- for actor,scopes in [('coordinator','read,write,coordinator'),('worker','read,write,writer'),('qa','read,write,auditor')]:
-  result=subprocess.run([str(BINARY),'token','issue','acceptance-'+actor,scopes],env=server.env,text=True,capture_output=True,check=True)
-  tokens[actor]=next(line[6:] for line in result.stdout.splitlines() if line.startswith('token='))
+ issue_actor_tokens(server, BINARY,
+                    [('coordinator','read,write,coordinator'), ('worker','read,write,writer'),
+                     ('qa','read,write,auditor')], prefix='acceptance-')
  url=server.start();client=mock.Client(url,tokens,'http',settings.SERVICE_REQUEST_TIMEOUT_SECONDS)
  project=client.call('project_create',{'title':'Disposable real-agent acceptance','repository':settings.AUTHORIZED_DELIVERY_REPOSITORY,'delivery_policy':'Direct main only after actual independent QA and verified non-force delivery; no deployment.'})['project']
  pid=project['id']

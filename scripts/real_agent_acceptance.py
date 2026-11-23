@@ -5,7 +5,7 @@ Private fixture data is kept outside the checkout. Safe evidence is exported
 before local service cleanup. A failed scenario never fabricates a receipt.
 """
 import argparse
-import importlib.util
+from functools import partial
 import json
 import os
 from pathlib import Path
@@ -21,6 +21,8 @@ from foundry_runtime import constants as settings
 from foundry_runtime.core import Barrier, Gate, Journal
 from foundry_runtime.runtime import Client, Launcher, ServiceError, local_git
 from foundry_runtime.remote import GitHub
+from scripts.acceptance_support import (load_module as load, issue_actor_tokens, resolve_provider,
+                                        quiet_call, workflow_call, job_binding, workflow_pages, history_snapshot)
 
 
 TRANSITION_TIMEOUT_SECONDS = 240
@@ -32,13 +34,6 @@ SHORT_POLL_SECONDS = 0.1
 TRANSITION_POLL_SECONDS = 0.5
 LEASE_EXPIRY_WAIT_SECONDS = 1.2
 ARTIFACT_TAIL_MAX_CHARACTERS = 24000
-
-
-def load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def write_report(path, report):
@@ -81,57 +76,33 @@ def run(args):
               'backend': 'installed Hermes AIAgent; macOS sandbox-exec checks; local SQLite AI.Contract',
               'contracts': reports, 'delivery': [], 'limits': []}
     try:
-        for actor, scopes in [('coordinator', 'read,write,coordinator'), ('worker-one', 'read,write,writer'),
-                              ('worker-two', 'read,write,writer'), ('qa', 'read,write,auditor')]:
-            if args.docker_image:
-                server.tokens[actor] = server.issue_token('acceptance-' + actor, scopes)
-            else:
-                result = subprocess.run([str(args.service_binary), 'token', 'issue', 'acceptance-' + actor, scopes],
-                                        env=server.env, capture_output=True, text=True, check=True)
-                server.tokens[actor] = next(line[6:] for line in result.stdout.splitlines() if line.startswith('token='))
+        issue_actor_tokens(server, args.service_binary,
+                           [('coordinator', 'read,write,coordinator'), ('worker-one', 'read,write,writer'),
+                            ('worker-two', 'read,write,writer'), ('qa', 'read,write,auditor')],
+                           prefix='acceptance-', containerized=bool(args.docker_image))
         origin = server.start()
         report['origin'] = origin
-        class QuietClient(mock.Client):
-            def call(self, *values, **options):
-                import contextlib,io
-                with contextlib.redirect_stdout(io.StringIO()):
-                    return super().call(*values, **options)
-        api = QuietClient(origin, server.tokens, 'http', settings.FIXTURE_SERVICE_TIMEOUT_SECONDS)
-        project = api.call('project_create', {'title': 'Disposable real Hermes acceptance',
+        api = mock.Client(origin, server.tokens, 'http', settings.FIXTURE_SERVICE_TIMEOUT_SECONDS)
+        call = partial(quiet_call, api)
+        project = call('project_create', {'title': 'Disposable real Hermes acceptance',
                           'repository': settings.AUTHORIZED_DELIVERY_REPOSITORY, 'delivery_policy':
                           'Direct main after independent exact-candidate QA, expected-head non-force delivery and postchecks. No deployment.'})['project']
         pid = project['id']; report['project_id'] = pid
-        milestone = api.call('milestone_create', {'project_id': pid, 'ordinal': 1, 'title': 'Local real-agent acceptance',
+        milestone = call('milestone_create', {'project_id': pid, 'ordinal': 1, 'title': 'Local real-agent acceptance',
                              'goal': 'Verify the bounded Context Foundry runtime using actual agents and delivery.',
                              'scope': 'Context Foundry runtime, focused operator documentation and disposable proofs. No AI.Contract runtime ownership changes.',
                              'acceptance_criteria': 'Real independent QA, remote delivery and native history; preserve boundaries.'})['milestone']
         report['milestone_id'] = milestone['id']
-        api.call('project_planning_boundary', {'project_id': pid, 'through': 1, 'expected_revision': 0})
+        call('project_planning_boundary', {'project_id': pid, 'through': 1, 'expected_revision': 0})
 
-        def work(op, values=None, actor='coordinator', expected_error=None):
-            command = dict(values or {}, project_id=pid)
-            if op not in ('get', 'list', 'agents', 'assignments', 'history'):
-                command['idempotency_key'] = uuid.uuid4().hex
-            result = api.call('workflow_' + op, command, actor, expected_error)
-            return result if expected_error else result['workflow']
-
-        def bound(job):
-            result = {'contract_id': job['contract_id'], 'revision': job['revision']['number'],
-                      'digest': job['revision']['digest'], 'attempt_id': job['attempt']['id']}
-            if job.get('candidate'):
-                result.update(candidate_id=job['candidate']['id'], candidate_sha=job['candidate']['sha'])
-            return result
+        work = partial(workflow_call, api, pid)
+        bound = partial(job_binding, include_candidate=True)
 
         work('configure', {'queue_target': 2}, 'admin')
         for actor, role in [('worker-one', 'worker'), ('worker-two', 'worker'), ('qa', 'qa')]:
             work('agent', {'agent': 'acceptance-' + actor, 'agent_role': role}, 'admin')
         # Resolve the existing configured provider only in the operator context.
-        resolver = ('from hermes_cli.runtime_provider import resolve_runtime_provider; import json; '
-                    'r=resolve_runtime_provider(requested=' + repr(settings.ACCEPTANCE_PROVIDER) + ',target_model=' + repr(settings.ACCEPTANCE_MODEL) + '); '
-                    'print(json.dumps({k:r[k] for k in ["provider","api_mode","api_key","base_url"]}))')
-        result = subprocess.run([str(args.hermes_python), '-c', resolver], capture_output=True, text=True,
-                                env=dict(os.environ, PYTHONPATH=str(args.hermes_source), PYTHONDONTWRITEBYTECODE='1'), check=True)
-        runtime = json.loads(result.stdout)
+        runtime = resolve_provider(args.hermes_python, args.hermes_source)
         gate = Gate(journal, settings.GITHUB_CONNECTION_ALIAS)
         github = GitHub(gate, checkout, settings.AUTHORIZED_DELIVERY_REPOSITORY)
         expected = github.head()
@@ -156,7 +127,7 @@ Worker runs the supplied checks and submits an actual commit. Independent QA ins
 Use the check capability. Coordinator integrates serially, verifies expected-head non-force main delivery and postchecks, then records native Done and historical issue. No deployment.
 '''
             body += extra
-            c = api.call('milestone_contract_create', {'project_id': pid, 'milestone_id': milestone['id'],
+            c = call('milestone_contract_create', {'project_id': pid, 'milestone_id': milestone['id'],
                          'title': name, 'body_markdown': body}, 'architect')['contract']
             job = work('define', {'contract_id': c['id'], 'title': name, 'body_markdown': body,
                                  'dependencies': [], 'conflicts': []}, 'architect')['job']
@@ -563,20 +534,11 @@ os._exit(0)
         try:
             if 'work' in locals():
                 report['all_history'] = []
-                queued, cursor = [], 0
-                while True:
-                    page = work('list', {'after':cursor,'limit':settings.HISTORY_PAGE_SIZE}).get('jobs',[])
-                    queued.extend(page)
-                    if len(page)<settings.HISTORY_PAGE_SIZE:break
-                    cursor=page[-1]['queue_sequence']
+                queued = []
+                for page in workflow_pages(work, 'list', field='jobs', cursor_field='queue_sequence', actor='coordinator'):
+                    queued.extend(page.get('jobs', []))
                 for job in queued:
-                    events, cursor, revisions = [], 0, []
-                    while True:
-                        page = work('history', {'contract_id':job['contract_id'],'after':cursor,'limit':settings.HISTORY_PAGE_SIZE})
-                        rows=page.get('events',[]);events.extend(rows);revisions=page.get('revisions',[])
-                        if len(rows)<settings.HISTORY_PAGE_SIZE:break
-                        cursor=rows[-1]['id']
-                    report['all_history'].append({'events':events,'revisions':revisions})
+                    report['all_history'].append(history_snapshot(work, job['contract_id'], actor='coordinator'))
             diagnostics = []
             for home in root.glob('home-*'):
                 row = {'home': home.name}

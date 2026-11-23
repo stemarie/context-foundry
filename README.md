@@ -130,6 +130,8 @@ Rendering refreshes generated native files and their hash manifest in the checko
 PYTHONDONTWRITEBYTECODE=1 TMPDIR=/private/tmp python3 -m unittest discover -s tests -v
 ```
 
+The runners share module loading, actor-token setup, provider resolution, workflow calls, bindings, and pagination through [`scripts/acceptance_support.py`](scripts/acceptance_support.py). Scenario assertions, evidence content, process ownership, and cleanup decisions stay in each runner.
+
 `scripts/acceptance_preflight.py` checks supplied service/Hermes prerequisites without launching an agent or proving delivery. Real-agent acceptance scripts can make model calls and perform authorized repository delivery; inspect their arguments and scope first.
 
 Recorded evidence includes [single and concurrent real-agent acceptance](docs/HERMES_ACCEPTANCE_2026-11-01.md), [audit-gap closure](docs/HERMES_GAP_CLOSURE_2026-11-01.md), [command admission and integration recovery](docs/COMMAND_ADMISSION_PROOFS_2026-11-01.md), and [connection recovery and check receipts](docs/CONNECTION_RECOVERY_ACCEPTANCE_2026-11-02.md). Later stock-runtime and final verification outcomes are linked in historical issues [#49](https://github.com/stemarie/context-foundry/issues/49) and [#50](https://github.com/stemarie/context-foundry/issues/50). These record their stated sources and hosts; they are not a health check of today's service.

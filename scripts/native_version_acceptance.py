@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 """Final-source installed-Hermes version/body smoke in disposable state; no delivery."""
 import argparse
-import contextlib
 import hashlib
-import importlib.util
-import io
+from functools import partial
 import json
-import os
 from pathlib import Path
 import sys
 import shutil
-import subprocess
 import tempfile
 import time
 import uuid
@@ -18,7 +14,9 @@ import uuid
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from foundry_runtime import constants as settings
 from foundry_runtime.core import Barrier, Journal
-from foundry_runtime.runtime import Client, Launcher, local_git
+from foundry_runtime.runtime import Launcher, local_git
+from scripts.acceptance_support import (load_module, issue_actor_tokens, resolve_provider,
+                                        quiet_call, workflow_call, job_binding, history_snapshot)
 
 
 TRANSITION_TIMEOUT_SECONDS = 300
@@ -31,8 +29,7 @@ def run(args):
     checkout=Path(__file__).resolve().parents[1]
     root=Path(tempfile.mkdtemp(prefix='cf-native-version-',dir=settings.MACOS_TEMP_DIRECTORY));root.chmod(settings.PRIVATE_DIRECTORY_MODE)
     print('PRIVATE_FIXTURE',root,flush=True)
-    spec=importlib.util.spec_from_file_location('native_version_mock',args.ai_contract_checkout/'scripts/mock_client.py')
-    mock=importlib.util.module_from_spec(spec);spec.loader.exec_module(mock)
+    mock=load_module('native_version_mock', args.ai_contract_checkout/'scripts/mock_client.py')
     server=mock.LocalServer(str(args.service_binary),str(root),settings.FIXTURE_SERVICE_TIMEOUT_SECONDS)
     journal=Journal(root/'runtime.sqlite');launcher=Launcher(journal,args.hermes_python,args.hermes_source)
     keys=[];trees=[];branches=[];pid=None;cid=None;work=None
@@ -41,8 +38,6 @@ def run(args):
             'hermes_revision':local_git(args.hermes_source,'rev-parse','HEAD'),
             'runtime_sha256':{str(p.relative_to(checkout)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((checkout/'foundry_runtime').glob('*.py'))},
             'status':'running'}
-    def bound(job):
-        return {'project_id':pid,'contract_id':cid,'revision':job['revision']['number'],'digest':job['revision']['digest'],'attempt_id':job['attempt']['id']}
     def wait(stages,key):
         deadline=time.monotonic()+TRANSITION_TIMEOUT_SECONDS
         while time.monotonic()<deadline:
@@ -52,20 +47,16 @@ def run(args):
             time.sleep(TRANSITION_POLL_SECONDS)
         raise Barrier('native smoke transition timeout')
     try:
-        for role,scopes in [('worker','read,write,writer'),('qa','read,write,auditor'),('coordinator','read,write,coordinator')]:
-            issued=subprocess.run([str(args.service_binary),'token','issue','version-'+role,scopes],env=server.env,capture_output=True,text=True,check=True)
-            server.tokens[role]=next(line[6:] for line in issued.stdout.splitlines() if line.startswith('token='))
+        issue_actor_tokens(server, args.service_binary,
+                           [('worker','read,write,writer'), ('qa','read,write,auditor'),
+                            ('coordinator','read,write,coordinator')], prefix='version-')
         origin=server.start();api=mock.Client(origin,server.tokens,'http',settings.FIXTURE_SERVICE_TIMEOUT_SECONDS)
-        def call(op,data,role='admin'):
-            with contextlib.redirect_stdout(io.StringIO()):return api.call(op,data,role)
+        call=partial(quiet_call, api)
         project=call('project_create',{'title':'Disposable native version smoke','repository':settings.AUTHORIZED_DELIVERY_REPOSITORY,'delivery_policy':'Disposable fixture only; no push, integration, Done or deployment.'})['project'];pid=project['id']
         milestone=call('milestone_create',{'project_id':pid,'ordinal':1,'title':'Native semantic version','goal':'Verify current installed adapter model path','scope':'Local disposable fixture','acceptance_criteria':'Worker and independent QA consume checked semantic version and native body.'})['milestone']
         call('project_planning_boundary',{'project_id':pid,'through':1,'expected_revision':0})
-        def workflow(op,data=None,role='coordinator'):
-            data=dict(data or {},project_id=pid)
-            if op not in ('get','history'):data['idempotency_key']=uuid.uuid4().hex
-            return call('workflow_'+op,data,role)['workflow']
-        work=workflow
+        work=partial(workflow_call, api, pid)
+        bound=partial(job_binding, project_id=pid)
         work('configure',{'queue_target':1},'admin')
         for role in ('worker','qa'):work('agent',{'agent':'version-'+role,'agent_role':role},'admin')
         marker='native-body-'+uuid.uuid4().hex
@@ -80,11 +71,7 @@ Write the concise fixture, run the supplied check and submit a local candidate. 
         job=work('define',{'contract_id':cid,'expected_revision':0,'title':'Disposable version fixture','body_markdown':body,'dependencies':[],'conflicts':[]},'architect')['job']
         work('ready',{'contract_id':cid,'revision':job['revision']['number'],'digest':job['revision']['digest']},'architect')
         job=work('reserve',{'lease_seconds':settings.DEFAULT_LEASE_SECONDS})['job']
-        resolver=('from hermes_cli.runtime_provider import resolve_runtime_provider; import json; '
-                  'r=resolve_runtime_provider(requested=' + repr(settings.ACCEPTANCE_PROVIDER) + ',target_model=' + repr(settings.ACCEPTANCE_MODEL) + '); '
-                  'print(json.dumps({k:r[k] for k in ["provider","api_mode","api_key","base_url"]}))')
-        result=subprocess.run([str(args.hermes_python),'-B','-c',resolver],env=dict(os.environ,PYTHONPATH=str(args.hermes_source),PYTHONDONTWRITEBYTECODE='1'),capture_output=True,text=True,check=True)
-        runtime=json.loads(result.stdout)
+        runtime=resolve_provider(args.hermes_python, args.hermes_source, disable_bytecode=True)
         base=local_git(checkout,'rev-parse','HEAD')
         def launch(job,role,ref):
             branch='codex/version-'+role+'-'+uuid.uuid4().hex[:8];directory=root/role
@@ -124,15 +111,7 @@ Write the concise fixture, run the supplied check and submit a local candidate. 
             try:launcher.stop(key)
             except Barrier:stopped=False
         if work is not None and cid:
-            history={'events':[],'revisions':[]};after=0
-            while True:
-                page=work('history',{'contract_id':cid,'limit':settings.HISTORY_PAGE_SIZE,'after':after},'reader')
-                history['revisions']=page.get('revisions',[])
-                events=page.get('events',[]);history['events'].extend(events)
-                if len(events)<settings.HISTORY_PAGE_SIZE:break
-                assert events[-1]['id']>after
-                after=events[-1]['id']
-            report['history']=history
+            report['history']=history_snapshot(work, cid)
         report['runtime_events']=[json.loads(line) for file in sorted(root.glob('home-*/events.jsonl')) for line in file.read_text().splitlines()]
         report['runtime_hashes_unchanged']=all(hashlib.sha256((checkout/p).read_bytes()).hexdigest()==v for p,v in report['runtime_sha256'].items())
         server.stop()
