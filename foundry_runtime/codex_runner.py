@@ -122,7 +122,7 @@ class Coordinator:
     def launch(self, role, actor, turn, workspace, **binding):
         payload = dict(role=role, project_id=self.project_id, milestone_id=self.milestone_id,
                        actor=actor.name, turn_id=turn, **binding)
-        key = self.sessions.start(payload, workspace, actor.home)
+        key = self.sessions.start(payload, workspace, actor.home, client=actor.client)
         state = self.sessions.inspect(key)
         if state == "unknown":
             raise Barrier("Codex session ownership is uncertain")
@@ -214,7 +214,7 @@ class Coordinator:
         ready = [(job["contract_id"], job["revision"]["digest"]) for job in jobs if job["stage"] == "Ready"]
         if len(ready) < target and self.architect.name not in busy:
             turn = digest([self.milestone_id, project["boundary_revision"], target, ready,
-                           [(job["contract_id"], job["stage"]) for job in jobs]])
+                           [(job["contract_id"], job["revision"]["digest"]) for job in jobs]])
             key, state = self.launch("architect", self.architect, turn, self.checkout,
                                      available_capacity=target - len(ready))
             if state == "stopped" and self.sessions.result(key) != 0:
@@ -246,9 +246,9 @@ class Coordinator:
                               lease_seconds=300, **self.binding(job))
         return changed
 
-    def watch(self):
+    def watch(self, stop=None):
         pending = queue.Queue()
-        stop = threading.Event()
+        stop = threading.Event() if stop is None else stop
         wake_pending = threading.Event()
 
         def wake():
@@ -274,13 +274,15 @@ class Coordinator:
         self.wake = wake
         threading.Thread(target=subscribe, daemon=True).start()
         try:
-            while True:
+            while not stop.is_set():
                 try:
                     message = pending.get(timeout=10)
                 except queue.Empty:
-                    if self.maintenance():
+                    if not stop.is_set() and self.maintenance():
                         self.reconcile()
                     continue
+                if stop.is_set():
+                    break
                 if message != "wake":
                     raise message
                 wake_pending.clear()

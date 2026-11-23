@@ -27,8 +27,10 @@ checkout. The private JSON configuration contains:
 Each credential file contains `name`, `scopes`, and `token`. Use files with mode
 0600. The coordinator, architect, writer and auditor need read, write and their
 respective role scope. Register Workers and reviewers and set the project queue
-target in AI.Contract. Configure a role-scoped AI.Contract connection in each
-Codex home. The runner keeps the service token out of the invocation prompt.
+target in AI.Contract. The runner configures the AI.Contract MCP connection for each invocation and
+provides its role token through the process environment. The token is excluded
+from model shells and kept out of prompts and arguments. The Worker receives an
+assignment-bound candidate commit tool for sandboxed Git handoff.
 Role homes run under the local operator account. Use a trusted host and
 runtime-managed credential access for role sessions.
 

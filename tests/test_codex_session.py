@@ -1,5 +1,6 @@
 import json
 import os
+import signal
 from pathlib import Path
 import sys
 import tempfile
@@ -7,6 +8,7 @@ import unittest
 
 from foundry_runtime.codex_session import CodexSessions
 from foundry_runtime.core import Journal
+from foundry_runtime.runtime import Client
 
 
 @unittest.skipUnless(os.name == "posix", "requires Unix process groups")
@@ -60,4 +62,16 @@ class CodexSessionsTest(unittest.TestCase):
         self.assertEqual(restarted.inspect(key), "running")
         self.assertTrue(launch.stop(key)["stopped_confirmed"])
         self.assertEqual(restarted.inspect(key), "stopped")
-        self.assertIsNone(restarted.result(key))
+        self.assertEqual(restarted.result(key), -signal.SIGTERM)
+
+    def test_role_token_is_passed_outside_argv_and_prompt(self):
+        launch = self.launcher("sys.exit(0)")
+        secret = "disposable-test-role-token"
+        key = launch.start(self.binding, self.workspace, self.home,
+                           client=Client("http://127.0.0.1:8080", secret))
+        self.assertEqual(launch.children[key].wait(timeout=5), 0)
+        invocation = (self.workspace / "invocation.json").read_text()
+        self.assertNotIn(secret, invocation)
+        self.assertIn("bearer_token_env_var", invocation)
+        self.assertIn("shell_environment_policy.exclude", invocation)
+        self.assertIn("foundry_candidate.enabled_tools", invocation)
