@@ -30,6 +30,16 @@ Record actual checks, outcomes, acceptance evidence, candidate identity, failure
 
 Separate QA actors from implementers, even if they share a GitHub login. The service/runtime must establish actor and attempt identity; do not infer independence from a role label alone.
 
+## Autonomous work selection
+
+For discretionary audits and successor work, assess value against the approved goal before creating a contract. Identify a realistic trigger, concrete consequence, supporting evidence and uncertainty, exposure through supported workflows, credible misuse or operational conditions, and proportionate implementation/verification cost. Keep the assessment brief and qualitative; do not invent probabilities or precise effort estimates. Use bounded investigation when missing evidence can cheaply resolve the decision. A reproducer proves possibility; assess its practical relevance separately. Rare failures with severe consequences can justify action without observed incidents or an unsafe live reproduction.
+
+Select material work whose expected benefit justifies its cost. During authorized execution, route it through Architect, Coordinator, Worker and independent QA under existing permissions, then continue without asking the user to approve routine prioritization. Leave low-value observations alone; do not automatically turn them into issues, backlog entries or successor contracts. Escalate only a genuine unresolved product decision or missing authority; report unavailable capabilities as concrete blockers.
+
+Inspect primary workflows, known failures and operational friction first. Expand investigation when evidence supports a useful next question. There is no finding quota, queue-filling obligation or need to exhaust every hypothetical edge case. Stop discretionary expansion when no worthwhile in-scope outcome remains, and report that conclusion briefly without a new approval request. Reassess only when new evidence or authorized scope warrants it.
+
+Keep this judgment separate from explicit requirements and active contracts. Required acceptance criteria, checks and independent QA still apply; do not waive failures, abandon assigned work, or claim the goal complete because remaining requirements seem low value. Return material contract changes through the existing reassessment process. An audit-only or planning-only request authorizes only that scope, regardless of a finding's impact.
+
 ## Shared GitHub circuit breaker
 
 All GitHub access must respect the breaker for the affected connection across projects. Connection, authentication, rate-limit, and service failures trip it; ordinary request-specific errors remain local. While open, pause GitHub access and continue local work where possible. Do not bypass it through another CLI, API, or agent.

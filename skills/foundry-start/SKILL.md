@@ -11,7 +11,9 @@ Use at most five cycles unless the user supplies another limit. Count a cycle wh
 
 For a named or clearly established OpenSpec change, read [openspec-foundry](../openspec-foundry/SKILL.md), reconcile its schema prerequisites and mapped requirements/tasks, and retain the selected store. Do not invent a change or initialize an unrelated project. Without OpenSpec, use the same native workflow with the current authoritative specification.
 
-Before every cycle, inspect actual implementation/delivery and native jobs/history. Stop if the goal is already fulfilled. Resume incomplete existing work before authoring a successor. Ask Architect only for the next coherent necessary outcome within the human horizon; avoid duplicate replenishment and speculative hardening.
+Before every cycle, inspect actual implementation/delivery and native jobs/history. Stop if the goal is already fulfilled. Resume incomplete existing work before authoring a successor. Ask Architect only for the next coherent necessary outcome within the human horizon, applying the operating rules' autonomous work selection. Proceed with material in-scope work through normal role handoffs without a routine prioritization approval. Leave low-value observations alone; avoid duplicate replenishment and speculative hardening.
+
+When no worthwhile discretionary work remains, stop without filling the cycle limit or generating a backlog, and briefly report what was achieved and any remaining limitation. Preserve unfinished explicit requirements and active contracts; an unmet goal or blocker is not completion. Ask the user only for genuine unresolved product decisions or missing authority, and report unavailable capabilities with the concrete prerequisite.
 
 Run one foundry-loop cycle and require actual native completion plus verified delivery/history before continuing. QA corrections remain within the same cycle; a material scope/revision decision returns to Architect. Reconcile uncertain launch, submission and remote outcomes before any repeat. A busy pool means wait; unknown execution or missing runtime/credentials means report the prerequisite, not invent actors or an issue queue.
 

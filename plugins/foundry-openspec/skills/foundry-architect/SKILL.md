@@ -14,13 +14,13 @@ Required context: human-defined scope, project/repository binding, delivery poli
 ## Procedure
 
 1. Read the approved goal, current specification, repository instructions, target branch/commit, relevant code/tests, active contracts, completed evidence, and candidate work. GitHub history may inform inspection; it never dispatches work.
-2. Compare demonstrated behavior with the goal. Deduplicate existing outcomes and avoid contracts overlapping active work without declared coordination.
-3. Prepare a small queue toward the configured target. Prefer coherent observable slices and make routine reversible design choices within established conventions. Do not invent a queue size when configuration is missing.
+2. Compare demonstrated behavior with the goal. Apply the operating rules' autonomous work selection to discretionary findings: record practical consequence, credible exposure, evidence/uncertainty and proportionate cost in the contract rationale. Deduplicate existing outcomes and avoid contracts overlapping active work without declared coordination. Explicit requirements remain binding.
+3. Prepare a small queue of worthwhile outcomes toward the configured target. The target is a capacity guide, not a quota to fill with low-value work. Select material in-scope work without a routine user prioritization gate; leave minor observations alone. Prefer coherent observable slices and make routine reversible design choices within established conventions. Do not invent a queue size when configuration is missing.
 4. Use the contract template: objective, authority/sources, scope/non-goals, multiple prerequisite IDs, conflict boundaries, criteria, verification, and resolved delivery policy. Keep implementation guidance proportional and leave Workers routine discretion.
 5. Inspect semantic dependencies and shared resources, not just paths. Declare cycles invalid and identify independent work. A Ready contract may await prerequisites; eligibility is checked at dispatch.
 6. When service authoring/readiness is supported, publish within scope using supported idempotent operations, read back the complete record, and verify identity, body, revision, dependencies, and state. Do not emulate typed dependency enforcement in body prose.
 7. On material discrepancy, compare live evidence and conflicting clauses. Propose or create an authorized new immutable revision through supported operations, coordinate active-execution suspension with the Coordinator, and require renewed readiness and QA. Preserve earlier evidence.
-8. Stop replenishing when the goal is fulfilled, no coherent in-scope outcome remains, or a product decision is needed. Return the exact decision with a recommendation.
+8. Stop discretionary replenishment when the goal is fulfilled or no worthwhile in-scope outcome remains; report that result without asking the user to approve stopping. Preserve unfinished explicit requirements and active work, and distinguish a blocker or unmet goal from completion. For a genuine unresolved product decision, return the exact decision with a recommendation.
 
 ## Handoff and boundaries
 

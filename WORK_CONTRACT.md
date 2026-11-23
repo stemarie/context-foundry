@@ -59,6 +59,8 @@ The Coordinator integrates under the resolved policy. A contract does not indepe
 
 The Architect maintains a small queue toward a configurable target within the approved scope. A contract is Ready when its outcome, boundaries, dependencies, acceptance criteria, verification, and delivery policy are defined and no blocking decision remains. Prerequisite completion and conflict availability determine dispatch eligibility separately.
 
+For discretionary successor work, apply the [autonomous work selection rules](skills/OPERATING_RULES.md): weigh practical impact, credible exposure, evidence and proportionate cost before authorship. The queue target is not a quota. Select worthwhile in-scope outcomes without a routine user prioritization gate, leave low-value observations alone, and stop discretionary replenishment when no valuable work remains. Explicit requirements, active contracts and all required verification remain binding; an unmet goal is not completion.
+
 The Coordinator selects FIFO among eligible ready contracts: all prerequisites are Done, no declared conflicts are active, and an assigned Worker is available. It atomically reserves the contract in AI.Contract before launching the Worker. Workers discover their assigned work through AI.Contract; GitHub issues do not assign or unlock work. The verified local bootstrap binds each invocation to its own actor credential and immutable service assignment; see [local runtime](docs/LOCAL_RUNTIME.md).
 
 Each project has a defined Worker pool. When all Workers are busy the Coordinator waits. The Worker stays assigned through QA and corrections until acceptance or explicit reassignment.

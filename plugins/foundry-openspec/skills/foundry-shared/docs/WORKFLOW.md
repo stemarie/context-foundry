@@ -21,6 +21,8 @@ Skills remain runtime-neutral; Hermes is the target of the current setup handoff
 
 The Architect maintains a small configurable ready-queue target. Replenishment is requested automatically by the Coordinator and never expands human-defined scope.
 
+Apply [autonomous work selection](../skills/OPERATING_RULES.md) before creating discretionary successor contracts. Prioritize practical impact, credible exposure and proportionate cost; select material in-scope work automatically and leave low-value observations alone. Queue and cycle limits are ceilings or capacity guides, never reasons to invent work. Stop discretionary expansion when no worthwhile outcome remains, without a routine approval request. Preserve unfinished explicit requirements, active work, independent QA and delivery checks; report unmet goals and blockers accurately.
+
 ## Selection and capacity
 
 - FIFO among eligible ready contracts; prerequisites must be integrated and verified (Done).

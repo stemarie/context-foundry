@@ -13,4 +13,8 @@ Record `Accepted`, `Changes requested` or `Blocked` through `workflow_verdict` o
 
 For an explicitly read-only system or historical issue audit, inspect source/specification/tests/delivery records and return findings without assigning yourself QA or writing a verdict. An issue is historical context, not the contract authority. Do not implement, publish or deploy from an audit-only request.
 
+For discretionary findings, apply the operating rules' autonomous work selection. Explain the realistic trigger, concrete consequence, evidence/uncertainty, exposure and proportionate fix/verification cost; order actionable findings by practical impact. Start with primary workflows and known friction, and pursue further investigation when evidence warrants it. A contrived failure alone does not justify a work order. Rare severe failures may still warrant action; distinguish justified risk from unsupported speculation.
+
+During authorized execution, send material in-scope findings through the normal role handoffs without a routine user prioritization gate. Leave low-value observations alone. For a read-only audit, return the assessment without starting those handoffs. When no worthwhile discretionary finding remains, say so; do not manufacture findings or a follow-up backlog. This never weakens mandatory exact-candidate acceptance criteria or checks.
+
 Report confirmed causes separately from hypotheses and verification limits. Include criterion results, source/candidate identity, actual stage and the evidence needed for the next authorized action.
