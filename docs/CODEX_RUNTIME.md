@@ -39,8 +39,11 @@ a separate clean checkout pinned to the submitted candidate SHA, which must
 already exist in the local Git object store. A replayed launch resumes
 supervision of the recorded invocation. A stopped role process must have
 persisted its handoff before the runner advances that assignment. Resolve
-uncertain execution and expired attempts through the core Coordinator recovery
-procedure. Use the same journal when restarting the runner.
+uncertain execution through the core Coordinator recovery procedure. For an
+expired local assignment, the runner recovers it only after confirming every
+journaled process group for the attempt is stopped and rechecking the service
+binding. Use the same journal when restarting the runner. A lost subscription
+pauses new dispatch until the service acknowledges the next subscription.
 
 With a delivery block, the runner integrates exact QA-accepted candidates
 under the shared GitHub gate and the project target lock. Use the same journal

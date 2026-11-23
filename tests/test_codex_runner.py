@@ -1,8 +1,10 @@
+import contextlib
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
+import threading
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from foundry_runtime.codex_runner import Coordinator
 from foundry_runtime.core import Barrier
@@ -94,3 +96,79 @@ class CodexCoordinatorTest(unittest.TestCase):
                          ["worker-a", "worker-b"])
         self.assertEqual(c.launch.call_args.args[0], "architect")
         self.assertEqual(c.launch.call_args.kwargs["available_capacity"], 2)
+
+    def test_expired_owned_attempt_recovers_only_after_confirmed_stop(self):
+        c = self.coordinator
+        expired = job()
+        expired["attempt"]["expires_at"] = (datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()
+        c.sessions.recorded.return_value = [("key", {"role": "worker", "actor": "worker-a"})]
+        c.sessions.inspect.side_effect = ["running", "stopped"]
+        c.work.return_value = {"job": expired}
+        self.assertTrue(c.recover_expired(expired))
+        c.sessions.stop.assert_called_once_with("key")
+        self.assertEqual(c.work.call_args.args, ("recover",))
+        self.assertTrue(c.work.call_args.kwargs["stopped_confirmed"])
+
+    def test_unknown_or_unowned_expired_attempt_blocks_without_recovery(self):
+        c = self.coordinator
+        expired = job()
+        expired["attempt"]["expires_at"] = (datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()
+        c.work.return_value = {"job": expired}
+        for records in ([], [("unknown", {"role": "worker", "actor": "worker-a"})]):
+            c.sessions.recorded.return_value = records
+            c.sessions.inspect.return_value = "unknown"
+            with self.assertRaises(Barrier):
+                c.recover_expired(expired)
+        c.sessions.stop.assert_not_called()
+        self.assertTrue(all(call.args == ("get",) for call in c.work.call_args_list))
+
+    def test_expiry_recovery_does_not_override_a_renewed_lease(self):
+        c = self.coordinator
+        old = job()
+        old["attempt"]["expires_at"] = (datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()
+        c.sessions.recorded.return_value = [("key", {"role": "worker", "actor": "worker-a"})]
+        c.sessions.inspect.return_value = "stopped"
+        c.work.return_value = {"job": job()}
+        self.assertFalse(c.recover_expired(old))
+        c.work.assert_called_once_with("get", contract_id="contract")
+
+    def test_local_wake_waits_for_subscription_acknowledgement(self):
+        c = self.coordinator
+        c.client = Mock()
+        entered, acknowledge, maintained, dispatched, stop = (threading.Event() for _ in range(5))
+
+        @contextlib.contextmanager
+        def subscribe(*_args):
+            entered.set()
+            if not acknowledge.wait(2):
+                raise RuntimeError("fixture did not enable subscription")
+            def idle():
+                if not stop.wait(2):
+                    yield None
+            yield idle()
+
+        def maintenance():
+            maintained.set()
+            return True
+
+        def reconcile():
+            dispatched.set()
+            stop.set()
+
+        c.maintenance = maintenance
+        c.reconcile = reconcile
+        with patch("foundry_runtime.codex_runner.workflow_events", subscribe):
+            thread = threading.Thread(target=c.watch, args=(stop,), daemon=True)
+            thread.start()
+            try:
+                self.assertTrue(entered.wait(2))
+                c.wake()
+                self.assertTrue(maintained.wait(2))
+                self.assertFalse(dispatched.is_set())
+                acknowledge.set()
+                self.assertTrue(dispatched.wait(2))
+            finally:
+                stop.set()
+                acknowledge.set()
+                thread.join(2)
+            self.assertFalse(thread.is_alive())

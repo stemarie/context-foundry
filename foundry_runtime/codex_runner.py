@@ -220,6 +220,38 @@ class Coordinator:
             if state == "stopped" and self.sessions.result(key) != 0:
                 raise Barrier("Architect session failed: " + key)
 
+    def recover_expired(self, job):
+        binding = self.binding(job)
+        attempt_id = binding["attempt_id"]
+
+        def still_expired():
+            fresh = self.work("get", contract_id=binding["contract_id"])["job"]
+            return (fresh.get("attempt") and self.binding(fresh) == binding and
+                    fresh["stage"] == job["stage"] and
+                    parse_service_time(fresh["attempt"]["expires_at"]) <= datetime.now(timezone.utc))
+
+        if not still_expired():
+            return False
+        launches = list(self.sessions.recorded(self.project_id, attempt_id=attempt_id))
+        if not any(row["role"] == "worker" and row["actor"] == job["attempt"]["worker"]
+                   for _, row in launches):
+            raise Barrier("expired Worker attempt lacks a local launch record: " + attempt_id)
+        for key, _ in launches:
+            state = self.sessions.inspect(key)
+            if state == "unknown":
+                raise Barrier("expired attempt process ownership is uncertain: " + key)
+            if state == "running":
+                self.sessions.stop(key)
+            if self.sessions.inspect(key) != "stopped":
+                raise Barrier("expired attempt process is not confirmed stopped: " + key)
+            self.active.pop(key, None)
+        if not still_expired():
+            return False
+        self.work("recover", mutation=True, idempotency_key="codex-recover-" + attempt_id,
+                  stopped_confirmed=True, evidence="Confirmed all Codex process groups stopped for " + attempt_id,
+                  **binding)
+        return True
+
     def maintenance(self):
         changed = False
         for key in tuple(self.active):
@@ -237,11 +269,8 @@ class Coordinator:
                 expires = parse_service_time(job["attempt"]["expires_at"])
                 remaining = (expires - datetime.now(timezone.utc)).total_seconds()
                 if remaining <= 0:
-                    for key, (_, attempt_id, _, _) in tuple(self.active.items()):
-                        if attempt_id == job["attempt"]["id"]:
-                            self.sessions.stop(key)
-                    raise Barrier("lease expired; reconcile before recovering the attempt")
-                if remaining <= 120:
+                    changed = self.recover_expired(job) or changed
+                elif remaining <= 120:
                     self.work("heartbeat", client=worker.client, mutation=True,
                               lease_seconds=300, **self.binding(job))
         return changed
@@ -250,6 +279,7 @@ class Coordinator:
         pending = queue.Queue()
         stop = threading.Event() if stop is None else stop
         wake_pending = threading.Event()
+        subscribed = threading.Event()
 
         def wake():
             if not wake_pending.is_set():
@@ -260,11 +290,15 @@ class Coordinator:
             while not stop.is_set():
                 try:
                     with workflow_events(self.client, self.project_id) as events:
-                        wake()
-                        for _ in events:
-                            if stop.is_set():
-                                return
+                        subscribed.set()
+                        try:
                             wake()
+                            for _ in events:
+                                if stop.is_set():
+                                    return
+                                wake()
+                        finally:
+                            subscribed.clear()
                 except ServiceUnavailable:
                     stop.wait(2)
                 except Exception as exc:
@@ -278,7 +312,7 @@ class Coordinator:
                 try:
                     message = pending.get(timeout=10)
                 except queue.Empty:
-                    if not stop.is_set() and self.maintenance():
+                    if not stop.is_set() and self.maintenance() and subscribed.is_set():
                         self.reconcile()
                     continue
                 if stop.is_set():
@@ -287,7 +321,8 @@ class Coordinator:
                     raise message
                 wake_pending.clear()
                 self.maintenance()
-                self.reconcile()
+                if subscribed.is_set():
+                    self.reconcile()
         finally:
             stop.set()
             if self.delivery:

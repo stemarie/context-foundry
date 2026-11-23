@@ -107,9 +107,15 @@ class CodexSessions:
             time.sleep(0.02)
         raise Barrier("Codex launch acknowledgement is missing")
 
-    def recorded(self, project_id):
+    def recorded(self, project_id, *, attempt_id=None):
         with self.journal.transaction() as db:
-            rows = db.execute("SELECT key,binding FROM launches WHERE finished IS NULL").fetchall()
+            if attempt_id is None:
+                rows = db.execute("SELECT key,binding FROM launches WHERE finished IS NULL").fetchall()
+            else:
+                rows = db.execute(
+                    "SELECT key,binding FROM launches WHERE json_extract(binding,'$.attempt_id')=?",
+                    (attempt_id,),
+                ).fetchall()
         for row in rows:
             binding = json.loads(row["binding"])
             if binding.get("adapter") == "codex" and binding.get("project_id") == project_id:
