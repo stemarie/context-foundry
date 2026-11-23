@@ -25,6 +25,13 @@ Only the operator Coordinator obtains native integration ownership, reconciles
 target drift, delivers and verifies the remote target, then completes the job.
 Changed candidates require renewed QA.
 
+Every check attempt clears earlier evidence before it starts. A timeout or other
+exception therefore requires a fresh successful check before submission or QA
+acceptance. Candidate snapshots bind file paths, bytes and permission modes;
+changing an executable bit invalidates verification. QA acceptance also compares
+the workspace to its checked snapshot, including ignored check-input files that
+can change without making Git status dirty.
+
 The verified delivery allowlist is `stemarie/context-foundry`; other targets require explicit operator authorization and configuration. All operator GitHub paths use `remote.GitHub` and one shared `core.Gate` journal
 and stable connection alias across projects. One shared journal path is mandatory across Coordinators; independent journals cannot coordinate the same connection. `GitHub.integration()` holds a target lock through ownership, push, postchecks and native Done. Qualifying failures pause remote
 operations with a single half-open probe; ordinary resource errors remain local.

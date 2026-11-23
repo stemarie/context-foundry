@@ -106,9 +106,11 @@ class LocalConnectionTests(unittest.TestCase):
         tools.role='qa';tools.binding={'project_id':'project','contract_id':'contract','revision':1,'digest':'digest','attempt_id':'attempt','actor':'qa','candidate_id':'candidate-id'}
         tools.config={'candidate_sha':candidate};tools.workspace=Path('/private/tmp/candidate')
         tools.checks={'passed':True,'command':check_descriptor(['python3','-m','unittest'],'/private/tmp/candidate')}
+        tools.checked_snapshot='fixture-snapshot'
         tools.calls=[];tools.lock=threading.RLock();tools.client=Mock()
         tools.client.authority.return_value={'stage':'QA','reviewer':'qa','candidate':{'id':'candidate-id'}}
-        with patch('foundry_runtime.runtime.local_git',side_effect=lambda workspace,*args: '' if args[0]=='status' else candidate):
+        with patch('foundry_runtime.runtime.local_git',side_effect=lambda workspace,*args: '' if args[0]=='status' else candidate), \
+             patch('foundry_runtime.runtime.snapshot',return_value='fixture-snapshot'):
             Tools._invoke(tools,'verdict',{'verdict':'Accepted','summary':'ran a different command'})
         payload=tools.client.workflow.call_args.args[1]
         evidence=json.loads(payload['evidence'])

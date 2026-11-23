@@ -11,6 +11,7 @@ import hashlib
 import os
 import math
 import re
+import stat
 from pathlib import Path
 import subprocess
 import sys
@@ -179,6 +180,7 @@ def restricted_check(workspace, argv, scratch, timeout=settings.CHECK_TIMEOUT_SE
 
 
 def snapshot(workspace):
+    """Bind verification to file paths, contents and permission modes."""
     result = hashlib.sha256()
     for path in sorted(workspace.rglob('*')):
         if any(part.startswith('.git') for part in path.relative_to(workspace).parts):
@@ -186,8 +188,10 @@ def snapshot(workspace):
         if path.is_symlink():
             raise Barrier('candidate contains unsupported symlink')
         if path.is_file():
-            result.update(str(path.relative_to(workspace)).encode())
-            result.update(b'\0' + path.read_bytes() + b'\0')
+            content = path.read_bytes()
+            metadata = [str(path.relative_to(workspace)), stat.S_IMODE(path.stat().st_mode), len(content)]
+            result.update(json.dumps(metadata, separators=(',', ':')).encode())
+            result.update(b'\0' + content)
     return result.hexdigest()
 
 
@@ -198,6 +202,7 @@ class Tools:
         self.binding, self.role = config['binding'], config['role']
         self.workspace = Path(config['workspace']).resolve()
         self.checks = None
+        self.checked_snapshot = None
         self.candidate = None
         self.calls = []
         self.lock = threading.RLock()
@@ -299,14 +304,17 @@ class Tools:
             self.checks = None
             return {'written': arguments['path']}
         if operation == 'check':
+            # A failed or interrupted recheck must never preserve an earlier PASS.
+            self.checks = None
+            self.checked_snapshot = None
             if self.role == 'qa' and local_git(self.workspace, 'rev-parse', 'HEAD') != self.config['candidate_sha']:
                 raise Barrier('QA snapshot no longer matches candidate')
             before = snapshot(self.workspace)
-            self.checks = restricted_check(self.workspace, self.config['checks'], Path(self.config['scratch']))
+            checks = restricted_check(self.workspace, self.config['checks'], Path(self.config['scratch']))
             after = snapshot(self.workspace)
             if before != after:
-                self.checks = None
                 raise Barrier('check changed candidate files; rerun verification')
+            self.checks = checks
             self.checked_snapshot = after
             return self.checks
         if operation == 'submit':
@@ -372,6 +380,10 @@ class Tools:
                 raise Barrier('QA candidate changed')
             if verdict == 'Accepted' and (not self.checks or not self.checks['passed']):
                 raise Barrier('independent exact-candidate checks required')
+            if verdict == 'Accepted' and snapshot(self.workspace) != self.checked_snapshot:
+                self.checks = None
+                self.checked_snapshot = None
+                raise Barrier('candidate changed since verification')
             evidence = json.dumps({'actor': self.binding['actor'], 'candidate_sha': self.config['candidate_sha'],
                                    'checks': self.checks, 'summary': arguments['summary']})
             return self.client.workflow('verdict', {**command_binding(self.binding), 'candidate_id': self.binding['candidate_id'],
