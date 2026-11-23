@@ -12,6 +12,7 @@ import threading
 import uuid
 
 from .codex_delivery import Delivery
+from .codex_planning import Planning
 from .codex_session import CodexSessions
 from .core import Barrier, Journal, digest
 from .events import workflow_events
@@ -31,11 +32,12 @@ class Coordinator:
         self.config = config
         self.sessions = sessions
         self.project_id = config["project_id"]
-        self.milestone_id = config["milestone_id"]
+        self.milestone_id = config.get("milestone_id")
         self.checkout = Path(config["checkout"]).resolve(strict=True)
         self.root = Path(sessions.journal.path).parent / "worktrees" / self.project_id
         self.root.mkdir(parents=True, mode=0o700, exist_ok=True)
-        self.client = self.actor(config["coordinator"], "coordinator").client
+        self.coordinator = self.actor(config["coordinator"], "coordinator")
+        self.client = self.coordinator.client
         self.architect = self.actor(config["architect"], "architect")
         self.workers = self.pool(config["workers"], "writer")
         self.reviewers = self.pool(config["reviewers"], "auditor")
@@ -45,6 +47,7 @@ class Coordinator:
         homes = [actor.home for actor in (self.architect, *self.workers.values(), *self.reviewers.values())]
         if len(set(homes)) != len(homes):
             raise Barrier("each Codex actor requires a separate configuration home")
+        self.planning = Planning(self) if self.milestone_id is None else None
         self.active = {}
         self.wake = lambda: None
         delivery = config.get("delivery")
@@ -105,13 +108,14 @@ class Coordinator:
     def project(self):
         path = "/api/v1/projects/" + self.project_id
         project = self.client.call(path, method="GET")["project"]
-        milestone = self.client.call(path + "/milestones/" + self.milestone_id, method="GET")["milestone"]
         origin = self.git("remote", "get-url", "origin")
         expected = "https://github.com/" + project["repository"]
-        if origin not in (expected, expected + ".git"):
+        if origin.casefold() not in (expected.casefold(), expected.casefold() + ".git"):
             raise Barrier("checkout remote does not match the AI.Contract project")
-        if milestone["ordinal"] > project["planning_through"]:
-            raise Barrier("milestone is outside the approved planning boundary")
+        if self.milestone_id is not None:
+            milestone = self.client.call(path + "/milestones/" + self.milestone_id, method="GET")["milestone"]
+            if milestone["ordinal"] > project["planning_through"]:
+                raise Barrier("milestone is outside the approved planning boundary")
         return project
 
     @staticmethod
@@ -120,8 +124,8 @@ class Coordinator:
                     digest=job["revision"]["digest"], attempt_id=job["attempt"]["id"])
 
     def launch(self, role, actor, turn, workspace, **binding):
-        payload = dict(role=role, project_id=self.project_id, milestone_id=self.milestone_id,
-                       actor=actor.name, turn_id=turn, **binding)
+        binding.setdefault("milestone_id", self.milestone_id)
+        payload = dict(role=role, project_id=self.project_id, actor=actor.name, turn_id=turn, **binding)
         key = self.sessions.start(payload, workspace, actor.home, client=actor.client)
         state = self.sessions.inspect(key)
         if state == "unknown":
@@ -145,6 +149,7 @@ class Coordinator:
         if job is None:
             return
         binding = self.binding(job)
+        milestone = job.get("milestone_id", self.milestone_id)
         attempt_id = binding["attempt_id"]
         attempt = job["attempt"]
         worker = self.workers.get(attempt["worker"])
@@ -159,7 +164,7 @@ class Coordinator:
                 return
             worker.client.authority(dict(binding, project_id=self.project_id, actor=worker.name), "worker")
             path = self.workspace("worker", attempt_id, self.config.get("base_ref", "refs/remotes/origin/main"))
-            key, state = self.launch("worker", worker, turn, path, **binding)
+            key, state = self.launch("worker", worker, turn, path, milestone_id=milestone, **binding)
         elif job.get("reviewer"):
             reviewer = self.reviewers.get(job["reviewer"])
             if reviewer is None:
@@ -170,7 +175,7 @@ class Coordinator:
             binding.update(candidate_id=candidate["id"], candidate_sha=candidate["sha"])
             reviewer.client.authority(dict(binding, project_id=self.project_id, actor=reviewer.name), "qa")
             path = self.workspace("qa", candidate["id"], candidate["sha"])
-            key, state = self.launch("qa", reviewer, candidate["id"], path, **binding)
+            key, state = self.launch("qa", reviewer, candidate["id"], path, milestone_id=milestone, **binding)
         else:
             return
         if state == "running":
@@ -212,7 +217,9 @@ class Coordinator:
                 self.handle_job(assigned["job"])
         # Retain a stable Architect turn while this Ready backlog remains unchanged.
         ready = [(job["contract_id"], job["revision"]["digest"]) for job in jobs if job["stage"] == "Ready"]
-        if len(ready) < target and self.architect.name not in busy:
+        if self.planning is not None:
+            self.planning.advance(project, target - len(ready))
+        elif len(ready) < target and self.architect.name not in busy:
             turn = digest([self.milestone_id, project["boundary_revision"], target, ready,
                            [(job["contract_id"], job["revision"]["digest"]) for job in jobs]])
             key, state = self.launch("architect", self.architect, turn, self.checkout,
@@ -336,6 +343,8 @@ def cli():
     try:
         config = private_json(args.config)
         for key in ("project_id", "milestone_id"):
+            if key == "milestone_id" and key not in config:
+                continue
             if str(uuid.UUID(config[key])) != config[key]:
                 raise Barrier("expected canonical project and milestone UUIDs")
         journal = Journal(config["journal"])

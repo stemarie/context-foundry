@@ -14,9 +14,9 @@ if __package__:
 ROLES = ("architect", "worker", "qa", "deliver", "operate")
 READ_TOOLS = ["project_get", "milestone_get", "milestone_list", "milestone_contract_list",
               "contract_assignment", "contract_get", "workflow_agents", "workflow_list",
-              "workflow_get", "workflow_assignments", "workflow_history"]
+              "workflow_get", "workflow_assignments", "workflow_history", "workflow_spec_get", "workflow_planning_list"]
 ROLE_WRITES = {
-    "architect": ["milestone_contract_create", "workflow_define", "workflow_ready"],
+    "architect": ["milestone_contract_create", "workflow_define", "workflow_ready", "workflow_planning_report"],
     "worker": ["workflow_submit", "workflow_heartbeat"],
     "qa": ["workflow_verdict"],
     "deliver": ["workflow_integrate", "workflow_complete", "workflow_publish_history", "workflow_record"],
@@ -107,9 +107,14 @@ class CodexSessions:
             time.sleep(0.02)
         raise Barrier("Codex launch acknowledgement is missing")
 
-    def recorded(self, project_id, *, attempt_id=None):
+    def recorded(self, project_id, *, attempt_id=None, planning_request_id=None):
         with self.journal.transaction() as db:
-            if attempt_id is None:
+            if planning_request_id is not None:
+                rows = db.execute(
+                    "SELECT key,binding FROM launches WHERE json_extract(binding,'$.planning_request_id')=?",
+                    (planning_request_id,),
+                ).fetchall()
+            elif attempt_id is None:
                 rows = db.execute("SELECT key,binding FROM launches WHERE finished IS NULL").fetchall()
             else:
                 rows = db.execute(

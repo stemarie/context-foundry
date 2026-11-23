@@ -40,6 +40,7 @@ class CodexCoordinatorTest(unittest.TestCase):
         c.active = {}
         c.delivery = None
         c.architect = actor("architect")
+        c.planning = None
         c.workers = {name: actor(name) for name in ("worker-a", "worker-b")}
         c.reviewers = {"qa-a": actor("qa-a")}
         c.workspace = Mock(return_value=Path("/worktree"))

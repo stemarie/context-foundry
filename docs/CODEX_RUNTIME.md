@@ -14,7 +14,8 @@ checkout. The private JSON configuration contains:
 | Field | Value |
 | --- | --- |
 | origin | AI.Contract origin with workflow SSE enabled |
-| project_id, milestone_id | Approved project and milestone UUIDs |
+| project_id | Registered project UUID |
+| milestone_id | Optional fixed approved milestone UUID for legacy automatic replenishment. Omit it to use MCP planning requests. |
 | checkout | Trusted local Git checkout with origin matching the project repository |
 | base_ref | Local Worker base ref, default `refs/remotes/origin/main` |
 | journal | Absolute path to the shared local runtime SQLite journal |
@@ -55,3 +56,33 @@ operator can use the delivery wrapper skill to drive the same core delivery
 procedure when resolving a blocked handoff. A failed check, target drift, or
 a merge requiring manual conflict resolution stops automated delivery.
 Use only authorized check commands and a trusted checkout on this host.
+
+## Start Architect planning from an MCP client
+
+Register the project by configuring the runner once with its project ID, local
+checkout, actor credentials and pools. Omit `milestone_id` to let each request
+select its own approved milestone. The project queue target determines available
+planning capacity. Pending requests wait for capacity and an idle Architect.
+
+1. Call `project_create`, `milestone_create`, then `project_planning_boundary`
+   through an authorized MCP client to establish and approve the milestone.
+2. Call `workflow_spec_attach` with the project and milestone IDs. For a Git
+   document, supply `spec_kind: git`, its repository-relative `spec_path`,
+   and the full commit SHA as `spec_revision`. The commit and blob must be
+   present in the registered checkout. For a Google Doc or another external
+   document, read it with an authenticated client, export the exact approved
+   revision as Markdown, and pass `spec_kind: snapshot`, `spec_url`,
+   `spec_revision`, and the bytes as `spec_snapshot`. Supply `spec_section` if
+   planning should focus on a named section.
+3. Call `workflow_planning_request` with `project_id`, `milestone_id`, the
+   returned `specification_id`, and a stable `idempotency_key`. The project
+   event wakes the runner. It verifies the pinned document before starting
+   the Architect and uses the recorded process identity on reconnect.
+4. Read `workflow_planning_list` to see Pending, Running, Completed, or Blocked
+   and the persisted Architect evidence. Every published executable revision
+   carries the planning request, immutable specification ID, and section.
+
+Spec attachment and planning requests require `write` plus `coordinator` or
+admin. Planning queries require `read`. Files and snapshots must be nonblank
+UTF-8 Markdown, at most 65,536 bytes. The runner uses the locally available Git
+object or the saved snapshot. It never fetches a document from a pasted URL.
